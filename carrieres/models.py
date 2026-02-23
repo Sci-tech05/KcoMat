@@ -40,7 +40,7 @@ class Candidature(models.Model):
     email = models.EmailField()
     telephone = models.CharField(max_length=20)
     cv = models.FileField(upload_to='cv/')
-    lettre_motivation = models.TextField()
+    lettre_motivation = models.FileField(upload_to='lettres_motivation/', blank=True, null=True)
     traite = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
 
