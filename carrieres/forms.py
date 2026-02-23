@@ -12,13 +12,9 @@ class CandidatureForm(forms.ModelForm):
             'email': forms.EmailInput(attrs={'placeholder': 'votre@email.com', 'class': 'form-input'}),
             'telephone': forms.TextInput(attrs={'placeholder': '+229 XX XX XX XX', 'class': 'form-input'}),
             'cv': forms.FileInput(attrs={'class': 'form-file', 'accept': '.pdf,.doc,.docx'}),
-            'lettre_motivation': forms.Textarea(attrs={
-                'placeholder': 'Votre lettre de motivation...',
-                'rows': 5,
-                'class': 'form-textarea',
-            }),
+            'lettre_motivation': forms.FileInput(attrs={'class': 'form-file', 'accept': '.pdf,.doc,.docx'}),
         }
         labels = {
             'cv': 'CV (PDF, Word)',
-            'lettre_motivation': 'Lettre de motivation',
+            'lettre_motivation': 'Lettre de motivation (PDF, Word)',
         }
