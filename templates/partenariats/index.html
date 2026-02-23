@@ -1,0 +1,153 @@
+{% extends 'base.html' %}
+{% load kcomat_tags %}
+
+{% block title %}Partenariats — KcoMat{% endblock %}
+
+{% block content %}
+<section class="page-hero">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="max-w-3xl mx-auto text-center">
+            <h1 class="text-4xl md:text-5xl font-black text-white mb-4">Nos <span class="text-yellow-400">partenaires</span></h1>
+            <p class="text-gray-300 text-lg">Ensemble, nous développons l'écosystème technologique du Bénin. Rejoignez notre réseau de partenaires.</p>
+        </div>
+    </div>
+</section>
+
+<!-- Partenaires actuels -->
+{% if partenaires %}
+<section class="py-16 bg-white">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <h2 class="section-title text-center mb-3">Ils nous font confiance</h2>
+        <div class="section-divider"></div>
+        <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6 mt-10">
+            {% for partenaire in partenaires %}
+            <div
+                class="flex flex-col items-center gap-3 p-4 bg-gray-50 rounded-2xl hover:bg-gray-100 transition-colors">
+                {% if partenaire.logo %}
+                <img src="{{ partenaire.logo.url }}" alt="{{ partenaire.nom }}"
+                    class="h-12 object-contain opacity-70 hover:opacity-100 transition-opacity" />
+                {% else %}
+                <div
+                    class="w-12 h-12 bg-gradient-to-br from-blue-600 to-blue-800 rounded-xl flex items-center justify-center">
+                    <span class="text-white font-black text-xl">{{ partenaire.nom|first }}</span>
+                </div>
+                {% endif %}
+                <span class="text-xs text-gray-600 font-medium text-center">{{ partenaire.nom }}</span>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</section>
+{% endif %}
+
+<!-- Formulaire partenariat -->
+<section class="py-16 bg-gray-50">
+    <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-12 items-start">
+            <!-- Pourquoi s'associer -->
+            <div>
+                <h2 class="text-3xl font-black text-gray-900 mb-4">Pourquoi devenir partenaire ?</h2>
+                <div class=" space-y-4">
+                    {% for item in "Accès à notre réseau de 200+ apprenants tech|Visibilité sur notre site et nos réseaux sociaux|Collaboration sur des projets innovants|Participation à nos événements et formations|Co-création de solutions technologiques adaptées au marché béninois|Tarifs préférentiels sur nos formations et composants"|split:"|" %}
+                    <div class="flex items-start gap-3">
+                        <div
+                            class="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5">
+                            <svg class="w-4 h-4 text-blue-600" fill="currentColor" viewBox="0 0 20 20">
+                                <path fill-rule="evenodd"
+                                    d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                                    clip-rule="evenodd" />
+                            </svg>
+                        </div>
+                        <p class="text-gray-600 text-sm">{{ item }}</p>
+                    </div>
+                    {% endfor %}
+                </div>
+
+                <div class="mt-8 p-5 bg-blue-50 border border-blue-100 rounded-2xl">
+                    <h3 class="font-bold text-blue-900 mb-2">Contact direct</h3>
+                    <p class="text-blue-700 text-sm mb-3">Pour une discussion rapide, contactez-nous sur WhatsApp.</p>
+                    <a href="https://wa.me/{{ KCOMAT.whatsapp }}?text=Bonjour, je souhaite établir un partenariat avec KcoMat."
+                        target="_blank" class="btn-green py-2.5 px-6 text-sm">WhatsApp</a>
+                </div>
+            </div>
+
+            <!-- Formulaire -->
+            <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+                <!-- Card header -->
+                <div class="bg-gradient-to-r from-blue-600 to-blue-700 px-6 py-5 text-center">
+                    <h3 class="font-black text-white text-xl">Demande de partenariat</h3>
+                </div>
+
+                <div class="p-6">
+                    {% if messages %}
+                    {% for msg in messages %}
+                    <div class="alert-{{ msg.tags }} mb-5">{{ msg }}</div>
+                    {% endfor %}
+                    {% endif %}
+
+                    <form method="post" class="space-y-4">
+                        {% csrf_token %}
+
+                        <!-- Nom organisation (obligatoire) -->
+                        <div>
+                            <label class="form-label">Nom de l'organisation <span class="text-red-500">*</span></label>
+                            <input type="text" name="nom_organisation" value="{{ form.nom_organisation.value|default:'' }}"
+                                placeholder="Nom de votre organisation"
+                                class="form-input {% if form.nom_organisation.errors %}border-red-400{% endif %}"
+                                required />
+                            {% if form.nom_organisation.errors %}<p class="form-error mt-1">{{ form.nom_organisation.errors.0 }}</p>{% endif %}
+                        </div>
+
+                        <!-- Email + Téléphone côte à côte -->
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div>
+                                <label class="form-label">Email <span class="text-red-500">*</span></label>
+                                <input type="email" name="email" value="{{ form.email.value|default:'' }}"
+                                    placeholder="email@organisation.com"
+                                    class="form-input {% if form.email.errors %}border-red-400{% endif %}"
+                                    required />
+                                {% if form.email.errors %}<p class="form-error mt-1">{{ form.email.errors.0 }}</p>{% endif %}
+                            </div>
+                            <div>
+                                <label class="form-label">Téléphone <span class="text-red-500">*</span></label>
+                                <input type="text" name="telephone" value="{{ form.telephone.value|default:'' }}"
+                                    placeholder="+229 XX XX XX XX"
+                                    class="form-input {% if form.telephone.errors %}border-red-400{% endif %}"
+                                    required />
+                                {% if form.telephone.errors %}<p class="form-error mt-1">{{ form.telephone.errors.0 }}</p>{% endif %}
+                            </div>
+                        </div>
+
+                        <!-- Site web -->
+                        <div>
+                            <label class="form-label">Site web <span class="text-gray-400 font-normal text-xs">(optionnel)</span></label>
+                            <input type="url" name="site_web" value="{{ form.site_web.value|default:'' }}"
+                                placeholder="https://..."
+                                class="form-input" />
+                        </div>
+
+                        <!-- Type partenariat -->
+                        <div>
+                            <label class="form-label">Type de partenariat souhaité <span class="text-gray-400 font-normal text-xs">(optionnel)</span></label>
+                            <input type="text" name="type_partenariat_souhaite" value="{{ form.type_partenariat_souhaite.value|default:'' }}"
+                                placeholder="Ex: Co-formation, Sponsoring, Équipement..."
+                                class="form-input" />
+                        </div>
+
+                        <!-- Note champs obligatoires -->
+                        <p class="text-xs text-gray-400"><span class="text-red-500">*</span> Champs obligatoires</p>
+
+                        <button type="submit"
+                            class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3.5 px-6 rounded-xl transition-colors flex items-center justify-center gap-2 mt-2">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/>
+                            </svg>
+                            Envoyer la demande
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}

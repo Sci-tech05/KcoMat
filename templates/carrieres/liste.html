@@ -1,0 +1,81 @@
+{% extends 'base.html' %}
+
+{% block title %}Carrières & Stages — KcoMat{% endblock %}
+
+{% block content %}
+<section class="page-hero">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="max-w-3xl mx-auto text-center">
+            <h1 class="text-4xl md:text-5xl font-black text-white mb-4">Rejoignez <span class="text-orange-400">KcoMat</span></h1>
+            <p class="text-gray-300 text-lg">Emplois, stages, missions freelance — construisez votre avenir dans la tech avec nous à Lokossa.</p>
+        </div>
+    </div>
+</section>
+
+<section class="py-16 bg-gray-50">
+    <div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
+        <!-- Filtres -->
+        <div class="flex flex-wrap gap-3 mb-8">
+            <a href="{% url 'carrieres:liste' %}"
+                class="px-4 py-2 rounded-xl text-sm font-semibold transition-colors {% if not type_active %}bg-blue-600 text-white shadow-sm{% else %}bg-white text-gray-600 border border-gray-200 hover:border-blue-400 hover:text-blue-600{% endif %}">
+                Toutes les offres
+            </a>
+            <a href="?type=emploi"
+                class="px-4 py-2 rounded-xl text-sm font-semibold transition-colors {% if type_active == 'emploi' %}bg-blue-600 text-white shadow-sm{% else %}bg-white text-gray-600 border border-gray-200 hover:border-blue-400 hover:text-blue-600{% endif %}">
+                💼 Emplois
+            </a>
+            <a href="?type=stage"
+                class="px-4 py-2 rounded-xl text-sm font-semibold transition-colors {% if type_active == 'stage' %}bg-blue-600 text-white shadow-sm{% else %}bg-white text-gray-600 border border-gray-200 hover:border-blue-400 hover:text-blue-600{% endif %}">
+                🎓 Stages
+            </a>
+            <a href="?type=freelance"
+                class="px-4 py-2 rounded-xl text-sm font-semibold transition-colors {% if type_active == 'freelance' %}bg-blue-600 text-white shadow-sm{% else %}bg-white text-gray-600 border border-gray-200 hover:border-blue-400 hover:text-blue-600{% endif %}">
+                🚀 Freelance
+            </a>
+        </div>
+
+        {% if offres %}
+        <div class="space-y-4">
+            {% for offre in offres %}
+            <div class="card hover:shadow-md transition-shadow">
+                <div class="flex items-start justify-between gap-4 flex-wrap">
+                    <div class="flex-1">
+                        <div class="flex flex-wrap gap-2 mb-2">
+                            <span
+                                class="badge text-xs
+                {% if offre.type == 'emploi' %}bg-blue-100 text-blue-700{% elif offre.type == 'stage' %}bg-purple-100 text-purple-700{% else %}bg-orange-100 text-orange-700{% endif %}">
+                                {{ offre.get_type_display }}
+                            </span>
+                            {% if offre.localisation %}<span class="badge bg-gray-100 text-gray-600 text-xs">📍 {{
+                                offre.localisation }}</span>{% endif %}
+                        </div>
+                        <h3 class="text-lg font-bold text-gray-900 mb-1">{{ offre.titre }}</h3>
+                        <p class="text-sm text-gray-500 line-clamp-2">{{ offre.description_courte }}</p>
+                    </div>
+                    <div class="flex flex-col items-end gap-2">
+                        {% if offre.remuneration %}<div class="text-green-600 font-bold text-sm">{{ offre.remuneration
+                            }}</div>{% endif %}
+                        <a href="{% url 'carrieres:detail' offre.slug %}" class="btn-primary py-2 px-5 text-sm">Postuler
+                            →</a>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="text-center py-20">
+            <div class="w-20 h-20 bg-orange-50 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                <svg class="w-10 h-10 text-orange-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                </svg>
+            </div>
+            <h3 class="text-xl font-bold text-gray-900 mb-2">Aucune offre disponible</h3>
+            <p class="text-gray-400 mb-6">Aucune offre ouverte pour le moment. Envoyez une candidature spontanée.</p>
+            <a href="https://wa.me/{{ KCOMAT.whatsapp }}?text=Bonjour, je souhaite envoyer une candidature spontanée à KcoMat."
+                target="_blank" class="btn-green px-6 py-3">Candidature spontanée</a>
+        </div>
+        {% endif %}
+    </div>
+</section>
+{% endblock %}

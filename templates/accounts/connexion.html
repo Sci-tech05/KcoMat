@@ -1,0 +1,79 @@
+{% extends 'base.html' %}
+
+{% block title %}Connexion — KcoMat{% endblock %}
+
+{% block content %}
+<section class="min-h-screen bg-gradient-to-br from-blue-50 via-white to-gray-50 flex items-center py-12">
+    <div class="max-w-md mx-auto px-4 w-full">
+        <div class="bg-white rounded-3xl shadow-md border border-gray-100 p-10">
+
+            <!-- Icône + titre -->
+            <div class="text-center mb-7">
+                <div class="inline-flex items-center justify-center w-16 h-16 rounded-full bg-blue-50 text-blue-600 mb-4">
+                    <svg class="w-9 h-9" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M5.121 17.804A13.937 13.937 0 0112 16c2.5 0 4.847.655 6.879 1.804M15 10a3 3 0 11-6 0 3 3 0 016 0zm6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                    </svg>
+                </div>
+                <h1 class="text-xl font-extrabold text-gray-900">Connexion</h1>
+                <p class="text-gray-400 text-sm mt-1">Accédez à votre espace pour retrouver vos achats.</p>
+            </div>
+
+            {% if messages %}{% for msg in messages %}<div class="alert-{{ msg.tags }} mb-5">{{ msg }}</div>{% endfor %}{% endif %}
+
+            <form method="post" autocomplete="on" class="space-y-5">
+                {% csrf_token %}
+
+                <!-- Nom d'utilisateur -->
+                <div>
+                    <label for="id_username" class="block text-sm font-semibold text-gray-700 mb-1.5">Nom d'utilisateur</label>
+                    <div class="relative">
+                        <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
+                            <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
+                            </svg>
+                        </div>
+                        <input type="text" name="username" id="id_username" placeholder="Votre nom d'utilisateur" autocomplete="username" class="w-full pl-10 pr-4 py-2.5 border border-gray-200 rounded-full text-sm text-gray-900 placeholder-gray-400 bg-gray-50 focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 outline-none transition" required autofocus />
+                    </div>
+                </div>
+
+                <!-- Mot de passe -->
+                <div>
+                    <label for="id_password" class="block text-sm font-semibold text-gray-700 mb-1.5">Mot de passe</label>
+                    <div class="relative">
+                        <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
+                            <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
+                            </svg>
+                        </div>
+                        <input type="password" name="password" id="id_password" placeholder="Votre mot de passe" autocomplete="current-password" class="w-full pl-10 pr-4 py-2.5 border border-gray-200 rounded-full text-sm text-gray-900 placeholder-gray-400 bg-gray-50 focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 outline-none transition" required />
+                    </div>
+                </div>
+
+                {% if form.errors %}
+                <div class="flex items-center gap-2 bg-red-50 border border-red-200 text-red-700 text-sm rounded-2xl px-4 py-3">
+                    <svg class="w-4 h-4 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/>
+                    </svg>
+                    Nom d'utilisateur ou mot de passe incorrect.
+                </div>
+                {% endif %}
+
+                <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-full transition-colors flex items-center justify-center gap-2">
+                    <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-8.707l-3-3a1 1 0 00-1.414 1.414L10.586 9H7a1 1 0 100 2h3.586l-1.293 1.293a1 1 0 101.414 1.414l3-3a1 1 0 000-1.414z" clip-rule="evenodd"/>
+                    </svg>
+                    Se connecter
+                </button>
+            </form>
+
+            <hr class="my-6 border-gray-100" />
+
+            <p class="text-center text-sm text-gray-400 mb-0">
+                Pas encore de compte ?
+                <a href="{% url 'accounts:inscription' %}" class="text-blue-600 font-semibold hover:underline">S'inscrire</a>
+            </p>
+
+        </div>
+    </div>
+</section>
+{% endblock %}

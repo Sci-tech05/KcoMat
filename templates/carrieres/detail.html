@@ -1,0 +1,72 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ offre.titre }} — Carrières KcoMat{% endblock %}
+
+{% block content %}
+<section class="page-hero">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <a href="{% url 'carrieres:liste' %}"
+            class="inline-flex items-center gap-1.5 text-blue-400 hover:text-blue-300 text-sm mb-5 transition-colors">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+            </svg>
+            Toutes les offres
+        </a>
+        <div class="flex flex-wrap gap-2 mb-3">
+            <span
+                class="badge text-sm {% if offre.type == 'emploi' %}bg-blue-600/30 text-blue-300{% elif offre.type == 'stage' %}bg-purple-600/30 text-purple-300{% else %}bg-orange-600/30 text-orange-300{% endif %}">{{
+                offre.get_type_display }}</span>
+            {% if offre.localisation %}<span class="badge bg-white/10 text-gray-300 text-sm">📍 {{ offre.localisation
+                }}</span>{% endif %}
+        </div>
+        <h1 class="text-3xl md:text-4xl font-black text-white mb-2">{{ offre.titre }}</h1>
+        {% if offre.remuneration %}<div class="text-green-400 font-bold text-xl">{{ offre.remuneration }}</div>{% endif %}
+    </div>
+</section>
+
+<section class="py-12 bg-gray-50">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <!-- Description -->
+            <div class="lg:col-span-2 space-y-6">
+                <div class="card">
+                    <h2 class="font-bold text-gray-900 text-xl mb-4">Description du poste</h2>
+                    <div class="prose max-w-none text-gray-600">{{ offre.description|linebreaksbr }}</div>
+                </div>
+                {% if offre.competences_requises %}
+                <div class="card">
+                    <h2 class="font-bold text-gray-900 text-xl mb-4">Compétences requises</h2>
+                    <div class="prose max-w-none text-gray-600">{{ offre.competences_requises|linebreaksbr }}</div>
+                </div>
+                {% endif %}
+            </div>
+
+            <!-- Formulaire candidature -->
+            <div>
+                <div class="card sticky top-24">
+                    <h3 class="font-bold text-gray-900 mb-4 text-lg">Postuler</h3>
+                    {% if messages %}{% for msg in messages %}<div class="alert-{{ msg.tags }} mb-4">{{ msg }}</div>{% endfor %}{% endif %}
+                    <form method="post" enctype="multipart/form-data" class="space-y-4">
+                        {% csrf_token %}
+                        {% for field in form %}
+                        <div>
+                            <label class="form-label">{{ field.label }}</label>
+                            {% if field.field.widget.input_type == 'textarea' %}
+                            <textarea name="{{ field.html_name }}" class="form-textarea" rows="3" {% if field.field.required %}required{% endif %}>{{ field.value|default:'' }}</textarea>
+                            {% elif field.field.widget.input_type == 'file' %}
+                            <input type="file" name="{{ field.html_name }}" class="form-file" {% if field.field.required %}required{% endif %} />
+                            {% else %}
+                            <input type="{{ field.field.widget.input_type }}" name="{{ field.html_name }}"
+                                value="{{ field.value|default:'' }}" class="form-input" {% if field.field.required %}required{% endif %} />
+                            {% endif %}
+                            {% if field.errors %}<span class="form-error">{{ field.errors.0 }}</span>{% endif %}
+                        </div>
+                        {% endfor %}
+                        <button type="submit" class="btn-primary w-full py-3 font-bold">Envoyer ma candidature</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}

@@ -1,0 +1,42 @@
+# ─── Python ───────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.so
+*.egg
+*.egg-info/
+dist/
+build/
+.eggs/
+
+# ─── Environnement virtuel ────────────────────────────────
+.venv/
+venv/
+env/
+ENV/
+
+# ─── Django ───────────────────────────────────────────────
+*.sqlite3
+*.log
+local_settings.py
+/staticfiles/
+/media/
+
+# ─── Variables d'environnement ────────────────────────────
+.env
+.env.*
+!.env.example
+
+# ─── VS Code ──────────────────────────────────────────────
+.vscode/
+
+# ─── Système ──────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ─── Migrations (optionnel — à adapter selon préférence) ──
+# Si tu veux versionner les migrations, laisse ces lignes commentées
+# */migrations/*.py
+# !*/migrations/__init__.py

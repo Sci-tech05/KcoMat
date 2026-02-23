@@ -1,0 +1,305 @@
+{% extends 'base.html' %}
+{% load kcomat_tags %}
+
+{% block title %}À propos{% endblock %}
+
+{% block content %}
+
+<!-- PAGE HERO -->
+<section class="page-hero text-center">
+    <div class="max-w-4xl mx-auto px-4">
+        <h1 class="text-4xl md:text-5xl font-black text-white mb-4">À propos de <span
+                class="text-gradient">KcoMat</span></h1>
+        <p class="text-xl text-gray-300 max-w-2xl mx-auto">
+            Une équipe de passionnés, une vision claire : démocratiser la technologie au Bénin et en Afrique.
+        </p>
+    </div>
+</section>
+
+
+<!-- ===================================================
+     HISTORIQUE
+=================================================== -->
+<section class="py-20 bg-white">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="grid lg:grid-cols-2 gap-16 items-start">
+            <!-- Timeline -->
+            <div>
+                <div class="section-tag">Notre histoire</div>
+                <h2 class="section-title mb-4">Comment tout a commencé ?</h2>
+                <div class="section-divider"></div>
+
+                <div class="mt-8 relative">
+                    <div
+                        class="absolute left-0 top-0 bottom-0 w-0.5 bg-gradient-to-b from-blue-600 to-green-500 ml-1.5">
+                    </div>
+
+                    <!-- Timeline items -->
+                    <div class="space-y-8 pl-8">
+                        <div class="relative">
+                            <div
+                                class="absolute -left-8 top-1 w-3 h-3 bg-blue-600 rounded-full border-2 border-white ring-2 ring-blue-100">
+                            </div>
+                            <div class="text-xs font-bold text-blue-600 mb-1">Juin 2025</div>
+                            <h3 class="font-bold text-gray-900 mb-2">Naissance de KcoMat</h3>
+                            <p class="text-gray-600 text-sm leading-relaxed text-justify">
+                                KcoMat est né en juin 2025 de la passion de cinq jeunes diplômés de l’<strong>INSTI Lokossa</strong>.
+                                Face au manque de formations techniques pratiques et accessibles au Bénin, ils ont 
+                                créé un espace unique qui allie <strong>centre de formation</strong>, boutique de composants 
+                                électroniques et prestations technologiques <em>(domotique, installations, automatisation…)</em>.
+                            </p>
+                        </div>
+
+                        <div class="relative">
+                            <div
+                                class="absolute -left-8 top-1 w-3 h-3 bg-blue-500 rounded-full border-2 border-white ring-2 ring-blue-100">
+                            </div>
+                            <div class="text-xs font-bold text-blue-600 mb-1">Juillet 2025</div>
+                            <h3 class="font-bold text-gray-900 mb-2">Premières formations</h3>
+                            <p class="text-gray-600 text-sm leading-relaxed text-justify">
+                                Dès les premières semaines, KcoMat lance ses premières sessions de formation en
+                                <strong>domotique et électronique</strong>. L'engouement est immédiat : jeunes,
+                                étudiants, professionnels — tous affluent pour apprendre des technologies qu'ils
+                                croyaient inaccessibles au Bénin.
+                            </p>
+                        </div>
+
+                        <div class="relative">
+                            <div
+                                class="absolute -left-8 top-1 w-3 h-3 bg-green-500 rounded-full border-2 border-white ring-2 ring-green-100">
+                            </div>
+                            <div class="text-xs font-bold text-green-600 mb-1">2025 — Croissance</div>
+                            <h3 class="font-bold text-gray-900 mb-2">Expansion du catalogue</h3>
+                            <p class="text-gray-600 text-sm leading-relaxed text-justify">
+                                Le catalogue s'étoffe rapidement : <strong>MicroPython, IA appliquée, pilotage de
+                                    drones, sécurité informatique, développement web et mobile</strong>... KcoMat
+                                devient le centre technologique de référence dans le département du Mono. La boutique de
+                                composants électroniques attire des techniciens et bricoleurs de toute la région.
+                            </p>
+                        </div>
+
+                        <div class="relative">
+                            <div
+                                class="absolute -left-8 top-1 w-3 h-3 bg-green-400 rounded-full border-2 border-white ring-2 ring-green-100">
+                            </div>
+                            <div class="text-xs font-bold text-green-600 mb-1">2026 — Aujourd'hui</div>
+                            <h3 class="font-bold text-gray-900 mb-2">KcoMat en plein essor</h3>
+                            <p class="text-gray-600 text-sm leading-relaxed text-justify">
+                                Avec plus de 500 apprenants formés, des dizaines de projets réalisés et une boutique en
+                                ligne opérationnelle, KcoMat consolide sa position de leader de la tech au Bénin. La
+                                vision reste la même : <em>"Maîtriser les technologies d'aujourd'hui pour construire
+                                    l'Afrique de demain."</em>
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Mission -->
+            <div>
+                <div class="section-tag">Notre mission</div>
+                <h2 class="section-title mb-4">Ce qui nous anime</h2>
+                <div class="section-divider"></div>
+
+                <div class="mt-8 space-y-5">
+                    {% for mission in "Former et professionnaliser les acteurs locaux aux métiers de demain (domotique, électronique, IA, drones, cybersécurité, programmation)|Fournir des composants électroniques et équipements technologiques de qualité à des prix accessibles|Offrir des services d'installation, de maintenance et d'automatisation aux particuliers et entreprises du Bénin|Contribuer au développement socio-économique du Bénin par l'innovation et le transfert de technologies"|split:"|" %}
+                    <div
+                        class="flex items-start gap-4 p-5 bg-blue-50 rounded-2xl hover:bg-blue-100 transition-colors group">
+                        <div
+                            class="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center flex-shrink-0 text-white font-black text-sm group-hover:bg-blue-700 transition-colors">
+                            {{ forloop.counter }}
+                        </div>
+                        <p class="text-gray-700 text-sm leading-relaxed font-medium">{{ mission }}</p>
+                    </div>
+                    {% endfor %}
+                </div>
+
+                <!-- Values -->
+                <div class="mt-10 grid grid-cols-2 gap-4">
+                    <div class="text-center p-5 bg-gradient-to-br from-blue-50 to-blue-100 rounded-2xl">
+                        <div class="text-3xl mb-2">🏆</div>
+                        <div class="font-bold text-gray-900 text-sm">Excellence</div>
+                    </div>
+                    <div class="text-center p-5 bg-gradient-to-br from-green-50 to-green-100 rounded-2xl">
+                        <div class="text-3xl mb-2">🤝</div>
+                        <div class="font-bold text-gray-900 text-sm">Accessibilité</div>
+                    </div>
+                    <div class="text-center p-5 bg-gradient-to-br from-purple-50 to-purple-100 rounded-2xl">
+                        <div class="text-3xl mb-2">💡</div>
+                        <div class="font-bold text-gray-900 text-sm">Innovation</div>
+                    </div>
+                    <div class="text-center p-5 bg-gradient-to-br from-orange-50 to-orange-100 rounded-2xl">
+                        <div class="text-3xl mb-2">🌍</div>
+                        <div class="font-bold text-gray-900 text-sm">Impact Africain</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+
+<!-- ===================================================
+     ÉQUIPE DIRIGEANTE
+=================================================== -->
+<section class="py-20 bg-gray-50">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="text-center mb-12">
+            <div class="section-tag mx-auto justify-center">Notre équipe</div>
+            <h2 class="section-title">Les fondateurs de KcoMat</h2>
+            <div class="section-divider mx-auto"></div>
+            <p class="section-subtitle mx-auto text-center mt-3">
+                Cinq techniciens supérieurs passionnés, diplômés de l'INSTI de Lokossa, unis pour construire l'avenir
+                technologique du Bénin.
+            </p>
+        </div>
+
+        {% if membres %}
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            {% for membre in membres %}
+            <div class="group relative bg-white rounded-2xl shadow-md hover:shadow-2xl transition-all duration-300 hover:-translate-y-2 overflow-hidden flex flex-col">
+
+                <!-- Gradient banner -->
+                <div class="h-40 bg-gradient-to-br {% cycle 'from-blue-600 to-blue-800' 'from-green-600 to-green-800' 'from-purple-600 to-purple-800' 'from-orange-500 to-orange-700' 'from-red-500 to-red-700' %} relative flex-shrink-0">
+                    <div class="absolute top-3 right-3 w-16 h-16 bg-white/10 rounded-full"></div>
+                    <div class="absolute -bottom-4 -left-4 w-14 h-14 bg-white/10 rounded-full"></div>
+                </div>
+
+                <!-- Avatar overlapping banner -->
+                <div class="flex justify-center -mt-32 relative z-10 flex-shrink-0">
+                    {% if membre.photo %}
+                    <img src="{{ membre.photo.url }}" alt="{{ membre.nom }}"
+                        class="w-64 h-64 rounded-2xl object-cover object-top border-4 border-white shadow-xl" />
+                    {% else %}
+                    <div class="w-64 h-64 bg-gradient-to-br from-blue-500 to-blue-700 rounded-2xl flex items-center justify-center border-4 border-white shadow-xl">
+                        <span class="text-white text-6xl font-black">{{ membre.nom|first }}</span>
+                    </div>
+                    {% endif %}
+                </div>
+
+                <!-- Content -->
+                <div class="px-5 pb-5 pt-3 text-center flex flex-col flex-1">
+                    <h3 class="font-bold text-gray-900 text-sm leading-tight mb-1.5">{{ membre.nom }}</h3>
+                    <span class="inline-block text-xs font-semibold text-blue-700 bg-blue-50 border border-blue-100 px-2.5 py-1 rounded-full mb-3">{{ membre.poste }}</span>
+                    {% if membre.bio %}
+                    <p class="text-xs text-gray-500 leading-relaxed line-clamp-3 flex-1 mb-3">{{ membre.bio }}</p>
+                    {% endif %}
+                    {% if membre.linkedin %}
+                    <a href="{{ membre.linkedin }}" target="_blank" rel="noopener"
+                        class="mt-auto inline-flex items-center justify-center gap-1.5 text-xs font-semibold text-white bg-blue-600 hover:bg-blue-700 px-3 py-2 rounded-lg transition-colors">
+                        <svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24">
+                            <path d="M16 8a6 6 0 016 6v7h-4v-7a2 2 0 00-2-2 2 2 0 00-2 2v7h-4v-7a6 6 0 016-6zM2 9h4v12H2z" />
+                            <circle cx="4" cy="4" r="2" />
+                        </svg>
+                        LinkedIn
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <!-- Default team if none in DB -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            {% for data in "Kouagou Isaac Hounton|Directeur Général & Expert Électronique|from-blue-600 to-blue-800,Membre 2|Responsable Formations|from-green-600 to-green-800,Membre 3|Responsable Boutique & Logistique|from-purple-600 to-purple-800,Membre 4|Expert Domotique & IoT|from-orange-500 to-orange-700,Membre 5|Expert Web & IA|from-red-500 to-red-700"|split:"," %}
+            {% with parts=data|split:"|" %}
+            <div class="group relative bg-white rounded-2xl shadow-md hover:shadow-2xl transition-all duration-300 hover:-translate-y-2 overflow-hidden flex flex-col">
+
+                <!-- Gradient banner -->
+                <div class="h-40 bg-gradient-to-br {{ parts.2|default:'from-blue-600 to-blue-800' }} relative flex-shrink-0">
+                    <div class="absolute top-3 right-3 w-16 h-16 bg-white/10 rounded-full"></div>
+                    <div class="absolute -bottom-4 -left-4 w-14 h-14 bg-white/10 rounded-full"></div>
+                </div>
+
+                <!-- Avatar overlapping banner -->
+                <div class="flex justify-center -mt-32 relative z-10 flex-shrink-0">
+                    <div class="w-64 h-64 bg-gradient-to-br {{ parts.2|default:'from-blue-600 to-blue-800' }} rounded-2xl flex items-center justify-center border-4 border-white shadow-xl">
+                        <span class="text-white text-6xl font-black">{{ parts.0|first }}</span>
+                    </div>
+                </div>
+
+                <!-- Content -->
+                <div class="px-5 pb-5 pt-3 text-center">
+                    <h3 class="font-bold text-gray-900 text-sm leading-tight mb-1.5">{{ parts.0 }}</h3>
+                    <span class="inline-block text-xs font-semibold text-blue-700 bg-blue-50 border border-blue-100 px-2.5 py-1 rounded-full">{{ parts.1 }}</span>
+                </div>
+            </div>
+            {% endwith %}
+            {% endfor %}
+        </div>
+        <div class="text-center mt-8 p-6 bg-blue-50 rounded-2xl max-w-2xl mx-auto">
+            <p class="text-sm text-gray-600">💡 <strong>Admin :</strong> Ajoutez les membres de l'équipe via <a
+                    href="/admin/core/teammember/" class="text-blue-600 hover:underline">l'espace administration</a>
+                pour les afficher ici avec leurs vraies photos.</p>
+        </div>
+        {% endif %}
+    </div>
+</section>
+
+
+<!-- ===================================================
+     LOCALISATION + GOOGLE MAPS
+=================================================== -->
+<section class="py-20 bg-white">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="grid lg:grid-cols-2 gap-12 items-center">
+            <!-- Info -->
+            <div>
+                <div class="section-tag">Nous trouver</div>
+                <h2 class="section-title mb-4">Notre localisation</h2>
+                <div class="section-divider"></div>
+                <p class="text-gray-600 mb-8">Venez nous rendre visite à Lokossa, dans le département du Mono. Nous
+                    sommes ouverts du lundi au samedi.</p>
+
+                <div class="space-y-8">
+                    <div class="flex items-start gap-4 p-4 bg-gray-50 rounded-xl">
+                        <div class="w-10 h-10 bg-green-100 rounded-xl flex items-center justify-center flex-shrink-0">
+                            <svg class="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
+                            </svg>
+                        </div>
+                        <div>
+                            <div class="font-semibold text-gray-900 text-sm mb-1">Téléphone</div>
+                            <a href="tel:{{ KCOMAT.phone }}"
+                                class="block text-gray-600 text-sm hover:text-blue-600 transition-colors">{{ KCOMAT.phone }}
+                            </a>
+                
+                        </div>
+                    </div>
+                    <div class="flex items-start gap-4 p-4 bg-gray-50 rounded-xl">
+                        <div class="w-10 h-10 bg-blue-100 rounded-xl flex items-center justify-center flex-shrink-0">
+                            <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                        </div>
+                        <div>
+                            <div class="font-semibold text-gray-900 text-sm mb-1">Horaires d'ouverture</div>
+                            <p class="text-gray-600 text-sm">Lun – Sam : 8h00 – 18h00</p>
+                        </div>
+                    </div>
+                </div>
+
+                <a href="{{ KCOMAT.maps_embed }}" target="_blank" rel="noopener"
+                    class="btn-primary mt-6 px-6 py-3 inline-flex">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
+                    </svg>
+                    Ouvrir dans Google Maps
+                </a>
+            </div>
+
+            <!-- Map embed -->
+            <div class="rounded-2xl overflow-hidden shadow-lg h-96 bg-gray-100">
+                <iframe
+                    src="https://maps.google.com/maps?q=KcoMat,+BP+136+Lokossa,+Agniv%C3%A8dji,+B%C3%A9nin&output=embed&hl=fr&z=16"
+                    width="100%" height="100%" style="border:0;" allowfullscreen="" loading="lazy"
+                    referrerpolicy="no-referrer-when-downgrade" title="KcoMat — Lokossa, Bénin"></iframe>
+            </div>
+        </div>
+    </div>
+</section>
+
+{% endblock %}

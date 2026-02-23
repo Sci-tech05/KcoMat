@@ -1,0 +1,127 @@
+{% extends 'base.html' %}
+{% load humanize %}
+
+{% block title %}Boutique — Composants & matériels{% endblock %}
+
+{% block content %}
+
+<!-- PAGE HERO -->
+<section class="page-hero">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="max-w-3xl mx-auto text-center">
+            <h1 class="text-4xl md:text-5xl font-black text-white mb-4">
+                Composants & <span class="text-green-400">matériels</span>
+            </h1>
+            <p class="text-gray-300 text-lg max-w-2xl mx-auto">
+                Arduino, ESP32, capteurs, actionneurs, kits domotique… Tout ce dont vous avez besoin pour vos projets au
+                Bénin.
+            </p>
+        </div>
+    </div>
+</section>
+
+<!-- FILTRES + GRILLE -->
+<section class="py-16 bg-gray-50">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+
+        <!-- Barre recherche + filtres -->
+        <div class="flex flex-col sm:flex-row gap-4 mb-8">
+            <form method="get" class="flex flex-1 max-w-md">
+                <input type="text" name="q" value="{{ request.GET.q|default:'' }}"
+                    placeholder="Rechercher un composant…"
+                    class="fform-input rounded-r-none flex-1 bg-white border border-gray-200 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 rounded-l-xl">
+                <button type="submit"
+                    class="bg-blue-600 text-white px-5 py-2.5 rounded-r-xl hover:bg-blue-700 transition-colors">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                    </svg>
+                </button>
+            </form>
+        </div>
+
+        <!-- Catégories -->
+        {% if categories %}
+        <div class="flex flex-wrap gap-3 mb-8">
+            <a href="{% url 'boutique:liste' %}" class="filter-tab {% if not cat_active %}active{% endif %}">Tous</a>
+            {% for cat in categories %}
+            <a href="?categorie={{ cat.slug }}" class="filter-tab {% if cat_active == cat.slug %}active{% endif %}">{{ cat.nom }}</a>
+            {% endfor %}
+        </div>
+        {% endif %}
+
+        <!-- Grille produits -->
+        {% if produits %}
+        <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-5">
+            {% for produit in produits %}
+            <div class="product-card group">
+                <!-- Image -->
+                <a href="{% url 'boutique:detail' produit.slug %}" class="relative overflow-hidden h-44 bg-gray-100 rounded-t-2xl block cursor-pointer">
+                    {% if produit.image %}
+                    <img src="{{ produit.image.url }}" alt="{{ produit.nom }}"
+                        class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
+                    {% elif produit.images.first %}
+                    <img src="{{ produit.images.first.image.url }}" alt="{{ produit.nom }}"
+                        class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
+                    {% else %}
+                    <div class="w-full h-full flex items-center justify-center text-gray-300">
+                        <svg class="w-12 h-12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1"
+                                d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+                        </svg>
+                    </div>
+                    {% endif %}
+                    {% if not produit.en_stock %}<div
+                        class="absolute inset-0 bg-black/50 flex items-center justify-center"><span
+                            class="text-white font-bold text-sm">Rupture</span></div>{% endif %}
+                    {% if produit.nouveau %}<div class="absolute top-2 left-2"><span
+                            class="badge-nouveau">Nouveau</span></div>{% endif %}
+                </a>
+                <!-- Info -->
+                <div class="p-4">
+                    {% if produit.categorie %}<span class="text-xs text-gray-400">{{ produit.categorie.nom }}</span>{% endif %}
+                    <h3 class="font-semibold text-gray-900 text-sm mt-0.5 mb-1 line-clamp-2">{{ produit.nom }}</h3>
+                    <p class="text-xs text-gray-400 line-clamp-1 mb-3">{{ produit.description_courte }}</p>
+                    <div class="flex items-center justify-between">
+                        <div class="font-black text-green-600 text-base">{{ produit.prix|intcomma }} <span
+                                class="text-xs font-normal text-gray-400">FCFA</span></div>
+                    </div>
+                    <!-- Boutons -->
+                    <div class="mt-3 flex gap-2">
+                        {% if produit.en_stock %}
+                        <form method="post" action="{% url 'boutique:ajouter' produit.slug %}" class="flex-1"
+                            hx-post="{% url 'boutique:ajouter' produit.slug %}" hx-target="#cart-badge"
+                            hx-swap="outerHTML">
+                            {% csrf_token %}
+                            <input type="hidden" name="quantite" value="1" />
+                            <button type="submit" class="btn-green w-full py-2 text-xs font-bold">+ Panier</button>
+                        </form>
+                        {% else %}
+                        <button disabled
+                            class="flex-1 bg-gray-100 text-gray-400 py-2 text-xs rounded-xl cursor-not-allowed">Indisponible</button>
+                        {% endif %}
+                        <a href="{% url 'boutique:detail' produit.slug %}"
+                            class="btn-secondary py-2 px-3 text-xs">🔍</a>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="text-center py-20">
+            <div class="w-20 h-20 bg-green-50 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                <svg class="w-10 h-10 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+                </svg>
+            </div>
+            <h3 class="text-xl font-bold text-gray-900 mb-2">Boutique en cours de remplissage</h3>
+            <p class="text-gray-500 mb-4">Nos produits arrivent bientôt. Contactez-nous pour pré-commander.</p>
+            <a href="https://wa.me/{{ KCOMAT.whatsapp }}" target="_blank" class="btn-green px-6 py-3">Commander sur
+                WhatsApp</a>
+        </div>
+        {% endif %}
+    </div>
+</section>
+
+{% endblock %}

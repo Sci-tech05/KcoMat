@@ -1,0 +1,132 @@
+{% extends 'base.html' %}
+{% load kcomat_tags %}
+
+{% block title %}Services — KcoMat{% endblock %}
+
+{% block content %}
+<section class="page-hero">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="max-w-3xl mx-auto text-center">
+            <h1 class="text-4xl md:text-5xl font-black text-white mb-4">
+                Solutions <span class="text-blue-400">sur mesure</span>
+            </h1>
+            <p class="text-gray-300 text-lg">
+                Développement web & mobile, domotique, électronique, formation personnalisée — nous concrétisons vos projets tech.
+            </p>
+        </div>
+    </div>
+</section>
+
+<section class="py-20 bg-gray-50">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        {% if services %}
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {% for service in services %}
+            <a href="{% url 'services:detail' service.slug %}"
+                class="group relative bg-white rounded-2xl shadow-sm border border-gray-100 hover:shadow-xl hover:-translate-y-1 transition-all duration-300 overflow-hidden block">
+                <!-- Image OU barre colorée -->
+                {% if service.image %}
+                <div class="relative overflow-hidden h-40">
+                    <img src="{{ service.image.url }}" alt="{{ service.titre }}"
+                         class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
+                    <div class="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent"></div>
+                    <!-- Icône flottante par-dessus l'image -->
+                    <div class="absolute bottom-3 left-4 w-11 h-11 rounded-xl flex items-center justify-center text-2xl shadow-md service-icon" data-color="{{ service.couleur }}">
+                        {{ service.icone }}
+                    </div>
+                </div>
+                {% else %}
+                <div class="h-1.5 w-full service-bar" data-color="{{ service.couleur }}"></div>
+                {% endif %}
+                <div class="p-7 text-center">
+                    <!-- Icône (si pas d'image) -->
+                    {% if not service.image %}
+                    <div class="w-16 h-16 rounded-2xl flex items-center justify-center text-3xl mb-5 mx-auto group-hover:scale-110 transition-transform duration-300 service-icon" data-color="{{ service.couleur }}">
+                        {{ service.icone }}
+                    </div>
+                    {% endif %}
+                    <!-- Titre -->
+                    <h2 class="text-lg font-bold text-gray-900 mb-2 group-hover:text-blue-600 transition-colors">{{ service.titre }}</h2>
+                    <!-- Description -->
+                    <p class="text-sm text-gray-500 leading-relaxed mb-6">{{ service.description_courte }}</p>
+                    <!-- Footer -->
+                    <div class="flex items-center justify-center gap-5 pt-4 border-t border-gray-100">
+                        <span class="text-xs text-gray-400 flex items-center gap-1">
+                            <svg class="w-3.5 h-3.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+                            Lokossa, Bénin
+                        </span>
+                        <span class="text-xs font-semibold text-blue-600 flex items-center gap-1 group-hover:gap-2 transition-all">
+                            Devis gratuit
+                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+                        </span>
+                    </div>
+                </div>
+            </a>
+            {% endfor %}
+        </div>
+        {% else %}
+        <!-- Services par défaut (aucun en base) -->
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {% for s in "Développement Web & Mobile|🌐|#2563eb|from-blue-500 to-blue-700|Création de sites web et applications mobiles sur mesure pour votre activité.~Domotique & IoT|🏠|#16a34a|from-green-500 to-green-700|Installation de maisons intelligentes avec capteurs et automatisation complète.~Formation sur site|🎓|#7c3aed|from-purple-500 to-purple-700|Formations techniques personnalisées dispensées dans vos locaux ou les nôtres.~Électronique embarquée|🔌|#ea580c|from-orange-500 to-orange-700|Conception et développement de cartes électroniques et systèmes embarqués.~Sécurité informatique|🔒|#dc2626|from-red-500 to-red-700|Audit de sécurité et mise en place de caméras pour protéger vos systèmes.~Pilotage de drone|🚁|#0284c7|from-sky-500 to-sky-700|Formation au pilotage et utilisation professionnelle de drones pour vos projets."|split:"~" %}
+            {% with parts=s|split:"|" %}
+            <div class="group relative bg-white rounded-2xl shadow-sm border border-gray-100 hover:shadow-xl hover:-translate-y-1 transition-all duration-300 overflow-hidden">
+                <div class="h-1.5 w-full bg-gradient-to-r {{ parts.3 }}"></div>
+                <div class="p-7 text-center">
+                    <div class="w-16 h-16 rounded-2xl flex items-center justify-center text-3xl mb-5 mx-auto group-hover:scale-110 transition-transform duration-300 service-icon-default" data-color="{{ parts.2 }}">
+                        {{ parts.1 }}
+                    </div>
+                    <h3 class="text-lg font-bold text-gray-900 mb-2 group-hover:text-blue-600 transition-colors">{{ parts.0 }}</h3>
+                    <p class="text-sm text-gray-500 leading-relaxed mb-6">{{ parts.4 }}</p>
+                    <div class="flex items-center justify-center gap-5 pt-4 border-t border-gray-100">
+                        <span class="text-xs text-gray-400 flex items-center gap-1">
+                            <svg class="w-3.5 h-3.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+                            Lokossa, Bénin
+                        </span>
+                        <a href="{% url 'core:contact' %}" class="text-xs font-semibold text-blue-600 flex items-center gap-1 hover:gap-2 transition-all">
+                            Devis gratuit
+                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+                        </a>
+                    </div>
+                </div>
+            </div>
+            {% endwith %}
+            {% endfor %}
+        </div>
+        {% endif %}
+    </div>
+</section>
+
+<!-- CTA -->
+<section class="py-16 bg-gradient-to-r from-blue-900 to-blue-700 text-white text-center">
+    <div class="max-w-3xl mx-auto px-4">
+        <h2 class="text-3xl font-black mb-3">Un projet en tête ?</h2>
+        <p class="text-blue-200 mb-8">Contactez-nous pour discuter de votre projet et obtenir un devis gratuit.</p>
+        <div class="flex flex-col sm:flex-row gap-4 justify-center">
+            <a href="{% url 'core:contact' %}" class="btn-primary px-8 py-3.5 font-bold">Demander un devis</a>
+            <a href="https://wa.me/{{ KCOMAT.whatsapp }}" target="_blank"
+                class="btn-green px-8 py-3.5 font-bold">WhatsApp</a>
+        </div>
+    </div>
+</section>
+{% block extra_js %}
+<script>
+    // Icônes services DB : fond coloré semi-transparent
+    document.querySelectorAll('.service-icon[data-color]').forEach(function (el) {
+        var c = el.dataset.color || '#2563eb';
+        el.style.backgroundColor = c + '22';
+        el.style.color = c;
+    });
+    // Barre top gradient services DB
+    document.querySelectorAll('.service-bar[data-color]').forEach(function (el) {
+        var c = el.dataset.color || '#2563eb';
+        el.style.background = 'linear-gradient(to right, ' + c + ', ' + c + 'aa)';
+    });
+    // Icônes services défaut
+    document.querySelectorAll('.service-icon-default[data-color]').forEach(function (el) {
+        var c = el.dataset.color || '#2563eb';
+        el.style.backgroundColor = c + '22';
+        el.style.color = c;
+    });
+</script>
+{% endblock %}
+{% endblock %}

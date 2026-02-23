@@ -1,0 +1,80 @@
+{% extends 'base.html' %}
+
+{% block title %}Portfolio — Projets KcoMat{% endblock %}
+
+{% block content %}
+<section class="page-hero">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="max-w-3xl mx-auto text-center">
+            <h1 class="text-4xl md:text-5xl font-black text-white mb-4">Nos <span class="text-purple-400">réalisations</span></h1>
+            <p class="text-gray-300 text-lg">Découvrez les projets concrets réalisés par KcoMat pour des clients et apprenants au Bénin.</p>
+        </div>
+    </div>
+</section>
+
+<section class="py-16 bg-gray-50">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        {% if categories %}
+        <div class="flex flex-wrap gap-3 mb-8">
+            <a href="{% url 'projets:liste' %}" class="filter-tab {% if not cat_active %}active{% endif %}">Tous</a>
+            {% for cat in categories %}
+            <a href="?categorie={{ cat.slug }}" class="filter-tab {% if cat_active == cat.slug %}active{% endif %}">{{ cat.nom }}</a>
+            {% endfor %}
+        </div>
+        {% endif %}
+
+        {% if projets %}
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {% for projet in projets %}
+            <a href="{% url 'projets:detail' projet.slug %}"
+                class="card group hover:shadow-lg transition-all hover:-translate-y-1 overflow-hidden p-0">
+                <!-- Image -->
+                <div class="h-52 overflow-hidden bg-gradient-to-br from-purple-900 to-purple-700 relative">
+                    {% if projet.image_principale %}
+                    <img src="{{ projet.image_principale.url }}" alt="{{ projet.titre }}"
+                        class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
+                    {% endif %}
+                    <div class="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
+                    {% if projet.categorie %}
+                    <div class="absolute top-3 left-3">
+                        <span class="bg-purple-600 text-white text-xs font-bold px-2.5 py-1 rounded-full">{{ projet.categorie.nom }}</span>
+                    </div>
+                    {% endif %}
+                    <!-- Technologies overlay -->
+                    <div class="absolute bottom-3 left-3 flex flex-wrap gap-1">
+                        {% for tech in projet.get_technologies_list|slice:":3" %}
+                        <span class="bg-black/50 backdrop-blur-sm text-white text-xs px-2 py-0.5 rounded-full">{{ tech }}</span>
+                        {% endfor %}
+                    </div>
+                </div>
+                <!-- Info -->
+                <div class="p-5">
+                    <h3 class="font-bold text-gray-900 mb-1">{{ projet.titre }}</h3>
+                    <p class="text-sm text-gray-500 line-clamp-2">{{ projet.description_courte }}</p>
+                    <div
+                        class="mt-3 flex items-center text-blue-600 text-sm font-medium gap-1 group-hover:gap-2 transition-all">
+                        <span>Voir le projet</span>
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                        </svg>
+                    </div>
+                </div>
+            </a>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="text-center py-20">
+            <div class="w-20 h-20 bg-purple-50 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                <svg class="w-10 h-10 text-purple-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                </svg>
+            </div>
+            <h3 class="text-xl font-bold text-gray-900 mb-2">Portfolio en construction</h3>
+            <p class="text-gray-400 mb-6">Nos projets seront bientôt visibles ici.</p>
+            <a href="{% url 'core:contact' %}" class="btn-primary px-6 py-3">Confier un projet</a>
+        </div>
+        {% endif %}
+    </div>
+</section>
+{% endblock %}

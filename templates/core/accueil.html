@@ -1,0 +1,639 @@
+{% extends 'base.html' %}
+{% load humanize %}
+{% load kcomat_tags %}
+{% load static %}
+
+{% block title %}Accueil{% endblock %}
+
+{% block content %}
+
+<!-- ===================================================
+     HERO SECTION
+=================================================== -->
+<section class="relative min-h-screen flex items-center overflow-hidden">
+    <!-- Background video -->
+    <video
+        autoplay
+        loop
+        muted
+        playsinline
+        class="absolute inset-0 w-full h-full object-cover z-0"
+        poster="{% static 'img/hero-poster.jpg' %}">
+        <source src="{% static 'img/hero-video.mp4' %}" type="video/mp4">
+    </video>
+
+    <!-- Dark overlay + gradient tint -->
+    <div class="absolute inset-0 bg-gradient-to-br from-blue-950/80 via-gray-700/75 to-blue-900/70 z-10"></div>
+
+    <!-- Animated blobs (kept on top of overlay) -->
+    <div class="absolute inset-0 overflow-hidden pointer-events-none z-10">
+        <div class="absolute -top-40 -right-40 w-96 h-96 bg-blue-600/20 rounded-full blur-3xl"></div>
+        <div class="absolute -bottom-40 -left-40 w-96 h-96 bg-green-500/15 rounded-full blur-3xl"></div>
+        <div class="absolute inset-0 opacity-5 hero-grid-pattern"></div>
+    </div>
+
+    <div class="relative z-20 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 lg:py-32">
+        <div class="grid lg:grid-cols-2 gap-12 items-center">
+            <!-- Left: Text -->
+            <div class="animate-fade-in-up">
+
+                <h1 class="text-4xl sm:text-5xl lg:text-6xl font-black text-white leading-tight mb-6">
+                    Maîtrisez les
+                    <span class="text-gradient block">technologies</span>
+                    d'aujourd'hui pour construire
+                    <span class="text-green-400"> l'Afrique de demain</span>
+                </h1>
+
+                <p class="text-lg text-gray-300 leading-relaxed mb-8 max-w-xl">
+                    KcoMat propose des formations pratiques en électronique, domotique, IA, drones et développement
+                    web.
+                    Rejoignez des centaines d'apprenants qui bâtissent l'avenir technologique du Bénin.
+                </p>
+
+                <div class="flex flex-wrap gap-4">
+                    <a href="{% url 'formations:liste' %}" class="btn-primary text-base px-7 py-3.5">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.746 0 3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+                        </svg>
+                        Voir les formations
+                    </a>
+                    <a href="{% url 'boutique:liste' %}"
+                        class="btn-outline text-base px-7 py-3.5 border-white/30 text-white hover:bg-white hover:text-gray-900">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
+                        </svg>
+                        Boutique composants
+                    </a>
+                </div>
+
+                <!-- Trust indicators -->
+                <div class="flex flex-wrap items-center gap-6 mt-10 pt-8 border-t border-white/10">
+                    <div class="flex items-center gap-2 text-gray-300 text-sm">
+                        <svg class="w-5 h-5 text-green-400" fill="currentColor" viewBox="0 0 20 20">
+                            <path fill-rule="evenodd"
+                                d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                                clip-rule="evenodd" />
+                        </svg>
+                        Formation certifiée
+                    </div>
+                    <div class="flex items-center gap-2 text-gray-300 text-sm">
+                        <svg class="w-5 h-5 text-green-400" fill="currentColor" viewBox="0 0 20 20">
+                            <path fill-rule="evenodd"
+                                d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                                clip-rule="evenodd" />
+                        </svg>
+                        100% pratique
+                    </div>
+                    <div class="flex items-center gap-2 text-gray-300 text-sm">
+                        <svg class="w-5 h-5 text-green-400" fill="currentColor" viewBox="0 0 20 20">
+                            <path fill-rule="evenodd"
+                                d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                                clip-rule="evenodd" />
+                        </svg>
+                        Paiement Mobile Money
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right: Floating cards -->
+            <div class="hidden lg:block relative">
+                <!-- Main card -->
+                <div class="relative">
+                    <div class="bg-white/10 backdrop-blur-md border border-white/20 rounded-3xl p-8 text-white">
+                        <div class="text-sm font-semibold text-blue-300 mb-2">🔥 Formation populaire</div>
+                        <h3 class="text-2xl font-bold mb-1">Domotique & IoT</h3>
+                        <p class="text-gray-300 text-sm mb-4">Contrôlez votre maison avec des capteurs intelligents</p>
+                        <div class="flex items-center justify-between">
+                            <span class="text-3xl font-black text-green-400">20 000 <span
+                                    class="text-sm font-medium text-gray-300">FCFA</span></span>
+                            <a href="{% url 'formations:liste' %}"
+                                class="bg-blue-600 hover:bg-blue-500 text-white text-sm font-semibold px-4 py-2 rounded-lg transition-colors">S'inscrire</a>
+                        </div>
+                    </div>
+
+                    <!-- Floating stat cards -->
+                    <div class="absolute -top-6 -right-6 bg-white rounded-2xl shadow-xl p-4 flex items-center gap-3">
+                        <div class="w-10 h-10 bg-green-100 rounded-xl flex items-center justify-center">
+                            <svg class="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
+                            </svg>
+                        </div>
+                        <div>
+                            <div class="text-xl font-black text-gray-900">200+</div>
+                            <div class="text-xs text-gray-500">Apprenants</div>
+                        </div>
+                    </div>
+
+                    <div class="absolute -bottom-6 -left-6 bg-white rounded-2xl shadow-xl p-4 flex items-center gap-3">
+                        <div class="w-10 h-10 bg-blue-100 rounded-xl flex items-center justify-center">
+                            <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z" />
+                            </svg>
+                        </div>
+                        <div>
+                            <div class="text-xl font-black text-gray-900">10+</div>
+                            <div class="text-xs text-gray-500">Formations</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bottom wave -->
+    <div class="absolute bottom-0 left-0 right-0 z-20">
+        <svg viewBox="0 0 1440 80" xmlns="http://www.w3.org/2000/svg" class="w-full fill-gray-50">
+            <path
+                d="M0,64L80,58.7C160,53,320,43,480,48C640,53,800,75,960,74.7C1120,75,1280,53,1360,42.7L1440,32L1440,80L1360,80C1280,80,1120,80,960,80C800,80,640,80,480,80C320,80,160,80,80,80L0,80Z" />
+        </svg>
+    </div>
+</section>
+
+
+<!-- ===================================================
+     STATS SECTION
+=================================================== -->
+<section class="py-16 bg-gray-50">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-6">
+            {% if statistiques %}
+            {% for stat in statistiques %}
+            <div class="stat-card animate-fade-in-up">
+                <div class="w-12 h-12 bg-blue-50 rounded-2xl flex items-center justify-center mb-3">
+                    <svg class="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M13 10V3L4 14h7v7l9-11h-7z" />
+                    </svg>
+                </div>
+                <div class="text-3xl font-black text-gray-900 mb-1">{{ stat.valeur }}</div>
+                <div class="text-sm text-gray-500">{{ stat.libelle }}</div>
+            </div>
+            {% endfor %}
+            {% else %}
+            <!-- Default stats if none in DB -->
+            <div class="stat-card">
+                <div class="w-12 h-12 bg-blue-50 rounded-2xl flex items-center justify-center mb-3">
+                    <svg class="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
+                    </svg>
+                </div>
+                <div class="text-3xl font-black text-gray-900 mb-1">200+</div>
+                <div class="text-sm text-gray-500">Apprenants formés</div>
+            </div>
+            <div class="stat-card">
+                <div class="w-12 h-12 bg-green-50 rounded-2xl flex items-center justify-center mb-3">
+                    <svg class="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.746 0 3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+                    </svg>
+                </div>
+                <div class="text-3xl font-black text-gray-900 mb-1">10+</div>
+                <div class="text-sm text-gray-500">Formations disponibles</div>
+            </div>
+            <div class="stat-card">
+                <div class="w-12 h-12 bg-purple-50 rounded-2xl flex items-center justify-center mb-3">
+                    <svg class="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z" />
+                    </svg>
+                </div>
+                <div class="text-3xl font-black text-gray-900 mb-1">50+</div>
+                <div class="text-sm text-gray-500">Projets réalisés</div>
+            </div>
+            <div class="stat-card">
+                <div class="w-12 h-12 bg-orange-50 rounded-2xl flex items-center justify-center mb-3">
+                    <svg class="w-6 h-6 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" />
+                    </svg>
+                </div>
+                <div class="text-3xl font-black text-gray-900 mb-1">98%</div>
+                <div class="text-sm text-gray-500">Satisfaction apprenants</div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</section>
+
+
+<!-- ===================================================
+     FORMATIONS PHARES
+=================================================== -->
+<section class="py-20 bg-white">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <!-- Header -->
+        <div class="text-center mb-12">
+            <div class="section-tag mx-auto justify-center">
+                <svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20">
+                    <path
+                        d="M9 4.804A7.968 7.968 0 005.5 4c-1.255 0-2.443.29-3.5.804v10A7.969 7.969 0 015.5 14c1.669 0 3.218.51 4.5 1.385A7.962 7.962 0 0114.5 14c1.255 0 2.443.29 3.5.804v-10A7.968 7.968 0 0014.5 4c-1.255 0-2.443.29-3.5.804V12a1 1 0 11-2 0V4.804z" />
+                </svg>
+                Nos Formations
+            </div>
+            <h2 class="section-title">Formations techniques de qualité</h2>
+            <div class="section-divider mx-auto"></div>
+            <p class="section-subtitle mx-auto text-center mt-3">
+                De la domotique à l'intelligence artificielle, maîtrisez les technologies qui façonnent l'Afrique de
+                demain.
+            </p>
+        </div>
+
+        <!-- Formation Grid -->
+        {% if formations_vedette %}
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {% for formation in formations_vedette %}
+            <a href="{% url 'formations:detail' formation.slug %}" class="formation-card block">
+                <!-- Image -->
+                <div class="relative overflow-hidden h-48 bg-gradient-to-br from-blue-900 to-blue-700">
+                    {% if formation.image %}
+                    <img src="{{ formation.image.url }}" alt="{{ formation.titre }}"
+                        class="w-full h-full object-cover" />
+                    {% else %}
+                    <div class="w-full h-full flex items-center justify-center">
+                        <svg class="w-20 h-20 text-blue-400/50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1"
+                                d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.746 0 3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+                        </svg>
+                    </div>
+                    {% endif %}
+                    <!-- Badges overlay -->
+                    <div class="absolute top-3 left-3 flex gap-2">
+                        {% if formation.nouveau %}<span class="badge-nouveau">Nouveau</span>{% endif %}
+                        {% if formation.niveau %}<span class="badge badge-blue">{{ formation.get_niveau_display }}</span>{% endif %}
+                    </div>
+                    <!-- Category -->
+                    {% if formation.categorie %}
+                    <div class="absolute top-3 right-3">
+                        <span class="badge badge-gray bg-black/40 text-white border-0">{{ formation.categorie.nom }}</span>
+                    </div>
+                    {% endif %}
+                </div>
+                <!-- Content -->
+                <div class="p-5">
+                    <h3
+                        class="font-bold text-gray-900 text-lg mb-1 group-hover:text-blue-600 transition-colors line-clamp-1">
+                        {{ formation.titre }}</h3>
+                    <p class="text-sm text-gray-500 mb-3 line-clamp-2">{{ formation.description_courte }}</p>
+                    <div class="flex items-center gap-2 text-xs text-gray-400 mb-4">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        {{ formation.duree }}
+                    </div>
+                    <div class="flex items-center justify-between pt-3 border-t border-gray-100">
+                        <div>
+                            <span class="text-2xl font-black text-blue-600">{{ formation.prix|intcomma }}</span>
+                            <span class="text-xs text-gray-400 ml-1">FCFA</span>
+                        </div>
+                        <span
+                            class="text-xs font-semibold text-blue-600 bg-blue-50 px-3 py-1.5 rounded-lg group-hover:bg-blue-600 group-hover:text-white transition-colors">
+                            S'inscrire →
+                        </span>
+                    </div>
+                </div>
+            </a>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="text-center py-16">
+          <div class="w-16 h-16 bg-blue-50 rounded-2xl flex items-center justify-center mx-auto mb-4">
+            <svg class="w-8 h-8 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.746 0 3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/></svg>
+          </div>
+          <h3 class="font-bold text-gray-900 mb-2">Formations bientôt disponibles</h3>
+          <p class="text-gray-500 text-sm mb-5">Nos formations sont en cours de mise en ligne. Contactez-nous pour être notifié.</p>
+          <a href="https://wa.me/{{ KCOMAT.whatsapp }}?text=Bonjour%20KcoMat%2C%20quelles%20formations%20sont%20disponibles%20%3F" target="_blank" class="btn-primary px-6 py-2.5 text-sm">Nous contacter sur WhatsApp</a>
+        </div>
+        {% endif %}
+
+        <div class="text-center mt-10">
+            <a href="{% url 'formations:liste' %}" class="btn-primary px-8 py-3.5">
+                Voir toutes les formations
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M17 8l4 4m0 0l-4 4m4-4H3" />
+                </svg>
+            </a>
+        </div>
+    </div>
+</section>
+
+
+<!-- ===================================================
+     SERVICES SECTION
+=================================================== -->
+<section class="py-20 bg-gradient-to-br from-gray-900 via-blue-950 to-gray-900 text-white relative overflow-hidden">
+    <div class="absolute inset-0 opacity-5 dot-bg-pattern"></div>
+    <div class="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="text-center mb-12">
+            <div class="section-tag mx-auto justify-center bg-blue-600/20 border-blue-500/30 text-blue-300">
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M13 10V3L4 14h7v7l9-11h-7z" />
+                </svg>
+                Nos Services
+            </div>
+            <h2 class="section-title text-white">Des solutions technologiques<br /><span class="text-blue-400">sur
+                    mesure pour vous</span></h2>
+            <div class="section-divider mx-auto"></div>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
+            {% if services %}
+            {% for service in services %}
+            <a href="{% url 'services:detail' service.slug %}"
+                class="group bg-white/5 hover:bg-white/10 border border-white/10 hover:border-blue-500/50 rounded-2xl p-6 transition-all duration-300 hover:-translate-y-1 text-center">
+                <div
+                    class="w-12 h-12 bg-blue-600/30 rounded-xl flex items-center justify-center mb-4 group-hover:bg-blue-600 transition-colors mx-auto">
+                    <svg class="w-6 h-6 text-blue-300 group-hover:text-white" fill="none" stroke="currentColor"
+                        viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M13 10V3L4 14h7v7l9-11h-7z" />
+                    </svg>
+                </div>
+                <h3 class="font-bold text-white mb-2 text-sm">{{ service.titre }}</h3>
+                <p class="text-gray-400 text-xs leading-relaxed">{{ service.description_courte|truncatechars:80 }}</p>
+            </a>
+            {% endfor %}
+            {% else %}
+            <!-- Default services -->
+            {% for titre in "Installations électriques,Automatisation intelligente,Domotique,Installations photovoltaïques,Caméras de surveillance,Dépannage électrique,Solutions sur mesure"|split:"," %}
+            <div
+                class="group bg-white/5 hover:bg-white/10 border border-white/10 hover:border-blue-500/50 rounded-2xl p-6 transition-all duration-300 hover:-translate-y-1 text-center">
+                <div
+                    class="w-12 h-12 bg-blue-600/30 rounded-xl flex items-center justify-center mb-4 group-hover:bg-blue-600 transition-colors mx-auto">
+                    <svg class="w-6 h-6 text-blue-300 group-hover:text-white" fill="none" stroke="currentColor"
+                        viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M13 10V3L4 14h7v7l9-11h-7z" />
+                    </svg>
+                </div>
+                <h3 class="font-bold text-white mb-2 text-sm">{{ titre }}</h3>
+                <p class="text-gray-400 text-xs leading-relaxed">Service professionnel fourni par nos experts
+                    certifiés.
+                </p>
+            </div>
+            {% endfor %}
+            {% endif %}
+        </div>
+
+        <div class="text-center mt-10">
+            <a href="{% url 'services:liste' %}"
+                class="btn-outline border-white/30 text-white hover:bg-white hover:text-gray-900 px-8 py-3.5">
+                Découvrir tous nos services
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M17 8l4 4m0 0l-4 4m4-4H3" />
+                </svg>
+            </a>
+        </div>
+    </div>
+</section>
+
+
+<!-- ===================================================
+     COMPOSANTS POPULAIRES
+=================================================== -->
+<section class="py-20 bg-gray-50">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="text-center mb-12">
+            <div class="section-tag mx-auto justify-center">
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M9 3H5a2 2 0 00-2 2v4m6-6h10a2 2 0 012 2v4M9 3v18m0 0h10a2 2 0 002-2V9M9 21H5a2 2 0 01-2-2V9m0 0h18" />
+                </svg>
+                Boutique
+            </div>
+            <h2 class="section-title">Composants électroniques</h2>
+            <div class="section-divider mx-auto"></div>
+            <p class="section-subtitle mx-auto text-center mt-3">Arduinos, capteurs, modules ESP32, alimentations et
+                bien plus. Livraison partout au Bénin.</p>
+        </div>
+
+        
+        <div class="text-center mt-10">
+            <a href="{% url 'boutique:liste' %}" class="btn-primary px-8 py-3.5">
+                Voir tous les composants
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M17 8l4 4m0 0l-4 4m4-4H3" />
+                </svg>
+            </a>
+        </div>
+    </div>
+</section>
+
+
+<!-- ===================================================
+     POURQUOI KCOMAT
+=================================================== -->
+<section class="py-20 bg-white">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="grid lg:grid-cols-2 gap-16 items-center">
+            <!-- Left -->
+            <div>
+                <div class="section-tag">À propos de KcoMat</div>
+                <h2 class="section-title mb-4">Pourquoi choisir <span class="text-gradient">KcoMat</span> ?</h2>
+                <div class="section-divider"></div>
+
+                <div class="space-y-5">
+                    <div class="flex items-start gap-3">
+                        <div
+                            class="w-6 h-6 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
+                            <svg class="w-3.5 h-3.5 text-green-600" fill="currentColor" viewBox="0 0 20 20">
+                                <path fill-rule="evenodd"
+                                    d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                                    clip-rule="evenodd" />
+                            </svg>
+                        </div>
+                        <span class="text-gray-700 font-medium">Formations 100% pratiques avec matériel réel</span>
+                    </div>
+                    <div class="flex items-start gap-3">
+                        <div
+                            class="w-6 h-6 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
+                            <svg class="w-3.5 h-3.5 text-green-600" fill="currentColor" viewBox="0 0 20 20">
+                                <path fill-rule="evenodd"
+                                    d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                                    clip-rule="evenodd" />
+                            </svg>
+                        </div>
+                        <span class="text-gray-700 font-medium">Formateurs experts certifiés</span>
+                    </div>
+                    <div class="flex items-start gap-3">
+                        <div
+                            class="w-6 h-6 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
+                            <svg class="w-3.5 h-3.5 text-green-600" fill="currentColor" viewBox="0 0 20 20">
+                                <path fill-rule="evenodd"
+                                    d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                                    clip-rule="evenodd" />
+                            </svg>
+                        </div>
+                        <span class="text-gray-700 font-medium">Attestation officielle à la fin de chaque
+                            formation</span>
+                    </div>
+                    <div class="flex items-start gap-3">
+                        <div
+                            class="w-6 h-6 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
+                            <svg class="w-3.5 h-3.5 text-green-600" fill="currentColor" viewBox="0 0 20 20">
+                                <path fill-rule="evenodd"
+                                    d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                                    clip-rule="evenodd" />
+                            </svg>
+                        </div>
+                        <span class="text-gray-700 font-medium">Support WhatsApp disponible 7j/7</span>
+                    </div>
+                    <div class="flex items-start gap-3">
+                        <div
+                            class="w-6 h-6 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
+                            <svg class="w-3.5 h-3.5 text-green-600" fill="currentColor" viewBox="0 0 20 20">
+                                <path fill-rule="evenodd"
+                                    d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                                    clip-rule="evenodd" />
+                            </svg>
+                        </div>
+                        <span class="text-gray-700 font-medium">Composants électroniques en vente directe</span>
+                    </div>
+                    <div class="flex items-start gap-3">
+                        <div
+                            class="w-6 h-6 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
+                            <svg class="w-3.5 h-3.5 text-green-600" fill="currentColor" viewBox="0 0 20 20">
+                                <path fill-rule="evenodd"
+                                    d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                                    clip-rule="evenodd" />
+                            </svg>
+                        </div>
+                        <span class="text-gray-700 font-medium">Prix accessibles adaptés au contexte africain</span>
+                    </div>
+                </div>
+
+                <div class="flex gap-4 mt-8">
+                    <a href="{% url 'core:a_propos' %}" class="btn-primary px-6 py-3">En savoir plus</a>
+                    <a href="{% url 'core:contact' %}" class="btn-secondary px-6 py-3">Nous contacter</a>
+                </div>
+            </div>
+
+            <!-- Right: Feature cards grid -->
+            <div class="grid grid-cols-2 gap-4">
+                <div class="bg-blue-50 rounded-2xl p-6 col-span-2 text-center">
+                    <div class="text-3xl mb-2">🎓</div>
+                    <h3 class="font-bold text-gray-900 mb-1">Formation certifiante</h3>
+                    <p class="text-sm text-gray-600">Toute inscription de 2 000 FCFA donne droit à une attestation de participation officielle KcoMat.</p>
+                </div>
+                <div class="bg-green-50 rounded-2xl p-6 text-center">
+                    <div class="text-2xl mb-2">⚡</div>
+                    <h3 class="font-bold text-gray-900 mb-1 text-sm">100% pratique</h3>
+                    <p class="text-xs text-gray-600">Ateliers mains dans la masse avec du vrai matériel.</p>
+                </div>
+                <div class="bg-purple-50 rounded-2xl p-6 text-center">
+                    <div class="text-2xl mb-2">🤖</div>
+                    <h3 class="font-bold text-gray-900 mb-1 text-sm">IA & Drones</h3>
+                    <p class="text-xs text-gray-600">Technologies de pointe accessibles au Bénin.</p>
+                </div>
+                <div class="bg-orange-50 rounded-2xl p-6 text-center">
+                    <div class="text-2xl mb-2">📱</div>
+                    <h3 class="font-bold text-gray-900 mb-1 text-sm">Mobile Money</h3>
+                    <p class="text-xs text-gray-600">Paiement facile via Fedapay / MTN / Moov.</p>
+                </div>
+                <div class="bg-red-50 rounded-2xl p-6 text-center">
+                    <div class="text-2xl mb-2">📍</div>
+                    <h3 class="font-bold text-gray-900 mb-1 text-sm">Lokossa, Bénin</h3>
+                    <p class="text-xs text-gray-600">Ancré dans notre communauté, ouvert au monde.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+
+<!-- ===================================================
+     TÉMOIGNAGES
+=================================================== -->
+{% if temoignages %}
+<section class="py-20 bg-gray-50">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="text-center mb-12">
+            <div class="section-tag mx-auto justify-center">
+                <svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20">
+                    <path
+                        d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                </svg>
+                Témoignages
+            </div>
+            <h2 class="section-title">Ce que disent nos apprenants</h2>
+            <div class="section-divider mx-auto"></div>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {% for temoignage in temoignages %}
+            <div class="card p-6">
+                <!-- Stars -->
+                <div class="flex gap-1 mb-4">
+                    {% for i in "12345" %}
+                    <svg class="w-4 h-4 {% if forloop.counter <= temoignage.note %}text-yellow-400{% else %}text-gray-200{% endif %}"
+                        fill="currentColor" viewBox="0 0 20 20">
+                        <path
+                            d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                    </svg>
+                    {% endfor %}
+                </div>
+                <p class="text-gray-600 text-sm leading-relaxed italic mb-5">"{{ temoignage.texte }}"</p>
+                <div class="flex items-center gap-3">
+                    {% if temoignage.photo %}
+                    <img src="{{ temoignage.photo.url }}" alt="{{ temoignage.nom }}"
+                        class="w-10 h-10 rounded-full object-cover" />
+                    {% else %}
+                    <div class="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
+                        <span class="text-blue-600 font-bold text-sm">{{ temoignage.nom|first }}</span>
+                    </div>
+                    {% endif %}
+                    <div>
+                        <div class="font-semibold text-gray-900 text-sm">{{ temoignage.nom }}</div>
+                        {% if temoignage.poste %}<div class="text-xs text-gray-500">{{ temoignage.poste }}</div>{% endif %}
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</section>
+{% endif %}
+
+
+<!-- ===================================================
+     CTA SECTION
+=================================================== -->
+<section class="py-20 bg-gradient-to-r from-blue-600 to-blue-800 text-white">
+    <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+        <h2 class="text-3xl md:text-4xl font-black mb-4">Prêt à maîtriser les technologies ?</h2>
+        <p class="text-blue-100 text-lg mb-8 max-w-2xl mx-auto">
+            Rejoignez des centaines d'apprenants de KcoMat. Inscrivez-vous à une formation ou commandez vos composants
+            aujourd'hui.
+        </p>
+        <div class="flex flex-col sm:flex-row gap-4 justify-center">
+            <a href="{% url 'formations:liste' %}"
+                class="bg-white text-blue-700 hover:bg-blue-50 font-bold px-8 py-4 rounded-xl transition-all hover:shadow-xl hover:-translate-y-0.5 inline-flex items-center gap-2">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.746 0 3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+                </svg>
+                S'inscrire à une formation
+            </a>
+            <a href="https://wa.me/{{ KCOMAT.whatsapp }}?text=Bonjour%20KcoMat%2C%20j%27ai%20une%20question%20!"
+                target="_blank" rel="noopener"
+                class="bg-green-500 hover:bg-green-400 text-white font-bold px-8 py-4 rounded-xl transition-all hover:shadow-xl hover:-translate-y-0.5 inline-flex items-center gap-2">
+                <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                    <path
+                        d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z" />
+                </svg>
+                Contacter sur WhatsApp
+            </a>
+        </div>
+    </div>
+</section>
+
+{% endblock %}
