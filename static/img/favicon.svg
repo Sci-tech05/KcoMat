@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <!-- Fond bleu arrondi -->
+  <rect width="64" height="64" rx="14" fill="#1d4ed8"/>
+
+  <!-- Lettre K stylisée -->
+  <text x="10" y="48" font-family="Arial Black, sans-serif" font-weight="900" font-size="44" fill="white">K</text>
+
+  <!-- Point vert (accent tech) -->
+  <circle cx="52" cy="14" r="7" fill="#10B981"/>
+</svg>

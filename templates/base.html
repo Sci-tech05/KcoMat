@@ -64,6 +64,10 @@
   {% load static %}
   <link rel="stylesheet" href="{% static 'css/kcomat.css' %}" />
 
+  <!-- Favicon -->
+  <link rel="icon" type="image/svg+xml" href="{% static 'img/favicon.svg' %}" />
+  <link rel="shortcut icon" href="{% static 'img/favicon.svg' %}" />
+
   {% block extra_head %}{% endblock %}
 </head>
 <body class="bg-gray-50 text-gray-900 font-sans antialiased" x-data="{ mobileOpen: false }">
