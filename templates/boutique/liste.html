@@ -52,17 +52,17 @@
 
         <!-- Grille produits -->
         {% if produits %}
-        <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-5">
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
             {% for produit in produits %}
             <div class="product-card group">
                 <!-- Image -->
-                <a href="{% url 'boutique:detail' produit.slug %}" class="relative overflow-hidden h-44 bg-gray-100 rounded-t-2xl block cursor-pointer">
+                <a href="{% url 'boutique:detail' produit.slug %}" class="relative h-44 bg-white rounded-t-2xl block cursor-pointer flex items-center justify-center overflow-hidden">
                     {% if produit.image %}
                     <img src="{{ produit.image.url }}" alt="{{ produit.nom }}"
-                        class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
+                        class="w-full h-full object-contain group-hover:scale-105 transition-transform duration-300 p-2" />
                     {% elif produit.images.first %}
                     <img src="{{ produit.images.first.image.url }}" alt="{{ produit.nom }}"
-                        class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
+                        class="w-full h-full object-contain group-hover:scale-105 transition-transform duration-300 p-2" />
                     {% else %}
                     <div class="w-full h-full flex items-center justify-center text-gray-300">
                         <svg class="w-12 h-12" fill="none" stroke="currentColor" viewBox="0 0 24 24">

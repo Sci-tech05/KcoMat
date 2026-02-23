@@ -5,6 +5,40 @@
 
 {% block title %}Accueil{% endblock %}
 
+{% block extra_head %}
+<style>
+  /* ── Scroll Reveal ── */
+  .reveal {
+    opacity: 0;
+    transform: translateY(28px);
+    transition: opacity 0.65s cubic-bezier(.22,1,.36,1), transform 0.65s cubic-bezier(.22,1,.36,1);
+  }
+  .reveal.in-view { opacity: 1; transform: translateY(0); }
+
+  /* Stagger pour les enfants dans une grille */
+  .stagger > .reveal:nth-child(1) { transition-delay: 0.00s; }
+  .stagger > .reveal:nth-child(2) { transition-delay: 0.08s; }
+  .stagger > .reveal:nth-child(3) { transition-delay: 0.16s; }
+  .stagger > .reveal:nth-child(4) { transition-delay: 0.24s; }
+  .stagger > .reveal:nth-child(5) { transition-delay: 0.32s; }
+  .stagger > .reveal:nth-child(6) { transition-delay: 0.40s; }
+  .stagger > .reveal:nth-child(7) { transition-delay: 0.48s; }
+  .stagger > .reveal:nth-child(8) { transition-delay: 0.56s; }
+
+  /* Cursor clignotant */
+  #hero-typing::after {
+    content: '|';
+    animation: kco-blink 0.7s step-end infinite;
+    color: #60a5fa;
+    margin-left: 1px;
+  }
+  @keyframes kco-blink { 0%,100%{opacity:1} 50%{opacity:0} }
+
+  /* Smooth blobs transition */
+  .hero-blob { transition: transform 0.12s ease-out; }
+</style>
+{% endblock %}
+
 {% block content %}
 
 <!-- ===================================================
@@ -36,6 +70,12 @@
         <div class="grid lg:grid-cols-2 gap-12 items-center">
             <!-- Left: Text -->
             <div class="animate-fade-in-up">
+
+                <!-- Typing badge -->
+                <div class="inline-flex items-center gap-2.5 bg-blue-600/20 border border-blue-500/30 rounded-full px-4 py-1.5 text-blue-300 text-sm font-medium mb-6">
+                  <span class="w-2 h-2 bg-green-400 rounded-full animate-pulse flex-shrink-0"></span>
+                  Apprenez <span id="hero-typing" class="text-white font-semibold">l'électronique</span>
+                </div>
 
                 <h1 class="text-4xl sm:text-5xl lg:text-6xl font-black text-white leading-tight mb-6">
                     Maîtrisez les
@@ -636,4 +676,103 @@
     </div>
 </section>
 
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+
+  // ══════════════════════════════════════════════
+  // 1. SCROLL REVEAL (IntersectionObserver)
+  // ══════════════════════════════════════════════
+  const revealSelectors = ['.stat-card', '.formation-card', '.card'];
+  document.querySelectorAll(revealSelectors.join(',')).forEach(el => el.classList.add('reveal'));
+
+  // Stagger sur les grilles
+  document.querySelectorAll(
+    '.grid.grid-cols-2, .grid.grid-cols-1.md\\:grid-cols-2, .grid.grid-cols-1.sm\\:grid-cols-2, .grid.grid-cols-1.sm\\:grid-cols-2.lg\\:grid-cols-3'
+  ).forEach(g => g.classList.add('stagger'));
+
+  // Section headers
+  document.querySelectorAll('.section-tag, h2.section-title, .section-divider, p.section-subtitle').forEach(el => {
+    el.classList.add('reveal');
+  });
+
+  const revealObs = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        entry.target.classList.add('in-view');
+        revealObs.unobserve(entry.target);
+      }
+    });
+  }, { threshold: 0.10, rootMargin: '0px 0px -30px 0px' });
+  document.querySelectorAll('.reveal').forEach(el => revealObs.observe(el));
+
+  // ══════════════════════════════════════════════
+  // 2. COUNTER ANIMATION sur les stat-cards
+  // ══════════════════════════════════════════════
+  document.querySelectorAll('.stat-card .text-3xl').forEach(el => {
+    const raw = el.textContent.trim();
+    const m = raw.match(/^(\d+)(.*)$/);
+    if (!m) return;
+    const target = parseInt(m[1]);
+    const suffix = m[2] || '';
+    el.textContent = '0' + suffix;
+
+    const cObs = new IntersectionObserver(([entry]) => {
+      if (!entry.isIntersecting) return;
+      cObs.disconnect();
+      const duration = 1500;
+      const t0 = performance.now();
+      const tick = (now) => {
+        const p = Math.min((now - t0) / duration, 1);
+        const eased = 1 - Math.pow(1 - p, 3);
+        el.textContent = Math.floor(eased * target) + suffix;
+        if (p < 1) requestAnimationFrame(tick);
+      };
+      requestAnimationFrame(tick);
+    }, { threshold: 0.6 });
+    cObs.observe(el);
+  });
+
+  // ══════════════════════════════════════════════
+  // 3. TYPING EFFECT dans le hero
+  // ══════════════════════════════════════════════
+  const typingEl = document.getElementById('hero-typing');
+  if (typingEl) {
+    const phrases = [
+      "l'électronique pratique",
+      "la domotique & IoT",
+      "l'intelligence artificielle",
+      "les drones & pilotage",
+      "le développement web",
+    ];
+    let pi = 0, ci = 0, deleting = false;
+    (function type() {
+      const word = phrases[pi];
+      typingEl.textContent = deleting ? word.slice(0, --ci) : word.slice(0, ++ci);
+      let delay = deleting ? 38 : 75;
+      if (!deleting && ci === word.length) { delay = 2200; deleting = true; }
+      else if (deleting && ci === 0) { deleting = false; pi = (pi + 1) % phrases.length; delay = 400; }
+      setTimeout(type, delay);
+    })();
+  }
+
+  // ══════════════════════════════════════════════
+  // 4. PARALLAX sur les blobs du hero
+  // ══════════════════════════════════════════════
+  const hero = document.querySelector('section.relative.min-h-screen');
+  if (hero) {
+    const blobs = hero.querySelectorAll('.blur-3xl');
+    blobs.forEach(b => b.classList.add('hero-blob'));
+    hero.addEventListener('mousemove', (e) => {
+      const rx = (e.clientX / window.innerWidth  - 0.5) * 30;
+      const ry = (e.clientY / window.innerHeight - 0.5) * 30;
+      if (blobs[0]) blobs[0].style.transform = `translate(${rx}px, ${ry}px)`;
+      if (blobs[1]) blobs[1].style.transform = `translate(${-rx}px, ${-ry}px)`;
+    }, { passive: true });
+  }
+
+});
+</script>
 {% endblock %}
