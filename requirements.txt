@@ -13,5 +13,4 @@ django-htmx==1.21.0
 django-extensions==3.2.3
 gunicorn==23.0.0
 python-decouple==3.8
-django-jazzmin==3.0.2       
-gunicorn>=25.0.0
+django-jazzmin==3.0.2
