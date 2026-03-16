@@ -4,10 +4,36 @@ Django settings for KcoMat project — Lokossa, Bénin.
 import os
 from pathlib import Path
 from decouple import config
+from django.core.exceptions import ImproperlyConfigured
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-SECRET_KEY = config('SECRET_KEY', default='django-insecure-kcomat-dev-key-changez-en-prod')
+
+def env_value(name, default=''):
+    """Read env var and ignore common placeholder values from .env.example."""
+    value = config(name, default=default)
+    if isinstance(value, str):
+        cleaned = value.strip().strip('"').strip("'")
+        if cleaned.lower().startswith('your_') or cleaned.lower() in {'changeme', 'change_me'}:
+            return default
+        return cleaned
+    return value
+
+
+def required_env(name, *fallback_names):
+    """Read a required env var (optionally with legacy fallback names)."""
+    value = env_value(name, default='')
+    if value:
+        return value
+
+    for fallback_name in fallback_names:
+        fallback_value = env_value(fallback_name, default='')
+        if fallback_value:
+            return fallback_value
+
+    raise ImproperlyConfigured(f"Missing required environment variable: {name}")
+
+SECRET_KEY = required_env('SECRET_KEY')
 DEBUG = config('DEBUG', default=True, cast=bool)
 ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='localhost,127.0.0.1').split(',')
 
@@ -30,6 +56,7 @@ THIRD_PARTY_APPS = [
 
 LOCAL_APPS = [
     'accounts',
+    'api',
     'core',
     'formations',
     'boutique',
@@ -48,6 +75,7 @@ MIDDLEWARE = [
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
+    'core.admin_security.AdminSecurityMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'django_htmx.middleware.HtmxMiddleware',
@@ -107,6 +135,25 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 LOGIN_URL = '/accounts/connexion/'
 LOGIN_REDIRECT_URL = '/accounts/dashboard/'
 LOGOUT_REDIRECT_URL = '/'
+
+# Admin security
+_admin_url_raw = env_value('ADMIN_URL', default='admin/')
+ADMIN_URL = _admin_url_raw.strip('/').strip()
+if not ADMIN_URL:
+    ADMIN_URL = 'admin'
+ADMIN_URL = f"{ADMIN_URL}/"
+
+_admin_2fa_path_raw = env_value('ADMIN_2FA_PATH', default=f"{ADMIN_URL}verify/")
+ADMIN_2FA_PATH = _admin_2fa_path_raw.strip('/').strip()
+if not ADMIN_2FA_PATH:
+    ADMIN_2FA_PATH = f"{ADMIN_URL}verify".strip('/')
+ADMIN_2FA_PATH = f"{ADMIN_2FA_PATH}/"
+
+_admin_allowed_ips_raw = env_value('ADMIN_ALLOWED_IPS', default='127.0.0.1,::1')
+ADMIN_ALLOWED_IPS = [ip.strip() for ip in _admin_allowed_ips_raw.split(',') if ip.strip()]
+ADMIN_TRUST_X_FORWARDED_FOR = config('ADMIN_TRUST_X_FORWARDED_FOR', default=False, cast=bool)
+ADMIN_2FA_CODE_TTL_SECONDS = config('ADMIN_2FA_CODE_TTL_SECONDS', default=300, cast=int)
+ADMIN_2FA_MAX_ATTEMPTS = config('ADMIN_2FA_MAX_ATTEMPTS', default=5, cast=int)
 
 CRISPY_ALLOWED_TEMPLATE_PACKS = 'tailwind'
 CRISPY_TEMPLATE_PACK = 'tailwind'
@@ -237,28 +284,50 @@ JAZZMIN_UI_TWEAKS = {
 }
 
 # Fedapay
-FEDAPAY_SECRET_KEY = config('FEDAPAY_API_KEY', default='')
-FEDAPAY_PUBLIC_KEY = config('FEDAPAY_PUBLIC_KEY', default='')
-FEDAPAY_SANDBOX = config('FEDAPAY_SANDBOX', default=True, cast=bool)
+FEDAPAY_CONFIG = {
+    'api_key': required_env('FEDAPAY_API_KEY', 'FEDAPAY_SECRET_KEY'),
+    'public_key': required_env('FEDAPAY_PUBLIC_KEY', 'FEDAPAY_PUB_KEY'),
+    'environment': required_env('FEDAPAY_ENVIRONMENT'),
+    'app_url': env_value('APP_URL', default='http://127.0.0.1:8000/'),
+    'success_url': env_value('FEDAPAY_SUCCESS_URL', default=''),
+    'cancel_url': env_value('FEDAPAY_CANCEL_URL', default=''),
+}
+
+PAYMENT_CONFIG = {
+    'currency': config('PAYMENT_CURRENCY', default='XOF'),
+    'country': config('PAYMENT_COUNTRY', default='BJ'),
+    'phone_prefix': config('PAYMENT_PHONE_PREFIX', default='+229'),
+}
+
+FEDAPAY_SECRET_KEY = FEDAPAY_CONFIG['api_key']
+FEDAPAY_PUBLIC_KEY = FEDAPAY_CONFIG['public_key']
+FEDAPAY_SANDBOX = FEDAPAY_CONFIG['environment'].lower() == 'sandbox'
+FEDAPAY_APP_URL = FEDAPAY_CONFIG['app_url'].rstrip('/')
+FEDAPAY_SUCCESS_URL = FEDAPAY_CONFIG['success_url']
+FEDAPAY_CANCEL_URL = FEDAPAY_CONFIG['cancel_url']
 
 # Email
-EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+EMAIL_BACKEND = config('EMAIL_BACKEND', default='django.core.mail.backends.smtp.EmailBackend')
 EMAIL_HOST = config('EMAIL_HOST', default='smtp.gmail.com')
 EMAIL_PORT = config('EMAIL_PORT', default=587, cast=int)
-EMAIL_USE_TLS = True
+EMAIL_USE_TLS = config('EMAIL_USE_TLS', default=True, cast=bool)
+EMAIL_USE_SSL = config('EMAIL_USE_SSL', default=False, cast=bool)
 EMAIL_HOST_USER = config('EMAIL_HOST_USER', default='kcomat0@gmail.com')
 EMAIL_HOST_PASSWORD = config('EMAIL_HOST_PASSWORD', default='')
-DEFAULT_FROM_EMAIL = 'KcoMat <kcomat0@gmail.com>'
+EMAIL_TIMEOUT = config('EMAIL_TIMEOUT', default=20, cast=int)
+DEFAULT_FROM_EMAIL = config('DEFAULT_FROM_EMAIL', default='KcoMat <kcomat0@gmail.com>')
 
 # KcoMat Company Info (accessible via context processor)
 KCOMAT_INFO = {
     'name': 'KcoMat',
     'slogan': "Maîtrisez les technologies d'aujourd'hui pour construire l'Afrique de demain",
+    'ifu': '0202290628090',
+    'rccm': 'LOKOSSA N° RB/LKS/25 A 10147',
     'phone': '+229 01 96 78 00 99',
     'whatsapp': '22996780099',
     'email': 'kcomat0@gmail.com',
     'address': 'Lokossa, Mono, Bénin',
-    'youtube': 'https://youtube.com/@sympltechofficiel',
+    'youtube': 'https://youtube.com/@KcoMat',
     'tiktok': 'https://www.tiktok.com/@kcomat3',
     'facebook': 'https://www.facebook.com/profile.php?id=61581135667007',
     'frais_inscription': 2000,

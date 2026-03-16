@@ -1,0 +1,113 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load humanize %}
+
+{% block content %}
+<section class="relative overflow-hidden bg-slate-950 py-12 sm:py-16 min-h-[calc(100vh-4rem)]">
+    <div class="absolute inset-0 pointer-events-none">
+        <div class="absolute -top-24 -left-20 w-80 h-80 rounded-full bg-cyan-400/20 blur-3xl"></div>
+        <div class="absolute top-1/3 -right-24 w-96 h-96 rounded-full bg-blue-500/20 blur-3xl"></div>
+        <div class="absolute bottom-0 left-1/3 w-96 h-64 bg-gradient-to-t from-emerald-500/10 to-transparent"></div>
+    </div>
+
+    <div class="relative max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="mb-8">
+            <p class="text-xs uppercase tracking-[0.22em] text-cyan-300 font-semibold">Paiement securise</p>
+            <h1 class="mt-2 text-3xl sm:text-4xl font-black text-white">Finaliser la commande #{{ commande.pk }}</h1>
+            <p class="mt-2 text-slate-300 text-sm sm:text-base">Vous allez etre redirige vers FedaPay pour valider votre paiement en toute securite.</p>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-5 gap-6">
+            <div class="lg:col-span-3 rounded-3xl border border-white/10 bg-white/[0.06] backdrop-blur-xl shadow-2xl shadow-blue-950/30 p-5 sm:p-6">
+                <div class="flex items-start justify-between gap-4 mb-5">
+                    <div>
+                        <h2 class="text-lg sm:text-xl font-bold text-white">Etat de la transaction</h2>
+                        <p class="text-slate-300 text-sm mt-1">Preparation de votre session de paiement...</p>
+                    </div>
+                    <span class="inline-flex items-center gap-2 rounded-full border border-amber-300/30 bg-amber-400/15 px-3 py-1 text-xs font-bold text-amber-200">
+                        <span class="w-2 h-2 rounded-full bg-amber-300 animate-pulse"></span>
+                        En attente
+                    </span>
+                </div>
+
+                <div id="fedapay-checkout" class="rounded-2xl border border-white/10 bg-slate-900/70 px-4 py-6 sm:px-5 sm:py-7 text-center">
+                    <div class="mx-auto w-10 h-10 rounded-full border-2 border-cyan-300/60 border-t-transparent animate-spin"></div>
+                    <p class="mt-4 text-slate-200 font-medium">Redirection vers la page de paiement...</p>
+                    <p class="text-xs text-slate-400 mt-1">Si rien ne se passe, utilisez le bouton ci-dessous.</p>
+                </div>
+
+                <div class="mt-4 flex flex-col sm:flex-row gap-3">
+                    <a id="manual-pay-link" href="#" class="inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-emerald-950 font-black px-5 py-3 transition-colors">
+                        Payer maintenant
+                    </a>
+                    <a href="{% url 'boutique:panier' %}" class="inline-flex items-center justify-center gap-2 rounded-xl border border-white/20 bg-white/5 hover:bg-white/10 text-white font-semibold px-5 py-3 transition-colors">
+                        Revenir au panier
+                    </a>
+                </div>
+            </div>
+
+            <aside class="lg:col-span-2 rounded-3xl border border-slate-200 bg-white shadow-xl p-5 sm:p-6">
+                <h3 class="text-sm uppercase tracking-[0.18em] text-blue-700 font-bold">Recapitulatif</h3>
+                <div class="mt-4 space-y-2 text-sm">
+                    <div class="flex justify-between gap-4"><span class="text-gray-500">Commande</span><span class="font-semibold text-gray-900">#{{ commande.pk }}</span></div>
+                    <div class="flex justify-between gap-4"><span class="text-gray-500">Client</span><span class="font-semibold text-gray-900 text-right">{{ commande.prenom }} {{ commande.nom }}</span></div>
+                    <div class="flex justify-between gap-4"><span class="text-gray-500">Email</span><span class="font-semibold text-gray-900 text-right break-all">{{ commande.email }}</span></div>
+                    <div class="flex justify-between gap-4"><span class="text-gray-500">Articles</span><span class="font-semibold text-gray-900">{{ commande.items.count }}</span></div>
+                </div>
+
+                <div class="mt-5 rounded-2xl bg-blue-50 border border-blue-100 p-4">
+                    <p class="text-xs uppercase tracking-[0.16em] text-blue-600 font-bold">Montant total</p>
+                    <p class="mt-2 text-3xl font-black text-blue-900">{{ commande.montant_total|intcomma }} <span class="text-sm font-semibold">FCFA</span></p>
+                </div>
+
+                {% if commande.items.all %}
+                <div class="mt-5 border-t border-gray-100 pt-4">
+                    <h4 class="text-sm font-bold text-gray-800 mb-3">Articles commandes</h4>
+                    <ul class="space-y-2 max-h-56 overflow-auto pr-1">
+                        {% for item in commande.items.all %}
+                        <li class="flex justify-between gap-3 text-sm">
+                            <span class="text-gray-600">{{ item.nom_produit }} x{{ item.quantite }}</span>
+                            <span class="font-semibold text-gray-900">{{ item.sous_total|intcomma }} FCFA</span>
+                        </li>
+                        {% endfor %}
+                    </ul>
+                </div>
+                {% endif %}
+            </aside>
+        </div>
+    </div>
+</section>
+
+<!-- FedaPay Checkout.js Script -->
+<script src="https://checkout.fedapay.com/checkout.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const publicKey = "{{ fedapay_public_key }}";
+    const token = "{{ token|escapejs }}";
+    const checkoutUrlFromBackend = "{{ checkout_url|default:''|escapejs }}";
+    const sandbox = "{{ sandbox|default_if_none:'false'|lower }}" === "true";
+    
+    if (!token || token.length === 0) {
+        console.error('Token FedaPay non disponible');
+        document.getElementById('fedapay-checkout').innerHTML = 
+            '<div class="alert alert-danger">Erreur: impossible de charger le formulaire de paiement. Veuillez réessayer.</div>';
+        return;
+    }
+
+    // Rediriger vers le checkout FedaPay
+    // Format correct: https://sandbox-checkout.fedapay.com/checkout/{token}
+    const checkoutBase = sandbox
+        ? 'https://sandbox-checkout.fedapay.com/checkout/'
+        : 'https://checkout.fedapay.com/checkout/';
+    const checkoutUrl = checkoutUrlFromBackend || (checkoutBase + token);
+    const manualPayLink = document.getElementById('manual-pay-link');
+    if (manualPayLink) {
+        manualPayLink.href = checkoutUrl;
+    }
+
+    window.setTimeout(function () {
+        window.location.href = checkoutUrl;
+    }, 900);
+});
+</script>
+{% endblock %}

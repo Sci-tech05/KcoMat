@@ -1,0 +1,25 @@
+{% extends "admin/change_list.html" %}
+
+{% block object-tools-items %}
+<li style="list-style:none; margin:0 12px 0 0; padding:0; float:left;">
+  <div style="display:flex; gap:8px; align-items:center; white-space:nowrap;">
+    <a href="{% url 'admin:formations_paiementformation_report_pdf' %}?period=day"
+       style="display:inline-flex; align-items:center; justify-content:center; padding:7px 11px; border-radius:8px; background:#1d4ed8; color:#fff; text-decoration:none; font-weight:600;">
+      PDF Jour
+    </a>
+    <a href="{% url 'admin:formations_paiementformation_report_pdf' %}?period=week"
+       style="display:inline-flex; align-items:center; justify-content:center; padding:7px 11px; border-radius:8px; background:#1d4ed8; color:#fff; text-decoration:none; font-weight:600;">
+      PDF Semaine
+    </a>
+    <a href="{% url 'admin:formations_paiementformation_report_pdf' %}?period=month"
+       style="display:inline-flex; align-items:center; justify-content:center; padding:7px 11px; border-radius:8px; background:#1d4ed8; color:#fff; text-decoration:none; font-weight:600;">
+      PDF Mois
+    </a>
+    <a href="{% url 'admin:formations_paiementformation_report_pdf' %}?period=year"
+       style="display:inline-flex; align-items:center; justify-content:center; padding:7px 11px; border-radius:8px; background:#1d4ed8; color:#fff; text-decoration:none; font-weight:600;">
+      PDF An
+    </a>
+  </div>
+</li>
+{{ block.super }}
+{% endblock %}

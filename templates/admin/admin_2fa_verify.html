@@ -1,0 +1,48 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Verification Admin 2FA{% endblock %}
+
+{% block content %}
+<section class="py-12 px-4">
+  <div class="max-w-md mx-auto bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+    <h1 class="text-2xl font-bold text-slate-900 mb-2">Verification administrateur</h1>
+    <p class="text-slate-600 mb-4">Entrez le code a 6 chiffres envoye sur votre email admin.</p>
+ 
+  <!--  {% if messages %}
+      <div class="space-y-2 mb-4">
+        {% for message in messages %}
+          <div class="text-sm px-3 py-2 rounded border {% if message.tags == 'error' %}bg-red-50 text-red-700 border-red-200{% elif message.tags == 'success' %}bg-green-50 text-green-700 border-green-200{% else %}bg-slate-50 text-slate-700 border-slate-200{% endif %}">
+            {{ message }}
+          </div>
+        {% endfor %}
+      </div>
+    {% endif %}
+    -->
+
+    <form method="post" class="space-y-4">
+      {% csrf_token %}
+      <input type="hidden" name="next" value="{{ next_url }}">
+      <div>
+        <label for="code" class="block text-sm font-medium text-slate-700 mb-1">Code de verification</label>
+        <input
+          id="code"
+          name="code"
+          type="text"
+          inputmode="numeric"
+          maxlength="6"
+          autocomplete="one-time-code"
+          class="w-full rounded-md border border-slate-300 px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+          placeholder="000000"
+          required
+        >
+      </div>
+      <div class="flex items-center gap-3">
+        <button type="submit" class="inline-flex items-center rounded-md bg-blue-700 text-white px-4 py-2 hover:bg-blue-800 transition">Verifier</button>
+        <a href="?next={{ next_url|urlencode }}&resend=1" class="text-blue-700 hover:text-blue-900 text-sm">Renvoyer un code</a>
+      </div>
+    </form>
+
+  </div>
+</section>
+{% endblock %}
