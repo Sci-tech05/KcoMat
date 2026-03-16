@@ -81,6 +81,7 @@ class Inscription(models.Model):
     prenom = models.CharField(max_length=100)
     email = models.EmailField()
     telephone = models.CharField(max_length=20)
+    adresse = models.CharField(max_length=255, blank=True)
     niveau_actuel = models.CharField(max_length=200, blank=True)
     message = models.TextField(blank=True)
     statut = models.CharField(max_length=20, choices=STATUT_CHOICES, default='en_attente')
@@ -102,3 +103,11 @@ class Inscription(models.Model):
     def montant_inscription(self):
         from django.conf import settings
         return settings.KCOMAT_INFO['frais_inscription']
+
+
+class PaiementFormation(Inscription):
+    class Meta:
+        proxy = True
+        ordering = ['-formation_payee_le', '-frais_payes_le', '-created_at']
+        verbose_name = "Paiement formation"
+        verbose_name_plural = "Paiements formation"

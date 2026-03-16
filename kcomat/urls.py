@@ -18,13 +18,16 @@ from django.contrib import admin
 from django.urls import path, include
 from django.conf import settings
 from django.conf.urls.static import static
+from core.admin_security import verify_admin_2fa
 
 admin.site.site_header = "KcoMat Administration"
 admin.site.site_title = "KcoMat Admin"
 admin.site.index_title = "Tableau de bord KcoMat"
 
 urlpatterns = [
-    path('admin/', admin.site.urls),
+    path(settings.ADMIN_2FA_PATH, verify_admin_2fa, name='admin_2fa_verify'),
+    path(settings.ADMIN_URL, admin.site.urls),
+    path('api/', include('api.urls', namespace='api')),
     path('', include('core.urls', namespace='core')),
     path('formations/', include('formations.urls', namespace='formations')),
     path('boutique/', include('boutique.urls', namespace='boutique')),

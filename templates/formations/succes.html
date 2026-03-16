@@ -82,6 +82,22 @@
 
         <!-- Actions -->
         <div class="flex flex-col sm:flex-row gap-3">
+            {% if inscription %}
+            {% if inscription.statut == 'frais_payes' %}
+            <a href="{% url 'formations:paiement_formation' inscription.pk %}"
+                class="btn-primary flex items-center justify-center py-3 flex-1">
+                Payer la formation — {{ inscription.formation.prix|intcomma }} FCFA
+            </a>
+            {% endif %}
+            <a href="{% url 'formations:facture_frais' inscription.pk %}" target="_blank"
+                class="btn-secondary flex items-center justify-center py-3 flex-1">
+                Facture frais (PDF)
+            </a>
+            <a href="{% url 'formations:facture_formation' inscription.pk %}" target="_blank"
+                class="btn-secondary flex items-center justify-center py-3 flex-1">
+                Facture formation (PDF)
+            </a>
+            {% endif %}
             <a href="https://wa.me/{{ KCOMAT.whatsapp }}?text=Bonjour KcoMat ! Je viens de m'inscrire à la formation « {% if inscription %}{{ inscription.formation.titre }}{% endif %} »."
                 target="_blank" class="btn-green flex items-center justify-center gap-2 py-3 flex-1">
                 <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">

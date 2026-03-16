@@ -1,0 +1,276 @@
+{% extends 'base.html' %}
+
+{% block title %}Modifier mon profil — KcoMat{% endblock %}
+
+{% block content %}
+<section class="py-10 sm:py-12 bg-gray-50 min-h-[70vh]">
+  <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6 sm:space-y-8">
+    <div class="relative overflow-hidden rounded-3xl bg-gradient-to-br from-slate-900 via-blue-900 to-blue-700 p-6 sm:p-8 shadow-xl shadow-blue-900/20">
+      <div class="absolute inset-0 pointer-events-none">
+        <div class="absolute -top-24 -right-16 w-72 h-72 rounded-full bg-cyan-300/20 blur-3xl"></div>
+        <div class="absolute -bottom-28 left-24 w-80 h-80 rounded-full bg-indigo-300/20 blur-3xl"></div>
+      </div>
+
+      <div class="relative flex flex-col sm:flex-row sm:items-center sm:justify-between gap-5">
+        <div>
+          <p class="text-xs font-semibold tracking-[0.24em] uppercase text-blue-200">Espace personnel</p>
+          <h1 class="text-3xl sm:text-4xl font-black text-white mt-2">Modifier mon profil</h1>
+          <p class="text-blue-100 mt-2 text-sm sm:text-base">Mettez à jour vos informations personnelles et renforcez la sécurité de votre compte.</p>
+        </div>
+        <a href="{% url 'accounts:dashboard' %}" class="inline-flex items-center justify-center gap-2 rounded-xl border border-white/30 bg-white/10 px-4 py-2.5 text-sm font-semibold text-white hover:bg-white/20 transition-colors">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
+          Retour au dashboard
+        </a>
+      </div>
+    </div>
+
+    <div class="grid grid-cols-1 xl:grid-cols-12 gap-6">
+      <aside class="xl:col-span-4 space-y-4">
+        <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
+          <h2 class="text-sm font-bold uppercase tracking-[0.18em] text-gray-500">Raccourcis</h2>
+          <div class="mt-4 space-y-2">
+            <button type="button" data-tab-target="tab-profile" class="tab-btn w-full text-left px-4 py-3 rounded-xl text-sm font-semibold transition-colors bg-blue-600 text-white">Informations personnelles</button>
+            <button type="button" data-tab-target="tab-security" class="tab-btn w-full text-left px-4 py-3 rounded-xl text-sm font-semibold transition-colors text-gray-700 hover:bg-gray-100">Sécurité du compte</button>
+          </div>
+        </div>
+
+        <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
+          <h3 class="text-sm font-bold uppercase tracking-[0.18em] text-gray-500">Conseil sécurité</h3>
+          <p class="mt-3 text-sm text-gray-600 leading-relaxed">Utilisez un mot de passe long et unique. Ne partagez jamais vos accès et changez votre mot de passe régulièrement.</p>
+        </div>
+      </aside>
+
+      <div class="xl:col-span-8">
+        <div class="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+          <div class="border-b border-gray-100 px-5 sm:px-6 py-4">
+            <p class="text-xs uppercase tracking-[0.2em] text-blue-600 font-semibold">Gestion du compte</p>
+            <p class="text-sm text-gray-500 mt-1">Les modifications sont enregistrées instantanément sans rechargement de page.</p>
+          </div>
+
+          <div id="toast" class="fixed top-4 right-4 z-50 min-w-[260px] max-w-sm rounded-xl px-4 py-3 text-sm font-semibold shadow-xl ring-1 ring-black/5 transition-all duration-300 ease-out opacity-0 translate-y-2 sm:translate-y-0 sm:translate-x-4 pointer-events-none">
+            <div class="flex items-center justify-between gap-3">
+              <span class="js-toast-message"></span>
+              <button type="button" class="js-toast-close text-white/90 hover:text-white" aria-label="Fermer">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+              </button>
+            </div>
+            <div class="mt-2 h-1 rounded-full bg-white/30 overflow-hidden">
+              <div class="js-toast-progress h-full w-full bg-white/80 origin-left"></div>
+            </div>
+          </div>
+
+          <div id="tab-profile" class="tab-panel p-5 sm:p-6">
+            <h2 class="text-xl font-bold text-gray-900 mb-5">Informations personnelles</h2>
+            <form method="post" class="space-y-4 js-ajax-form" data-form-kind="profile" novalidate>
+              {% csrf_token %}
+              <input type="hidden" name="action" value="profile">
+
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-1" for="id_first_name">{{ user_form.first_name.label }}</label>
+                  {{ user_form.first_name }}
+                  <div class="text-xs text-red-600 mt-1 js-error" data-error-key="user.first_name">{% for error in user_form.first_name.errors %}<p>{{ error }}</p>{% endfor %}</div>
+                </div>
+
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-1" for="id_last_name">{{ user_form.last_name.label }}</label>
+                  {{ user_form.last_name }}
+                  <div class="text-xs text-red-600 mt-1 js-error" data-error-key="user.last_name">{% for error in user_form.last_name.errors %}<p>{{ error }}</p>{% endfor %}</div>
+                </div>
+              </div>
+
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1" for="id_adresse">{{ profil_form.adresse.label }}</label>
+                {{ profil_form.adresse }}
+                <div class="text-xs text-red-600 mt-1 js-error" data-error-key="profil.adresse">{% for error in profil_form.adresse.errors %}<p>{{ error }}</p>{% endfor %}</div>
+              </div>
+
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1" for="id_telephone">{{ profil_form.telephone.label }}</label>
+                {{ profil_form.telephone }}
+                <div class="text-xs text-red-600 mt-1 js-error" data-error-key="profil.telephone">{% for error in profil_form.telephone.errors %}<p>{{ error }}</p>{% endfor %}</div>
+              </div>
+
+              <button type="submit" class="w-full sm:w-auto inline-flex items-center justify-center rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-semibold px-6 py-2.5 transition-colors">Enregistrer les modifications</button>
+            </form>
+          </div>
+
+          <div id="tab-security" class="tab-panel p-5 sm:p-6 hidden">
+            <h2 class="text-xl font-bold text-gray-900 mb-5">Sécurité du compte</h2>
+            <form method="post" class="space-y-4 js-ajax-form" data-form-kind="password" novalidate>
+              {% csrf_token %}
+              <input type="hidden" name="action" value="password">
+
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1" for="id_old_password">{{ password_form.old_password.label }}</label>
+                {{ password_form.old_password }}
+                <div class="text-xs text-red-600 mt-1 js-error" data-error-key="password.old_password">{% for error in password_form.old_password.errors %}<p>{{ error }}</p>{% endfor %}</div>
+              </div>
+
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-1" for="id_new_password1">{{ password_form.new_password1.label }}</label>
+                  {{ password_form.new_password1 }}
+                  <div class="text-xs text-red-600 mt-1 js-error" data-error-key="password.new_password1">{% for error in password_form.new_password1.errors %}<p>{{ error }}</p>{% endfor %}</div>
+                </div>
+
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-1" for="id_new_password2">{{ password_form.new_password2.label }}</label>
+                  {{ password_form.new_password2 }}
+                  <div class="text-xs text-red-600 mt-1 js-error" data-error-key="password.new_password2">{% for error in password_form.new_password2.errors %}<p>{{ error }}</p>{% endfor %}</div>
+                </div>
+              </div>
+
+              <div class="text-xs text-red-600 mt-1 js-error" data-error-key="password.non_field_errors">{% for error in password_form.non_field_errors %}<p>{{ error }}</p>{% endfor %}</div>
+
+              <button type="submit" class="w-full sm:w-auto inline-flex items-center justify-center rounded-xl bg-gray-900 hover:bg-black text-white font-semibold px-6 py-2.5 transition-colors">Mettre à jour le mot de passe</button>
+            </form>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<script>
+  (function () {
+    const tabButtons = document.querySelectorAll('.tab-btn');
+    const tabPanels = document.querySelectorAll('.tab-panel');
+    const toast = document.getElementById('toast');
+
+    function switchTab(targetId) {
+      tabPanels.forEach((panel) => {
+        panel.classList.toggle('hidden', panel.id !== targetId);
+      });
+      tabButtons.forEach((btn) => {
+        const active = btn.dataset.tabTarget === targetId;
+        btn.classList.toggle('bg-blue-600', active);
+        btn.classList.toggle('text-white', active);
+        btn.classList.toggle('hover:bg-blue-700', active);
+
+        btn.classList.toggle('bg-transparent', !active);
+        btn.classList.toggle('text-gray-700', !active);
+        btn.classList.toggle('hover:bg-gray-100', !active);
+
+        btn.classList.toggle('text-gray-600', false);
+      });
+    }
+
+    tabButtons.forEach((btn) => {
+      btn.addEventListener('click', () => switchTab(btn.dataset.tabTarget));
+    });
+
+    function hideToast() {
+      if (!toast) return;
+      toast.classList.remove('opacity-100', 'translate-y-0', 'sm:translate-x-0');
+      toast.classList.add('opacity-0', 'translate-y-2', 'sm:translate-x-4', 'pointer-events-none');
+    }
+
+    function showToast(message, ok) {
+      if (!toast) return;
+      const toastMessage = toast.querySelector('.js-toast-message');
+      const toastProgress = toast.querySelector('.js-toast-progress');
+      const toastClose = toast.querySelector('.js-toast-close');
+
+      if (toastMessage) {
+        toastMessage.textContent = message;
+      }
+
+      toast.classList.remove('bg-red-600', 'bg-green-600', 'text-white');
+      toast.classList.add(ok ? 'bg-green-600' : 'bg-red-600', 'text-white');
+
+      if (toastProgress) {
+        toastProgress.style.transition = 'none';
+        toastProgress.style.transform = 'scaleX(1)';
+      }
+
+      toast.classList.remove('opacity-0', 'translate-y-2', 'sm:translate-x-4', 'pointer-events-none');
+      toast.classList.add('opacity-100', 'translate-y-0', 'sm:translate-x-0');
+
+      window.clearTimeout(window.__kcomatToastTimer);
+      window.clearTimeout(window.__kcomatToastProgressTimer);
+
+      if (toastProgress) {
+        window.__kcomatToastProgressTimer = window.setTimeout(() => {
+          toastProgress.style.transition = 'transform 2400ms linear';
+          toastProgress.style.transform = 'scaleX(0)';
+        }, 30);
+      }
+
+      window.__kcomatToastTimer = window.setTimeout(() => {
+        hideToast();
+      }, 2400);
+
+      if (toastClose && !toastClose.dataset.bound) {
+        toastClose.addEventListener('click', hideToast);
+        toastClose.dataset.bound = '1';
+      }
+    }
+
+    function clearFormErrors(form) {
+      form.querySelectorAll('.js-error').forEach((el) => {
+        el.innerHTML = '';
+      });
+    }
+
+    function renderErrors(form, errors) {
+      const flat = {};
+      Object.keys(errors || {}).forEach((scope) => {
+        const scoped = errors[scope] || {};
+        Object.keys(scoped).forEach((field) => {
+          flat[scope + '.' + field] = scoped[field];
+        });
+      });
+
+      Object.keys(flat).forEach((key) => {
+        const holder = form.querySelector('.js-error[data-error-key="' + key + '"]');
+        if (holder) {
+          holder.innerHTML = (flat[key] || []).map((msg) => '<p>' + msg + '</p>').join('');
+        }
+      });
+    }
+
+    document.querySelectorAll('.js-ajax-form').forEach((form) => {
+      form.addEventListener('submit', async function (event) {
+        event.preventDefault();
+        clearFormErrors(form);
+
+        const submitBtn = form.querySelector('button[type="submit"]');
+        const initialBtnText = submitBtn ? submitBtn.textContent : '';
+        if (submitBtn) {
+          submitBtn.disabled = true;
+          submitBtn.textContent = 'Enregistrement...';
+        }
+
+        try {
+          const response = await fetch(window.location.href, {
+            method: 'POST',
+            headers: {
+              'X-Requested-With': 'XMLHttpRequest'
+            },
+            body: new FormData(form)
+          });
+
+          const payload = await response.json();
+          if (response.ok && payload.ok) {
+            showToast(payload.message || 'Mise à jour effectuée.', true);
+            if (form.dataset.formKind === 'password') {
+              form.reset();
+            }
+          } else {
+            renderErrors(form, payload.errors || {});
+            showToast(payload.message || 'Veuillez corriger les champs.', false);
+          }
+        } catch (err) {
+          showToast('Erreur réseau. Veuillez réessayer.', false);
+        } finally {
+          if (submitBtn) {
+            submitBtn.disabled = false;
+            submitBtn.textContent = initialBtnText;
+          }
+        }
+      });
+    });
+  })();
+</script>
+{% endblock %}
