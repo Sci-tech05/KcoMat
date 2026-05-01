@@ -317,6 +317,7 @@ FEDAPAY_CONFIG = {
     'success_url': env_value('FEDAPAY_SUCCESS_URL', default=''),
     'cancel_url': env_value('FEDAPAY_CANCEL_URL', default=''),
 }
+FEDAPAY_API_TIMEOUT = config('FEDAPAY_API_TIMEOUT', default=60, cast=int)
 
 PAYMENT_CONFIG = {
     'currency': config('PAYMENT_CURRENCY', default='XOF'),
