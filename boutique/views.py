@@ -18,6 +18,71 @@ from core.pdf_invoices import build_invoice_response
 logger = logging.getLogger(__name__)
 
 
+def _fedapay_base_url(environment):
+    env = (environment or '').strip().lower()
+    if env == 'sandbox':
+        return 'https://sandbox-api.fedapay.com/v1'
+    return 'https://api.fedapay.com/v1'
+
+
+def _extract_transaction_object(payload):
+    if isinstance(payload, dict):
+        if 'id' in payload:
+            return payload
+        for value in payload.values():
+            if isinstance(value, dict) and 'id' in value:
+                return value
+    return {}
+
+
+def _fetch_fedapay_transaction(transaction_id):
+    if not transaction_id:
+        return {}
+
+    api_key = settings.FEDAPAY_CONFIG.get('api_key', '')
+    environment = settings.FEDAPAY_CONFIG.get('environment', 'live')
+    timeout_seconds = int(getattr(settings, 'FEDAPAY_API_TIMEOUT', 30))
+    if not api_key:
+        logger.error("Missing FEDAPAY API key while checking commande transaction")
+        return {}
+
+    headers = {
+        'Authorization': f'Bearer {api_key}',
+        'Content-Type': 'application/json',
+    }
+    base_url = _fedapay_base_url(environment)
+    try:
+        response = requests.get(
+            f'{base_url}/transactions/{transaction_id}',
+            headers=headers,
+            timeout=timeout_seconds,
+        )
+    except requests.RequestException:
+        logger.exception("Network error while fetching FedaPay transaction %s", transaction_id)
+        return {}
+
+    if response.status_code != 200:
+        logger.warning(
+            "FedaPay transaction fetch failed id=%s status=%s body=%s",
+            transaction_id,
+            response.status_code,
+            response.text[:1200],
+        )
+        return {}
+
+    try:
+        payload = response.json()
+    except ValueError:
+        logger.warning("FedaPay transaction fetch returned non-JSON body id=%s", transaction_id)
+        return {}
+    return _extract_transaction_object(payload)
+
+
+def _is_fedapay_transaction_approved(transaction_id):
+    transaction_data = _fetch_fedapay_transaction(transaction_id)
+    return str(transaction_data.get('status', '')).strip().lower() == 'approved'
+
+
 def _get_panier(request):
     """Récupère ou crée le panier de la session/utilisateur."""
     if not request.session.session_key:
@@ -128,6 +193,16 @@ def _send_commande_invoice_email(commande):
     )
     message.attach(invoice_filename, invoice_response.content, 'application/pdf')
     message.send(fail_silently=False)
+
+
+def _mark_commande_paid(commande, request=None):
+    if commande.statut == 'payee':
+        return
+    commande.statut = 'payee'
+    commande.payee_le = timezone.now()
+    commande.save(update_fields=['statut', 'payee_le'])
+    _finalize_paid_commande(commande, request=request)
+    _send_commande_invoice_email(commande)
 
 
 def liste_produits(request):
@@ -356,17 +431,30 @@ def paiement_commande(request, pk):
 @csrf_exempt
 def callback_commande(request, pk):
     commande = get_object_or_404(Commande, pk=pk)
+    if request.method == 'GET':
+        status_hint = (request.GET.get('status') or '').strip().lower()
+        transaction_id = str(request.GET.get('id') or commande.fedapay_transaction_id or '').strip()
+        if status_hint == 'approved' and transaction_id and _is_fedapay_transaction_approved(transaction_id):
+            try:
+                _mark_commande_paid(commande)
+            except Exception as e:
+                logger.exception("Erreur callback GET commande #%s: %s", commande.pk, e)
+        return redirect('boutique:succes_commande', pk=commande.pk)
+
     if request.method == 'POST':
         try:
             data = json.loads(request.body)
             event = data.get('name', '')
             transaction = data.get('data', {}).get('transaction', {})
-            if event == 'transaction.approved' and transaction.get('status') == 'approved' and commande.statut != 'payee':
-                commande.statut = 'payee'
-                commande.payee_le = timezone.now()
-                commande.save(update_fields=['statut', 'payee_le'])
-                _finalize_paid_commande(commande)
-                _send_commande_invoice_email(commande)
+            transaction_id = str(transaction.get('id') or commande.fedapay_transaction_id or '').strip()
+            status_hint = str(transaction.get('status', '')).strip().lower()
+            if (
+                event == 'transaction.approved'
+                and status_hint == 'approved'
+                and transaction_id
+                and _is_fedapay_transaction_approved(transaction_id)
+            ):
+                _mark_commande_paid(commande)
         except Exception as e:
             logger.exception("Erreur callback commande #%s: %s", commande.pk, e)
     return HttpResponse(status=200)
@@ -375,15 +463,15 @@ def callback_commande(request, pk):
 def succes_commande(request, pk):
     commande = get_object_or_404(Commande, pk=pk)
     if commande.statut == 'en_attente':
-        commande.statut = 'payee'
-        commande.payee_le = timezone.now()
-        commande.save(update_fields=['statut', 'payee_le'])
-        _finalize_paid_commande(commande, request=request)
-        try:
-            _send_commande_invoice_email(commande)
-        except Exception as e:
-            logger.exception("Erreur envoi facture email commande #%s: %s", commande.pk, e)
-            messages.warning(request, "Paiement confirme, mais l'envoi automatique de la facture a echoue. Vous pouvez la telecharger depuis votre espace.")
+        transaction_id = str(request.GET.get('id') or commande.fedapay_transaction_id or '').strip()
+        if transaction_id and _is_fedapay_transaction_approved(transaction_id):
+            try:
+                _mark_commande_paid(commande, request=request)
+            except Exception as e:
+                logger.exception("Erreur envoi facture email commande #%s: %s", commande.pk, e)
+                messages.warning(request, "Paiement confirme, mais l'envoi automatique de la facture a echoue. Vous pouvez la telecharger depuis votre espace.")
+        else:
+            messages.warning(request, "Paiement en attente de confirmation FedaPay. Rechargez cette page dans quelques secondes.")
     ctx = {
         'commande': commande,
         'title': 'Commande confirmée !',

@@ -17,6 +17,71 @@ from core.pdf_invoices import build_invoice_response
 logger = logging.getLogger(__name__)
 
 
+def _fedapay_base_url(environment):
+    env = (environment or '').strip().lower()
+    if env == 'sandbox':
+        return 'https://sandbox-api.fedapay.com/v1'
+    return 'https://api.fedapay.com/v1'
+
+
+def _extract_transaction_object(payload):
+    if isinstance(payload, dict):
+        if 'id' in payload:
+            return payload
+        for value in payload.values():
+            if isinstance(value, dict) and 'id' in value:
+                return value
+    return {}
+
+
+def _fetch_fedapay_transaction(transaction_id):
+    if not transaction_id:
+        return {}
+
+    api_key = settings.FEDAPAY_CONFIG.get('api_key', '')
+    environment = settings.FEDAPAY_CONFIG.get('environment', 'live')
+    timeout_seconds = int(getattr(settings, 'FEDAPAY_API_TIMEOUT', 30))
+    if not api_key:
+        logger.error("Missing FEDAPAY API key while checking inscription transaction")
+        return {}
+
+    headers = {
+        'Authorization': f'Bearer {api_key}',
+        'Content-Type': 'application/json',
+    }
+    base_url = _fedapay_base_url(environment)
+    try:
+        response = requests.get(
+            f'{base_url}/transactions/{transaction_id}',
+            headers=headers,
+            timeout=timeout_seconds,
+        )
+    except requests.RequestException:
+        logger.exception("Network error while fetching FedaPay transaction %s", transaction_id)
+        return {}
+
+    if response.status_code != 200:
+        logger.warning(
+            "FedaPay transaction fetch failed id=%s status=%s body=%s",
+            transaction_id,
+            response.status_code,
+            response.text[:1200],
+        )
+        return {}
+
+    try:
+        payload = response.json()
+    except ValueError:
+        logger.warning("FedaPay transaction fetch returned non-JSON body id=%s", transaction_id)
+        return {}
+    return _extract_transaction_object(payload)
+
+
+def _is_fedapay_transaction_approved(transaction_id):
+    transaction_data = _fetch_fedapay_transaction(transaction_id)
+    return str(transaction_data.get('status', '')).strip().lower() == 'approved'
+
+
 def _build_frais_invoice_response(inscription):
     frais = settings.KCOMAT_INFO['frais_inscription']
     items = [{
@@ -109,6 +174,26 @@ def _send_inscription_invoice_email(inscription):
         )
 
     message.send(fail_silently=False)
+
+
+def _mark_inscription_frais_paid(inscription):
+    if inscription.statut != 'en_attente':
+        return
+    inscription.statut = 'frais_payes'
+    inscription.frais_payes_le = timezone.now()
+    inscription.save(update_fields=['statut', 'frais_payes_le'])
+    _send_inscription_invoice_email(inscription)
+
+
+def _mark_inscription_formation_paid(inscription):
+    if inscription.statut == 'complet':
+        return
+    if inscription.statut == 'en_attente':
+        return
+    inscription.statut = 'complet'
+    inscription.formation_payee_le = timezone.now()
+    inscription.save(update_fields=['statut', 'formation_payee_le'])
+    _send_inscription_invoice_email(inscription)
 
 
 def liste_formations(request):
@@ -328,18 +413,32 @@ def paiement_formation(request, pk):
 
 @csrf_exempt
 def callback_frais(request, pk):
-    """Webhook Fedapay — confirmation paiement frais d'inscription."""
     inscription = get_object_or_404(Inscription, pk=pk)
+    if request.method == 'GET':
+        status_hint = (request.GET.get('status') or '').strip().lower()
+        transaction_id = str(request.GET.get('id') or inscription.fedapay_frais_id or '').strip()
+        if status_hint == 'approved' and transaction_id and _is_fedapay_transaction_approved(transaction_id):
+            try:
+                _mark_inscription_frais_paid(inscription)
+            except Exception as e:
+                logger.exception("Erreur callback GET frais inscription #%s: %s", inscription.pk, e)
+        return redirect('formations:succes', pk=inscription.pk)
+
     if request.method == 'POST':
         try:
             data = json.loads(request.body)
             event = data.get('name', '')
             transaction = data.get('data', {}).get('transaction', {})
-            if event == 'transaction.approved' and transaction.get('status') == 'approved' and inscription.statut == 'en_attente':
-                inscription.statut = 'frais_payes'
-                inscription.frais_payes_le = timezone.now()
-                inscription.save(update_fields=['statut', 'frais_payes_le'])
-                _send_inscription_invoice_email(inscription)
+            transaction_id = str(transaction.get('id') or inscription.fedapay_frais_id or '').strip()
+            status_hint = str(transaction.get('status', '')).strip().lower()
+            if (
+                event == 'transaction.approved'
+                and status_hint == 'approved'
+                and inscription.statut == 'en_attente'
+                and transaction_id
+                and _is_fedapay_transaction_approved(transaction_id)
+            ):
+                _mark_inscription_frais_paid(inscription)
         except Exception as e:
             logger.exception("Erreur callback frais inscription #%s: %s", inscription.pk, e)
     return HttpResponse(status=200)
@@ -347,20 +446,32 @@ def callback_frais(request, pk):
 
 @csrf_exempt
 def callback_formation(request, pk):
-    """Webhook Fedapay — confirmation paiement formation complete."""
     inscription = get_object_or_404(Inscription, pk=pk)
+    if request.method == 'GET':
+        status_hint = (request.GET.get('status') or '').strip().lower()
+        transaction_id = str(request.GET.get('id') or inscription.fedapay_formation_id or '').strip()
+        if status_hint == 'approved' and transaction_id and _is_fedapay_transaction_approved(transaction_id):
+            try:
+                _mark_inscription_formation_paid(inscription)
+            except Exception as e:
+                logger.exception("Erreur callback GET formation inscription #%s: %s", inscription.pk, e)
+        return redirect('formations:succes_formation', pk=inscription.pk)
+
     if request.method == 'POST':
         try:
             data = json.loads(request.body)
             event = data.get('name', '')
             transaction = data.get('data', {}).get('transaction', {})
-            if event == 'transaction.approved' and transaction.get('status') == 'approved' and inscription.statut in ['frais_payes', 'complet']:
-                if inscription.statut == 'complet':
-                    return HttpResponse(status=200)
-                inscription.statut = 'complet'
-                inscription.formation_payee_le = timezone.now()
-                inscription.save(update_fields=['statut', 'formation_payee_le'])
-                _send_inscription_invoice_email(inscription)
+            transaction_id = str(transaction.get('id') or inscription.fedapay_formation_id or '').strip()
+            status_hint = str(transaction.get('status', '')).strip().lower()
+            if (
+                event == 'transaction.approved'
+                and status_hint == 'approved'
+                and inscription.statut in ['frais_payes', 'complet']
+                and transaction_id
+                and _is_fedapay_transaction_approved(transaction_id)
+            ):
+                _mark_inscription_formation_paid(inscription)
         except Exception as e:
             logger.exception("Erreur callback formation inscription #%s: %s", inscription.pk, e)
     return HttpResponse(status=200)
@@ -369,15 +480,15 @@ def callback_formation(request, pk):
 def succes_inscription(request, pk):
     inscription = get_object_or_404(Inscription, pk=pk)
     if inscription.statut == 'en_attente':
-        # Marquer comme frais payés si on arrive ici depuis le checkout
-        inscription.statut = 'frais_payes'
-        inscription.frais_payes_le = timezone.now()
-        inscription.save(update_fields=['statut', 'frais_payes_le'])
-        try:
-            _send_inscription_invoice_email(inscription)
-        except Exception as e:
-            logger.exception("Erreur envoi facture email inscription #%s: %s", inscription.pk, e)
-            messages.warning(request, "Paiement confirme, mais l'envoi automatique de la facture a echoue. Vous pouvez la telecharger depuis votre espace.")
+        transaction_id = str(request.GET.get('id') or inscription.fedapay_frais_id or '').strip()
+        if transaction_id and _is_fedapay_transaction_approved(transaction_id):
+            try:
+                _mark_inscription_frais_paid(inscription)
+            except Exception as e:
+                logger.exception("Erreur envoi facture email inscription #%s: %s", inscription.pk, e)
+                messages.warning(request, "Paiement confirme, mais l'envoi automatique de la facture a echoue. Vous pouvez la telecharger depuis votre espace.")
+        else:
+            messages.warning(request, "Paiement en attente de confirmation FedaPay. Rechargez cette page dans quelques secondes.")
     ctx = {
         'inscription': inscription,
         'title': "Inscription confirmée !",
@@ -392,14 +503,15 @@ def succes_formation(request, pk):
         return redirect('formations:paiement_frais', pk=inscription.pk)
 
     if inscription.statut != 'complet':
-        inscription.statut = 'complet'
-        inscription.formation_payee_le = timezone.now()
-        inscription.save(update_fields=['statut', 'formation_payee_le'])
-        try:
-            _send_inscription_invoice_email(inscription)
-        except Exception as e:
-            logger.exception("Erreur envoi facture formation email inscription #%s: %s", inscription.pk, e)
-            messages.warning(request, "Paiement confirme, mais l'envoi automatique de la facture formation a echoue. Vous pouvez la telecharger depuis votre espace.")
+        transaction_id = str(request.GET.get('id') or inscription.fedapay_formation_id or '').strip()
+        if transaction_id and _is_fedapay_transaction_approved(transaction_id):
+            try:
+                _mark_inscription_formation_paid(inscription)
+            except Exception as e:
+                logger.exception("Erreur envoi facture formation email inscription #%s: %s", inscription.pk, e)
+                messages.warning(request, "Paiement confirme, mais l'envoi automatique de la facture formation a echoue. Vous pouvez la telecharger depuis votre espace.")
+        else:
+            messages.warning(request, "Paiement formation en attente de confirmation FedaPay. Rechargez cette page dans quelques secondes.")
 
     ctx = {
         'inscription': inscription,
