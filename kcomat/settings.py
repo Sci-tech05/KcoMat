@@ -33,9 +33,21 @@ def required_env(name, *fallback_names):
 
     raise ImproperlyConfigured(f"Missing required environment variable: {name}")
 
-SECRET_KEY = required_env('SECRET_KEY')
-DEBUG = config('DEBUG', default=True, cast=bool)
-ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='localhost,127.0.0.1').split(',')
+SECRET_KEY = config('SECRET_KEY', default='django-insecure-kcomat-changez-moi-en-production-xxx')
+DEBUG = config('DEBUG', default=False, cast=bool)
+
+ALLOWED_HOSTS = [
+    'localhost',
+    '127.0.0.1',
+    'kcomat0.pythonanywhere.com',
+]
+
+# Sécurité
+SECURE_SSL_REDIRECT = False
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+SECURE_BROWSER_XSS_FILTER = True
+SECURE_CONTENT_TYPE_NOSNIFF = True
+X_FRAME_OPTIONS = 'DENY'
 
 DJANGO_APPS = [
     'jazzmin',

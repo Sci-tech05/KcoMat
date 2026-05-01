@@ -1,36 +1,48 @@
 <?php
 /**
- * Bridge PHP pour créer une transaction FedaPay via SDK officielle.
- * Entrée: JSON sur STDIN
- * Sortie: JSON sur STDOUT
+ * Bridge PHP FedaPay - Version corrigée avec logs détaillés
  */
 
 error_reporting(E_ALL & ~E_DEPRECATED);
 ini_set('display_errors', '0');
 
+function fedapay_log($message, $level = 'INFO') {
+    $log_file = __DIR__ . '/fedapay_bridge.log';
+    $timestamp = date('Y-m-d H:i:s');
+    file_put_contents($log_file, "[$timestamp] [$level] $message\n", FILE_APPEND | LOCK_EX);
+}
+
+fedapay_log("=== NOUVELLE TENTATIVE DE PAIEMENT ===");
+
 $sdk_candidates = [
     __DIR__ . '/../vendor/autoload.php',
     dirname(__DIR__) . '/vendor/autoload.php',
-    'vendor/autoload.php',
+    __DIR__ . '/vendor/autoload.php',
+    dirname(__DIR__, 2) . '/vendor/autoload.php',
+    '/home/KcoMat0/KcoMat/vendor/autoload.php',           // Chemin typique PythonAnywhere
+    '/home/kcomat0/.local/share/virtualenvs/.../vendor/autoload.php' // au cas où
 ];
 
 $sdk_path = null;
 foreach ($sdk_candidates as $candidate) {
     if (file_exists($candidate)) {
         $sdk_path = $candidate;
+        fedapay_log("SDK trouvé : " . $sdk_path);
         break;
     }
 }
 
 if (!$sdk_path) {
+    fedapay_log("SDK NON TROUVÉ ! Chemins essayés : " . implode(" | ", $sdk_candidates), 'ERROR');
     exit(json_encode([
         'success' => false,
-        'error' => 'SDK FedaPay non trouvée. Chemins essayés: ' . implode(', ', $sdk_candidates),
+        'error' => 'SDK FedaPay non trouvé. Vérifiez le dossier vendor/',
         'transaction_id' => null,
     ]));
 }
 
 require_once $sdk_path;
+fedapay_log("SDK chargé avec succès");
 
 use FedaPay\FedaPay;
 use FedaPay\Transaction;
@@ -40,43 +52,49 @@ try {
     $input = json_decode($input_raw, true);
 
     if (!$input) {
-        throw new Exception('Données JSON invalides');
+        throw new Exception('JSON invalide');
     }
 
     $api_key = $input['api_key'] ?? '';
-    $environment = $input['environment'] ?? 'sandbox';
+    $environment = strtolower($input['environment'] ?? 'sandbox');
 
-    if (!$api_key) {
-        throw new Exception('Clé API FedaPay manquante');
+    fedapay_log("Environment : " . $environment);
+    fedapay_log("API Key début : " . substr($api_key, 0, 25) . "...");
+
+    if (empty($api_key)) {
+        throw new Exception('Clé API manquante');
     }
 
     FedaPay::setApiKey($api_key);
     FedaPay::setEnvironment($environment);
-    FedaPay::setVerifySslCerts(false);
+    FedaPay::setVerifySslCerts($environment === 'live');
 
+    fedapay_log("SSL Verify : " . ($environment === 'live' ? 'true' : 'false'));
+
+    // Champs requis
     $required = ['amount', 'description', 'currency', 'country', 'callback_url'];
     foreach ($required as $field) {
         if (empty($input[$field])) {
-            throw new Exception("Champ requis manquant: $field");
+            throw new Exception("Champ manquant : $field");
         }
     }
 
     $transaction_data = [
-        'amount' => (int)$input['amount'],
-        'description' => $input['description'],
-        'currency' => ['iso' => $input['currency']],
+        'amount'       => (int)$input['amount'],
+        'description'  => $input['description'],
+        'currency'     => ['iso' => strtoupper($input['currency'])],
         'callback_url' => $input['callback_url'],
     ];
 
     if (!empty($input['customer'])) {
-        $customer = $input['customer'];
+        $c = $input['customer'];
         $transaction_data['customer'] = [
-            'firstname' => $customer['firstname'] ?? '',
-            'lastname' => $customer['lastname'] ?? '',
-            'email' => $customer['email'] ?? '',
+            'firstname' => $c['firstname'] ?? '',
+            'lastname'  => $c['lastname'] ?? '',
+            'email'     => $c['email'] ?? '',
             'phone_number' => [
-                'number' => $customer['phone'] ?? '',
-                'country' => $input['country'],
+                'number'  => $c['phone'] ?? '',
+                'country' => strtoupper($input['country']),
             ],
         ];
     }
@@ -85,62 +103,56 @@ try {
         $transaction_data['custom_metadata'] = $input['metadata'];
     }
 
+    fedapay_log("Appel à Transaction::create()...");
+
     $transaction = Transaction::create($transaction_data);
 
-    if (!$transaction || !isset($transaction->id)) {
-        throw new Exception('Impossible de créer la transaction FedaPay');
+    if (!$transaction || empty($transaction->id)) {
+        throw new Exception('Transaction non créée (pas de ID)');
     }
+
+    fedapay_log("Transaction créée - ID: " . $transaction->id);
 
     $token_data = $transaction->generateToken();
 
-    if (!$token_data) {
-        throw new Exception('Impossible de générer le token de paiement');
-    }
-
-    // Le SDK peut renvoyer soit une string JWT, soit une structure {token, url}.
+    // Extraction token
     $token = null;
     $process_url = null;
 
-    if (is_string($token_data)) {
-        $token = $token_data;
-    } elseif (is_array($token_data)) {
-        $token = $token_data['token'] ?? null;
+    if (is_string($token_data)) $token = $token_data;
+    elseif (is_array($token_data)) {
+        $token = $token_data['token'] ?? $token_data['jwt'] ?? null;
         $process_url = $token_data['url'] ?? null;
     } elseif (is_object($token_data)) {
-        if (isset($token_data->token)) {
-            $token = $token_data->token;
-        }
-        if (isset($token_data->url)) {
-            $process_url = $token_data->url;
-        }
+        $token = $token_data->token ?? null;
+        $process_url = $token_data->url ?? null;
     }
 
-    if (!$token || !is_string($token)) {
-        throw new Exception('Token FedaPay invalide: format non reconnu');
+    if (!$token) {
+        throw new Exception('Impossible de générer le token');
     }
 
-    $fallback_checkout_url = ($environment === 'sandbox'
-        ? 'https://sandbox-checkout.fedapay.com/checkout/'
-        : 'https://checkout.fedapay.com/checkout/') . $token;
+    $checkout_url = $process_url ?: 
+        ($environment === 'live' 
+            ? 'https://live-checkout.fedapay.com/checkout/' 
+            : 'https://checkout.fedapay.com/checkout/') . $token;
 
-    $checkout_url = $process_url ?: $fallback_checkout_url;
+    fedapay_log("Succès - Checkout URL générée");
 
     exit(json_encode([
-        'success' => true,
+        'success'        => true,
         'transaction_id' => $transaction->id,
-        'token' => $token,
-        'checkout_url' => $checkout_url,
-        'process_url' => $process_url,
-        'amount' => $transaction->amount,
-        'currency' => $transaction->currency->iso ?? 'XOF',
+        'token'          => $token,
+        'checkout_url'   => $checkout_url,
+        'amount'         => $transaction->amount ?? $input['amount'],
+        'currency'       => 'XOF',
     ]));
 
 } catch (Exception $e) {
+    fedapay_log("ERREUR : " . $e->getMessage() . " | Ligne " . $e->getLine(), 'ERROR');
     exit(json_encode([
         'success' => false,
-        'error' => $e->getMessage(),
-        'error_file' => $e->getFile(),
+        'error'   => $e->getMessage(),
         'error_line' => $e->getLine(),
-        'transaction_id' => null,
     ]));
 }

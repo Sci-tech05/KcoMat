@@ -273,7 +273,7 @@ def checkout(request):
 
 
 def paiement_commande(request, pk):
-    """Initie le paiement de la commande via l'endpoint API local (qui utilise FedaPay SDK via PHP)."""
+    """Initie le paiement de la commande via l'endpoint API local (FedaPay REST)."""
     commande = get_object_or_404(Commande, pk=pk)
     if commande.statut not in ['en_attente']:
         messages.info(request, "Cette commande a déjà été traitée.")
@@ -283,10 +283,10 @@ def paiement_commande(request, pk):
     callback_url = f"{app_url}/boutique/commande/{commande.pk}/callback/"
     success_url = settings.FEDAPAY_SUCCESS_URL or f"{app_url}/boutique/commande/{commande.pk}/succes/"
     cancel_url = settings.FEDAPAY_CANCEL_URL or f"{app_url}/boutique/panier/"
-    
+
     # Appeler l'endpoint API local pour créer la transaction FedaPay
     api_url = request.build_absolute_uri('/') + 'api/create-transaction/'
-    
+
     transaction_payload = {
         'amount': int(commande.montant_total),
         'description': f"Commande KcoMat #{commande.pk}",
@@ -309,9 +309,9 @@ def paiement_commande(request, pk):
     }
 
     try:
-        resp = requests.post(api_url, json=transaction_payload, timeout=10)
+        resp = requests.post(api_url, json=transaction_payload, timeout=25)
         data = resp.json()
-        
+
         if not data.get('success') or not data.get('transaction_id'):
             logger.warning(
                 "KcoMat API create transaction failed (boutique): status=%s response=%s",
@@ -324,12 +324,12 @@ def paiement_commande(request, pk):
             transaction_id = data['transaction_id']
             token = data['token']
             checkout_url = data.get('checkout_url', '')
-            
+
             commande.fedapay_transaction_id = str(transaction_id)
             commande.save(update_fields=['fedapay_transaction_id'])
-            
+
             logger.info("FedaPay transaction created (boutique): %s", transaction_id)
-            
+
             # Passer le token au template pour Checkout.js
             ctx = {
                 'commande': commande,
@@ -341,7 +341,7 @@ def paiement_commande(request, pk):
                 'sandbox': settings.FEDAPAY_SANDBOX,
             }
             return render(request, 'boutique/paiement_checkout.html', ctx)
-            
+
     except requests.RequestException as e:
         logger.exception("KcoMat API HTTP error (boutique): %s", e)
         messages.error(request, "Erreur réseau lors de la connexion au service de paiement.")

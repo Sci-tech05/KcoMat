@@ -73,7 +73,7 @@ def build_invoice_response(
     """
     items: list of dicts {description, quantity, unit_price, subtotal}
     """
-    footer_text = 'Cette facture est une estimation avant validation definitive de la commande. Site web: https://kcomat.com'
+    footer_text = 'Cette facture est une estimation avant validation definitive de la commande. Site web: https://kcomat0.pythonanywhere.com'
     footer_norm = _normalize_text(footer_text)
     clean_note = str(note or '').strip()
     note_norm = _normalize_text(clean_note)
