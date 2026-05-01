@@ -51,14 +51,9 @@ DEFAULT_ALLOWED_HOSTS = [
     'localhost',
     '127.0.0.1',
     'kcomat0.pythonanywhere.com',
-    'kcomat-production.up.railway.app',
 ]
-RAILWAY_PUBLIC_DOMAIN = env_value('RAILWAY_PUBLIC_DOMAIN', default='')
 ALLOWED_HOSTS = env_list('ALLOWED_HOSTS', default=','.join(DEFAULT_ALLOWED_HOSTS)) or DEFAULT_ALLOWED_HOSTS
-if RAILWAY_PUBLIC_DOMAIN and RAILWAY_PUBLIC_DOMAIN not in ALLOWED_HOSTS:
-    ALLOWED_HOSTS.append(RAILWAY_PUBLIC_DOMAIN)
-
-DEFAULT_APP_URL = f"https://{RAILWAY_PUBLIC_DOMAIN}/" if RAILWAY_PUBLIC_DOMAIN else 'http://127.0.0.1:8000/'
+DEFAULT_APP_URL = ''
 
 # Sécurité
 SECURE_SSL_REDIRECT = False
