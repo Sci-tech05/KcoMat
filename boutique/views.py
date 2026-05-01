@@ -13,6 +13,7 @@ from django.utils import timezone
 from .models import Produit, CategorieProduit, Panier, PanierItem, Commande, CommandeItem
 from .forms import CommandeForm
 from core.pdf_invoices import build_invoice_response
+from api.fedapay_service import create_fedapay_transaction
 
 
 logger = logging.getLogger(__name__)
@@ -348,7 +349,7 @@ def checkout(request):
 
 
 def paiement_commande(request, pk):
-    """Initie le paiement de la commande via l'endpoint API local (FedaPay REST)."""
+    """Initie le paiement de la commande via le service FedaPay."""
     commande = get_object_or_404(Commande, pk=pk)
     if commande.statut not in ['en_attente']:
         messages.info(request, "Cette commande a déjà été traitée.")
@@ -358,9 +359,6 @@ def paiement_commande(request, pk):
     callback_url = f"{app_url}/boutique/commande/{commande.pk}/callback/"
     success_url = settings.FEDAPAY_SUCCESS_URL or f"{app_url}/boutique/commande/{commande.pk}/succes/"
     cancel_url = settings.FEDAPAY_CANCEL_URL or f"{app_url}/boutique/panier/"
-
-    # Appeler l'endpoint API local pour créer la transaction FedaPay
-    api_url = request.build_absolute_uri('/') + 'api/create-transaction/'
 
     transaction_payload = {
         'amount': int(commande.montant_total),
@@ -384,18 +382,11 @@ def paiement_commande(request, pk):
     }
 
     try:
-        resp = requests.post(api_url, json=transaction_payload, timeout=25)
-        data = resp.json()
-
+        data = create_fedapay_transaction(transaction_payload)
         if not data.get('success') or not data.get('transaction_id'):
-            logger.warning(
-                "KcoMat API create transaction failed (boutique): status=%s response=%s",
-                resp.status_code,
-                data
-            )
+            logger.warning("FedaPay create transaction failed (boutique): response=%s", data)
             messages.error(request, "Impossible de créer la transaction de paiement: " + data.get('error', 'Erreur inconnue'))
         else:
-            # Sauvegarde l'ID de transaction FedaPay
             transaction_id = data['transaction_id']
             token = data['token']
             checkout_url = data.get('checkout_url', '')
@@ -404,8 +395,6 @@ def paiement_commande(request, pk):
             commande.save(update_fields=['fedapay_transaction_id'])
 
             logger.info("FedaPay transaction created (boutique): %s", transaction_id)
-
-            # Passer le token au template pour Checkout.js
             ctx = {
                 'commande': commande,
                 'title': 'Paiement de la commande',
@@ -416,15 +405,10 @@ def paiement_commande(request, pk):
                 'sandbox': settings.FEDAPAY_SANDBOX,
             }
             return render(request, 'boutique/paiement_checkout.html', ctx)
-
-    except requests.RequestException as e:
-        logger.exception("KcoMat API HTTP error (boutique): %s", e)
-        messages.error(request, "Erreur réseau lors de la connexion au service de paiement.")
     except Exception as e:
         logger.exception("Unexpected error creating transaction (boutique): %s", e)
         messages.error(request, "Une erreur inattendue est survenue lors de l'initialisation du paiement.")
 
-    # Fallback: rediriger vers le panier
     return redirect('boutique:panier')
 
 
@@ -536,3 +520,4 @@ def facture_commande_pdf(request, pk):
         return HttpResponseForbidden('Acces refuse a cette facture.')
 
     return _build_commande_invoice_response(commande)
+
