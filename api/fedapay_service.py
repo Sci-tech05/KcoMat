@@ -1,5 +1,6 @@
 import logging
 from typing import Any
+from urllib.parse import urlparse
 
 import requests
 from django.conf import settings
@@ -162,9 +163,18 @@ def create_fedapay_transaction(data: dict[str, Any]) -> dict[str, Any]:
     except requests.Timeout:
         logger.error("FedaPay API timeout env=%s", environment)
         return {"success": False, "error": "Timeout lors de la création de la transaction", "status_code": 500}
-    except requests.RequestException:
+    except requests.RequestException as exc:
         logger.exception("FedaPay API network error")
-        return {"success": False, "error": "Erreur réseau lors de la création de la transaction", "status_code": 500}
+        host = urlparse(base_url).netloc or "api.fedapay.com"
+        details = str(exc).strip()
+        error_message = f"Erreur réseau lors de la création de la transaction ({host})"
+        if details:
+            error_message = f"{error_message}: {details}"
+        error_message = (
+            f"{error_message}. "
+            "Sur PythonAnywhere, vérifiez que la sortie HTTPS vers ce domaine est autorisée."
+        )
+        return {"success": False, "error": error_message, "status_code": 500}
     except Exception:
         logger.exception("Unexpected error while creating FedaPay transaction")
         return {"success": False, "error": "Erreur interne lors de la création de la transaction", "status_code": 500}
