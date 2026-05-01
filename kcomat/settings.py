@@ -40,6 +40,7 @@ ALLOWED_HOSTS = [
     'localhost',
     '127.0.0.1',
     'kcomat0.pythonanywhere.com',
+    'kcomat-production.up.railway.app',
 ]
 
 # Sécurité
