@@ -12,6 +12,7 @@ from django.utils import timezone
 from .models import Formation, Inscription, CategorieFormation
 from .forms import InscriptionForm
 from core.pdf_invoices import build_invoice_response
+from api.fedapay_service import create_fedapay_transaction
 
 
 logger = logging.getLogger(__name__)
@@ -255,10 +256,7 @@ def paiement_frais(request, pk):
     callback_url = f"{app_url}/formations/inscription/{inscription.pk}/callback-frais/"
     success_url = settings.FEDAPAY_SUCCESS_URL or f"{app_url}/formations/inscription/{inscription.pk}/succes/"
     cancel_url = settings.FEDAPAY_CANCEL_URL or f"{app_url}/formations/{inscription.formation.slug}/"
-    
-    # Appeler l'endpoint API local pour créer la transaction FedaPay
-    api_url = request.build_absolute_uri('/') + 'api/create-transaction/'
-    
+
     transaction_payload = {
         'amount': settings.KCOMAT_INFO['frais_inscription'],
         'description': f"Frais d'inscription KcoMat — {inscription.formation.titre}",
@@ -282,28 +280,19 @@ def paiement_frais(request, pk):
     }
 
     try:
-        resp = requests.post(api_url, json=transaction_payload, timeout=10)
-        data = resp.json()
-        
+        data = create_fedapay_transaction(transaction_payload)
         if not data.get('success') or not data.get('transaction_id'):
-            logger.warning(
-                "KcoMat API create transaction failed (formations): status=%s response=%s",
-                resp.status_code,
-                data
-            )
+            logger.warning("FedaPay create transaction failed (formations): response=%s", data)
             messages.error(request, "Impossible de créer la transaction de paiement: " + data.get('error', 'Erreur inconnue'))
         else:
-            # Sauvegarde l'ID de transaction FedaPay
             transaction_id = data['transaction_id']
             token = data['token']
             checkout_url = data.get('checkout_url', '')
-            
+
             inscription.fedapay_frais_id = str(transaction_id)
             inscription.save(update_fields=['fedapay_frais_id'])
-            
+
             logger.info("FedaPay transaction created (formations): %s", transaction_id)
-            
-            # Passer le token au template pour Checkout.js
             ctx = {
                 'inscription': inscription,
                 'frais': settings.KCOMAT_INFO['frais_inscription'],
@@ -315,15 +304,10 @@ def paiement_frais(request, pk):
                 'sandbox': settings.FEDAPAY_SANDBOX,
             }
             return render(request, 'formations/paiement_checkout.html', ctx)
-            
-    except requests.RequestException as e:
-        logger.exception("KcoMat API HTTP error (formations): %s", e)
-        messages.error(request, "Erreur réseau lors de la connexion au service de paiement.")
     except Exception as e:
         logger.exception("Unexpected error creating transaction (formations): %s", e)
         messages.error(request, "Une erreur inattendue est survenue lors de l'initialisation du paiement.")
 
-    # Fallback: rediriger vers la page de formation
     return redirect('formations:detail', slug=inscription.formation.slug)
 
 
@@ -347,7 +331,6 @@ def paiement_formation(request, pk):
     success_url = settings.FEDAPAY_SUCCESS_URL or f"{app_url}/formations/inscription/{inscription.pk}/succes-formation/"
     cancel_url = settings.FEDAPAY_CANCEL_URL or f"{app_url}/formations/inscription/{inscription.pk}/succes/"
 
-    api_url = request.build_absolute_uri('/') + 'api/create-transaction/'
     transaction_payload = {
         'amount': int(inscription.formation.prix),
         'description': f"Paiement formation KcoMat - {inscription.formation.titre}",
@@ -371,15 +354,9 @@ def paiement_formation(request, pk):
     }
 
     try:
-        resp = requests.post(api_url, json=transaction_payload, timeout=10)
-        data = resp.json()
-
+        data = create_fedapay_transaction(transaction_payload)
         if not data.get('success') or not data.get('transaction_id'):
-            logger.warning(
-                "KcoMat API create transaction failed (formation complete): status=%s response=%s",
-                resp.status_code,
-                data
-            )
+            logger.warning("FedaPay create transaction failed (formation complete): response=%s", data)
             messages.error(request, "Impossible de creer la transaction de paiement: " + data.get('error', 'Erreur inconnue'))
         else:
             transaction_id = data['transaction_id']
@@ -400,10 +377,6 @@ def paiement_formation(request, pk):
                 'sandbox': settings.FEDAPAY_SANDBOX,
             }
             return render(request, 'formations/paiement_formation_checkout.html', ctx)
-
-    except requests.RequestException as e:
-        logger.exception("KcoMat API HTTP error (formation complete): %s", e)
-        messages.error(request, "Erreur reseau lors de la connexion au service de paiement.")
     except Exception as e:
         logger.exception("Unexpected error creating formation transaction: %s", e)
         messages.error(request, "Une erreur inattendue est survenue lors de l'initialisation du paiement.")
@@ -546,3 +519,4 @@ def facture_formation_pdf(request, pk):
         return HttpResponseForbidden('Acces refuse a cette facture.')
 
     return _build_formation_invoice_response(inscription)
+
