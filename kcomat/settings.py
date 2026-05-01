@@ -36,12 +36,29 @@ def required_env(name, *fallback_names):
 SECRET_KEY = config('SECRET_KEY', default='django-insecure-kcomat-changez-moi-en-production-xxx')
 DEBUG = config('DEBUG', default=False, cast=bool)
 
-ALLOWED_HOSTS = [
+def env_list(name, default=''):
+    raw_value = env_value(name, default=default)
+    if not raw_value:
+        return []
+    if isinstance(raw_value, str):
+        values = raw_value.replace(';', ',').split(',')
+    else:
+        values = list(raw_value)
+    return [str(value).strip() for value in values if str(value).strip()]
+
+
+DEFAULT_ALLOWED_HOSTS = [
     'localhost',
     '127.0.0.1',
     'kcomat0.pythonanywhere.com',
     'kcomat-production.up.railway.app',
 ]
+RAILWAY_PUBLIC_DOMAIN = env_value('RAILWAY_PUBLIC_DOMAIN', default='')
+ALLOWED_HOSTS = env_list('ALLOWED_HOSTS', default=','.join(DEFAULT_ALLOWED_HOSTS)) or DEFAULT_ALLOWED_HOSTS
+if RAILWAY_PUBLIC_DOMAIN and RAILWAY_PUBLIC_DOMAIN not in ALLOWED_HOSTS:
+    ALLOWED_HOSTS.append(RAILWAY_PUBLIC_DOMAIN)
+
+DEFAULT_APP_URL = f"https://{RAILWAY_PUBLIC_DOMAIN}/" if RAILWAY_PUBLIC_DOMAIN else 'http://127.0.0.1:8000/'
 
 # Sécurité
 SECURE_SSL_REDIRECT = False
@@ -301,7 +318,7 @@ FEDAPAY_CONFIG = {
     'api_key': required_env('FEDAPAY_API_KEY', 'FEDAPAY_SECRET_KEY'),
     'public_key': required_env('FEDAPAY_PUBLIC_KEY', 'FEDAPAY_PUB_KEY'),
     'environment': required_env('FEDAPAY_ENVIRONMENT'),
-    'app_url': env_value('APP_URL', default='https://kcomat-production.up.railway.app/'),
+    'app_url': env_value('APP_URL', default=DEFAULT_APP_URL),
     'success_url': env_value('FEDAPAY_SUCCESS_URL', default=''),
     'cancel_url': env_value('FEDAPAY_CANCEL_URL', default=''),
 }
