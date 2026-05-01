@@ -301,7 +301,7 @@ FEDAPAY_CONFIG = {
     'api_key': required_env('FEDAPAY_API_KEY', 'FEDAPAY_SECRET_KEY'),
     'public_key': required_env('FEDAPAY_PUBLIC_KEY', 'FEDAPAY_PUB_KEY'),
     'environment': required_env('FEDAPAY_ENVIRONMENT'),
-    'app_url': env_value('APP_URL', default='http://127.0.0.1:8000/'),
+    'app_url': env_value('APP_URL', default='https://kcomat-production.up.railway.app/'),
     'success_url': env_value('FEDAPAY_SUCCESS_URL', default=''),
     'cancel_url': env_value('FEDAPAY_CANCEL_URL', default=''),
 }
