@@ -5,7 +5,7 @@ from django.contrib import messages
 from django.conf import settings
 from django.core.mail import EmailMessage
 from django.core.exceptions import PermissionDenied
-from django.http import HttpResponse
+from django.http import HttpResponse, JsonResponse
 from django.urls import reverse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST
@@ -253,10 +253,29 @@ def voir_panier(request):
     return render(request, 'boutique/panier.html', ctx)
 
 
+def _veut_json(request):
+    return request.headers.get('X-Requested-With') == 'fetch' or 'application/json' in request.headers.get('Accept', '')
+
+
+def _etat_panier(panier, **extra):
+    """Totaux du panier pour la mise à jour sans rechargement (static/js/panier.js)."""
+    items = list(panier.items.select_related('produit'))
+    nombre = sum(i.quantite for i in items)
+    return JsonResponse({
+        'ok': True,
+        'nombre_articles': nombre,
+        'total': int(sum(i.sous_total() for i in items)),
+        'vide': not items,
+        **extra,
+    })
+
+
 @require_POST
 def supprimer_item(request, item_id):
     panier = _get_panier(request)
-    PanierItem.objects.filter(pk=item_id, panier=panier).delete()
+    supprimes, _ = PanierItem.objects.filter(pk=item_id, panier=panier).delete()
+    if _veut_json(request):
+        return _etat_panier(panier, supprime=bool(supprimes))
     messages.info(request, "Article retiré du panier.")
     return redirect('boutique:panier')
 
@@ -264,13 +283,20 @@ def supprimer_item(request, item_id):
 @require_POST
 def modifier_quantite(request, item_id):
     panier = _get_panier(request)
-    quantite = int(request.POST.get('quantite', 1))
-    item = get_object_or_404(PanierItem, pk=item_id, panier=panier)
+    try:
+        quantite = int(request.POST.get('quantite', 1))
+    except (TypeError, ValueError):
+        quantite = 1
+    item = get_object_or_404(PanierItem.objects.select_related('produit'), pk=item_id, panier=panier)
     if quantite < 1:
         item.delete()
+        item_data = {'supprime': True}
     else:
-        item.quantite = min(quantite, item.produit.stock)
-        item.save()
+        item.quantite = max(1, min(quantite, item.produit.stock))
+        item.save(update_fields=['quantite'])
+        item_data = {'quantite': item.quantite, 'sous_total': int(item.sous_total())}
+    if _veut_json(request):
+        return _etat_panier(panier, item=item_data)
     return redirect('boutique:panier')
 
 

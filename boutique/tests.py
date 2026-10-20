@@ -71,3 +71,43 @@ class CommandeSecurityTests(TestCase):
         self.assertEqual(
             self.client.get(reverse('boutique:facture_commande', args=[anonymous.pk])).status_code, 403,
         )
+
+
+class PanierSansRechargementTests(TestCase):
+    """Retrait / quantité en JSON (static/js/panier.js) et repli classique sans JavaScript."""
+
+    def setUp(self):
+        from boutique.models import Panier, PanierItem, Produit
+        self.user = User.objects.create_user('client-panier', password='x')
+        self.client.force_login(self.user)
+        p1 = Produit.objects.create(nom='ESP32', slug='esp32-t', description_courte='x', description='x', prix=10000, stock=5)
+        p2 = Produit.objects.create(nom='Relais', slug='relais-t', description_courte='x', description='x', prix=2500, stock=5)
+        self.panier = Panier.objects.create(utilisateur=self.user)
+        self.i1 = PanierItem.objects.create(panier=self.panier, produit=p1, quantite=2)
+        self.i2 = PanierItem.objects.create(panier=self.panier, produit=p2, quantite=1)
+        self.json = {'HTTP_X_REQUESTED_WITH': 'fetch', 'HTTP_ACCEPT': 'application/json'}
+
+    def test_retrait_json(self):
+        r = self.client.post(reverse('boutique:supprimer_item', args=[self.i1.pk]), **self.json)
+        self.assertEqual(r.status_code, 200)
+        self.assertEqual(r.json(), {'ok': True, 'nombre_articles': 1, 'total': 2500, 'vide': False, 'supprime': True})
+        r = self.client.post(reverse('boutique:supprimer_item', args=[self.i2.pk]), **self.json)
+        self.assertTrue(r.json()['vide'])
+
+    def test_quantite_json_plafonnee_au_stock(self):
+        r = self.client.post(reverse('boutique:modifier_item', args=[self.i1.pk]), {'quantite': 99}, **self.json)
+        self.assertEqual(r.json()['item'], {'quantite': 5, 'sous_total': 50000})
+        self.assertEqual(r.json()['total'], 52500)
+        r = self.client.post(reverse('boutique:modifier_item', args=[self.i1.pk]), {'quantite': 'abc'}, **self.json)
+        self.assertEqual(r.json()['item']['quantite'], 1)
+
+    def test_article_d_un_autre_panier_intouchable(self):
+        from boutique.models import PanierItem
+        autre = User.objects.create_user('autre', password='x')
+        self.client.force_login(autre)
+        self.client.post(reverse('boutique:supprimer_item', args=[self.i1.pk]), **self.json)
+        self.assertTrue(PanierItem.objects.filter(pk=self.i1.pk).exists())
+
+    def test_repli_sans_javascript(self):
+        r = self.client.post(reverse('boutique:supprimer_item', args=[self.i1.pk]))
+        self.assertRedirects(r, reverse('boutique:panier'))
