@@ -262,7 +262,7 @@ def detail_formation(request, slug):
         Formation.objects.prefetch_related(
             Prefetch(
                 'sessions_passees',
-                queryset=FormationSessionPassee.objects.filter(publiee=True).prefetch_related('medias'),
+                queryset=FormationSessionPassee.objects.filter(publiee=True),
             )
         ),
         slug=slug,

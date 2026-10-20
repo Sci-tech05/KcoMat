@@ -1,0 +1,28 @@
+{% comment %}
+Aperçu vidéo YouTube / TikTok (façade légère : miniature + bouton, le lecteur se charge au clic).
+  {% include 'partials/video.html' with v=projet.video titre=projet.titre %}
+  Options : sous_titre='Session Avril 2025'  vertical_max='20rem'  priorite=True
+{% endcomment %}
+{% if v %}
+<div class="vid {% if v.vertical %}vid--vertical{% endif %}" data-video-src="{{ v.lecteur }}" data-video-title="{{ titre|default:'Vidéo KcoMat' }}"
+     {% if v.vertical and vertical_max %}style="--vid-max: {{ vertical_max }}"{% endif %}>
+  <button type="button" class="vid__facade" aria-label="Lire la vidéo : {{ titre|default:'Vidéo KcoMat' }} ({{ v.nom_plateforme }})">
+    {% if v.miniature %}
+    <img src="{{ v.miniature }}" alt="" {% if priorite %}fetchpriority="high"{% else %}loading="lazy"{% endif %} decoding="async" class="vid__thumb" referrerpolicy="no-referrer">
+    {% else %}
+    <span class="vid__tiktok" aria-hidden="true">
+      <svg viewBox="0 0 24 24" fill="currentColor" class="w-12 h-12"><path d="M19.59 6.69a4.83 4.83 0 01-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 01-2.88 2.5 2.89 2.89 0 01-2.89-2.89 2.89 2.89 0 012.89-2.89c.28 0 .54.04.79.1V9.01a6.27 6.27 0 00-.79-.05 6.34 6.34 0 00-6.34 6.34 6.34 6.34 0 006.34 6.34 6.34 6.34 0 006.33-6.34V8.69a8.18 8.18 0 004.78 1.52V6.73a4.85 4.85 0 01-1.01-.04z"/></svg>
+      {% if not sous_titre %}<span class="vid__tiktok-titre">{{ titre|default:'Vidéo KcoMat' }}</span>{% endif %}
+    </span>
+    {% endif %}
+    <span class="vid__shade" aria-hidden="true"></span>
+    <span class="vid__btn" aria-hidden="true"><svg viewBox="0 0 24 24" fill="currentColor" class="w-7 h-7 translate-x-0.5"><path d="M8 5.14v13.72a1 1 0 0 0 1.52.85l10.96-6.86a1 1 0 0 0 0-1.7L9.52 4.29A1 1 0 0 0 8 5.14z"/></svg></span>
+    <span class="vid__badge" aria-hidden="true">
+      {% if v.est_youtube %}<svg viewBox="0 0 24 24" fill="currentColor" class="w-4 h-4 text-[#FF0033]"><path d="M23.5 6.2a3 3 0 0 0-2.1-2.1C19.5 3.6 12 3.6 12 3.6s-7.5 0-9.4.5A3 3 0 0 0 .5 6.2 31 31 0 0 0 0 12a31 31 0 0 0 .5 5.8 3 3 0 0 0 2.1 2.1c1.9.5 9.4.5 9.4.5s7.5 0 9.4-.5a3 3 0 0 0 2.1-2.1A31 31 0 0 0 24 12a31 31 0 0 0-.5-5.8zM9.6 15.6V8.4l6.2 3.6-6.2 3.6z"/></svg>{% else %}<svg viewBox="0 0 24 24" fill="currentColor" class="w-3.5 h-3.5"><path d="M19.59 6.69a4.83 4.83 0 01-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 01-5.77-.39 2.89 2.89 0 013.68-2.78V9.01a6.34 6.34 0 105.47 6.28V8.69a8.18 8.18 0 004.78 1.52V6.73a4.85 4.85 0 01-.94-.04z"/></svg>{% endif %}
+      {{ v.nom_plateforme }}
+    </span>
+    {% if sous_titre %}<span class="vid__caption">{{ sous_titre }}</span>{% endif %}
+  </button>
+  <noscript><a href="{{ v.lien_plateforme }}" target="_blank" rel="noopener" class="vid__noscript">Voir la vidéo sur {{ v.nom_plateforme }}</a></noscript>
+</div>
+{% endif %}
