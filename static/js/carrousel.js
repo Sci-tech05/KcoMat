@@ -80,12 +80,17 @@
     track.addEventListener('pointerdown', function (e) {
       if (e.pointerType !== 'mouse' || e.button !== 0) return;
       glisse = true; deplace = false; departX = e.clientX; departScroll = track.scrollLeft;
-      pause(); track.classList.add('is-dragging');
+      pause();
     });
     window.addEventListener('pointermove', function (e) {
       if (!glisse) return;
-      if (Math.abs(e.clientX - departX) > 5) deplace = true;
-      track.scrollLeft = departScroll - (e.clientX - departX);
+      // Le mode « glisser » (qui neutralise les liens) ne démarre qu'après un vrai déplacement :
+      // un simple clic doit toujours ouvrir la carte.
+      if (!deplace && Math.abs(e.clientX - departX) > 5) {
+        deplace = true;
+        track.classList.add('is-dragging');
+      }
+      if (deplace) track.scrollLeft = departScroll - (e.clientX - departX);
     });
     window.addEventListener('pointerup', function () {
       if (!glisse) return;
