@@ -236,3 +236,25 @@ class OffresPremiumTests(TestCase):
         self.assertContains(response, '"employmentType": "INTERN"')
         self.assertContains(response, 'Vos missions')
         self.assertContains(response, 'Formule conseillée')
+
+
+class CandidatureUniqueTests(TestCase):
+    def setUp(self):
+        self.offre = Offre.objects.create(titre='Stage IoT', type_offre='stage', domaine='IoT',
+                                          description='desc', competences_requises='ESP32')
+        self.autre = Offre.objects.create(titre='Stage web', slug='stage-web', type_offre='stage', domaine='web',
+                                          description='desc', competences_requises='Django')
+        self._media = tempfile.mkdtemp()
+        self.addCleanup(shutil.rmtree, self._media, ignore_errors=True)
+
+    def postuler(self, offre, email):
+        with override_settings(MEDIA_ROOT=self._media), self.captureOnCommitCallbacks(execute=True):
+            return self.client.post(reverse('carrieres:detail', args=[offre.slug]), {
+                'prenom': 'Awa', 'nom': 'Dossou', 'email': email, 'telephone': '0197000000', 'cv': fichier()})
+
+    def test_une_seule_candidature_par_offre(self):
+        self.assertEqual(self.postuler(self.offre, 'awa@example.com').status_code, 302)
+        r = self.postuler(self.offre, 'AWA@Example.com')
+        self.assertContains(r, 'déjà postulé à cette offre')
+        self.assertEqual(Candidature.objects.filter(offre=self.offre).count(), 1)
+        self.assertEqual(self.postuler(self.autre, 'awa@example.com').status_code, 302)   # autre offre : autorisé

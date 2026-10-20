@@ -148,3 +148,59 @@ class InscriptionSecurityTests(TestCase):
 
     def test_open_transaction_api_is_removed(self):
         self.assertEqual(self.client.post('/api/create-transaction/').status_code, 404)
+
+
+class InscriptionUniqueTests(TestCase):
+    """Une seule inscription en cours par personne et par formation ; reprise du paiement."""
+
+    def setUp(self):
+        self.formation = Formation.objects.create(titre='Domotique', description_courte='IoT', description='IoT', prix=20000)
+        self.user = User.objects.create_user('awa', email='awa@example.com', password='pw-awa-123')
+        self.url = reverse('formations:detail', args=[self.formation.slug])
+        self.data = {'prenom': 'Awa', 'nom': 'Dossou', 'email': 'awa@example.com', 'telephone': '0197000000',
+                     'mode_preference': 'presentiel'}
+
+    def test_deuxieme_inscription_redirigee_vers_le_paiement_en_cours(self):
+        self.client.force_login(self.user)
+        r1 = self.client.post(self.url, self.data)
+        inscription = Inscription.objects.get()
+        self.assertRedirects(r1, reverse('formations:paiement_frais', args=[inscription.pk]), fetch_redirect_response=False)
+        r2 = self.client.post(self.url, self.data)
+        self.assertEqual(Inscription.objects.count(), 1)
+        self.assertRedirects(r2, reverse('formations:paiement_frais', args=[inscription.pk]), fetch_redirect_response=False)
+        # frais réglés : on est envoyé au paiement de la formation
+        Inscription.objects.filter(pk=inscription.pk).update(statut='frais_payes')
+        r3 = self.client.post(self.url, self.data)
+        self.assertRedirects(r3, reverse('formations:paiement_formation', args=[inscription.pk]), fetch_redirect_response=False)
+        page = self.client.get(self.url).content.decode()
+        self.assertIn('Vous êtes déjà inscrit(e)', page)
+        self.assertIn(reverse('formations:paiement_formation', args=[inscription.pk]), page)
+
+    def test_meme_email_par_un_inconnu_refuse(self):
+        Inscription.objects.create(formation=self.formation, utilisateur=self.user, nom='Dossou', prenom='Awa',
+                                   email='awa@example.com', telephone='0197000000')
+        r = self.client.post(self.url, {**self.data, 'email': 'AWA@example.com'})   # anonyme, même e-mail
+        self.assertEqual(r.status_code, 200)
+        self.assertContains(r, 'déjà en cours pour cette adresse e-mail')
+        self.assertEqual(Inscription.objects.count(), 1)
+
+    def test_reinscription_possible_apres_formation_terminee_ou_annulee(self):
+        self.client.force_login(self.user)
+        for statut in ('termine', 'annule'):
+            Inscription.objects.all().delete()
+            Inscription.objects.create(formation=self.formation, utilisateur=self.user, nom='Dossou', prenom='Awa',
+                                       email='awa@example.com', telephone='0197000000', statut=statut)
+            self.client.post(self.url, self.data)
+            self.assertEqual(Inscription.objects.filter(statut='en_attente').count(), 1, statut)
+
+    def test_profil_propose_de_continuer_les_paiements(self):
+        from boutique.models import Commande
+        insc = Inscription.objects.create(formation=self.formation, utilisateur=self.user, nom='Dossou', prenom='Awa',
+                                          email='awa@example.com', telephone='0197000000', statut='frais_payes')
+        commande = Commande.objects.create(utilisateur=self.user, nom='D', prenom='A', email='awa@example.com',
+                                           telephone='0197000000', adresse_livraison='x', ville='Lokossa', montant_total=5000)
+        self.client.force_login(self.user)
+        page = self.client.get(reverse('accounts:dashboard')).content.decode()
+        self.assertIn(reverse('formations:paiement_formation', args=[insc.pk]), page)
+        self.assertIn(reverse('boutique:paiement', args=[commande.pk]), page)
+        self.assertIn('Continuer le paiement', page)

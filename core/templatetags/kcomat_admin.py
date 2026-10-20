@@ -26,14 +26,14 @@ def admin_dashboard():
         total=Count('id'),
         ce_mois=Count('id', filter=Q(created_at__gte=debut_mois)),
         en_attente=Count('id', filter=Q(statut='en_attente')),
-        completes=Count('id', filter=Q(statut='complet')),
+        completes=Count('id', filter=Q(statut__in=['complet', 'termine'])),
         # anciennes inscriptions : statut renseigné sans date de paiement
-        frais_payes=Count('id', filter=Q(frais_payes_le__isnull=False) | Q(statut__in=['frais_payes', 'complet'])),
+        frais_payes=Count('id', filter=Q(frais_payes_le__isnull=False) | Q(statut__in=['frais_payes', 'complet', 'termine'])),
         en_ligne=Count('id', filter=Q(mode_preference='en_ligne')),
     )
     revenus_formations = (
         inscriptions['frais_payes'] * settings.KCOMAT_INFO['frais_inscription']
-        + (Inscription.objects.filter(Q(formation_payee_le__isnull=False) | Q(statut='complet'))
+        + (Inscription.objects.filter(Q(formation_payee_le__isnull=False) | Q(statut__in=['complet', 'termine']))
            .aggregate(s=Sum('formation__prix'))['s'] or 0)
     )
 

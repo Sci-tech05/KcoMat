@@ -45,9 +45,22 @@ class Video:
 
     @property
     def miniature_hd(self):
+        """1280 × 720 : n'existe que pour les vidéos mises en ligne en HD (sinon repli, voir video.js)."""
         if self.est_youtube:
             return f"https://i.ytimg.com/vi/{self.identifiant}/maxresdefault.jpg"
         return ''
+
+    @property
+    def miniature_sd(self):
+        """640 × 480, disponible pour presque toutes les vidéos."""
+        if self.est_youtube:
+            return f"https://i.ytimg.com/vi/{self.identifiant}/sddefault.jpg"
+        return ''
+
+    @property
+    def miniatures_repli(self):
+        """Miniatures de repli (de la meilleure à la plus sûre), séparées par des espaces."""
+        return f"{self.miniature_sd} {self.miniature}" if self.est_youtube else ''
 
     @property
     def lecteur(self):

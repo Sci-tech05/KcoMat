@@ -3,7 +3,7 @@
 
 {% block title %}{{ projet.titre }} — Projet réalisé{% endblock %}
 {% block meta_description %}{{ projet.description_courte }}{% endblock %}
-{% block og_image %}{% if projet.miniature %}{{ projet.miniature }}{% else %}{{ block.super }}{% endif %}{% endblock %}
+{% block og_image %}{% if projet.video.miniature_sd %}{{ projet.video.miniature_sd }}{% else %}{{ block.super }}{% endif %}{% endblock %}
 
 {% block content %}
 
