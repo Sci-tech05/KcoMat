@@ -1,5 +1,8 @@
 from django.shortcuts import render, redirect
 from django.contrib import messages
+from django.http import HttpResponse
+from django.views.decorators.cache import cache_control
+from django.views.decorators.http import require_GET
 from django.core.mail import send_mail
 from django.conf import settings
 from .models import TeamMember, Temoignage, Statistique
@@ -56,3 +59,23 @@ def contact(request):
 
 def confidentialite(request):
     return render(request, 'core/confidentialite.html', {'title': 'Politique de confidentialité'})
+
+
+ROBOTS_DISALLOW = [
+    '/accounts/',
+    '/boutique/panier/',
+    '/boutique/checkout/',
+    '/boutique/commande/',
+    '/formations/inscription/',
+    '/formations/mes-inscriptions/',
+]
+
+
+@require_GET
+@cache_control(max_age=60 * 60 * 24, public=True)
+def robots_txt(request):
+    # L'URL de l'admin est volontairement absente : la citer la rendrait publique.
+    site_url = (settings.FEDAPAY_APP_URL or request.build_absolute_uri('/')).rstrip('/')
+    lines = ['User-agent: *', *[f'Disallow: {path}' for path in ROBOTS_DISALLOW], '',
+             f'Sitemap: {site_url}/sitemap.xml', '']
+    return HttpResponse('\n'.join(lines), content_type='text/plain; charset=utf-8')

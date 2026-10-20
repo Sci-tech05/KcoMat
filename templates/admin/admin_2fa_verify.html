@@ -1,48 +1,70 @@
-{% extends 'base.html' %}
-{% load static %}
+{% load static %}<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="robots" content="noindex, nofollow" />
+    <title>Vérification 2FA | KcoMat</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300..900&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="{% static 'css/app.css' %}" />
+    <link rel="stylesheet" href="{% static 'css/kcomat.css' %}" />
+    <link rel="icon" type="image/svg+xml" href="{% static 'img/favicon.svg' %}" />
+</head>
+<body class="font-sans antialiased bg-[#060A14]">
+<main class="hx min-h-screen flex items-center" style="--hx-a:#10B981;--hx-b:#0A84FF;--hx-c:#34D399">
+    {% include 'partials/hero_fx.html' %}
 
-{% block title %}Verification Admin 2FA{% endblock %}
+    <div class="relative w-full max-w-md mx-auto px-4 py-12">
+        <div class="hx-in hx-glass p-7 sm:p-9 text-center">
+            <div class="mx-auto grid place-items-center w-14 h-14 rounded-2xl bg-gradient-to-br from-emerald-500 to-cyan-400 text-white shadow-lg shadow-emerald-900/50">
+                {% include 'partials/icon.html' with name='shield' class='w-7 h-7' stroke='2' %}
+            </div>
+            <p class="mt-6 font-mono text-[11px] uppercase tracking-[0.2em] text-emerald-300">Étape 2 sur 2</p>
+            <h1 class="mt-2 text-2xl font-extrabold tracking-tight text-white">Vérification de sécurité</h1>
+            <p class="mt-2 text-sm text-slate-400">Saisissez le code à 6 chiffres envoyé sur l'adresse e-mail de votre compte administrateur.</p>
 
-{% block content %}
-<section class="py-12 px-4">
-  <div class="max-w-md mx-auto bg-white rounded-xl shadow-sm border border-slate-200 p-6">
-    <h1 class="text-2xl font-bold text-slate-900 mb-2">Verification administrateur</h1>
-    <p class="text-slate-600 mb-4">Entrez le code a 6 chiffres envoye sur votre email admin.</p>
- 
-  <!--  {% if messages %}
-      <div class="space-y-2 mb-4">
-        {% for message in messages %}
-          <div class="text-sm px-3 py-2 rounded border {% if message.tags == 'error' %}bg-red-50 text-red-700 border-red-200{% elif message.tags == 'success' %}bg-green-50 text-green-700 border-green-200{% else %}bg-slate-50 text-slate-700 border-slate-200{% endif %}">
-            {{ message }}
-          </div>
-        {% endfor %}
-      </div>
-    {% endif %}
-    -->
+            {% if messages %}
+            <div class="mt-6 space-y-2 text-left" role="status">
+                {% for message in messages %}
+                <div class="rounded-xl border px-4 py-3 text-sm {% if message.tags == 'error' %}border-rose-400/30 bg-rose-500/10 text-rose-200{% elif message.tags == 'success' %}border-emerald-400/30 bg-emerald-500/10 text-emerald-200{% else %}border-white/10 bg-white/5 text-slate-300{% endif %}">{{ message }}</div>
+                {% endfor %}
+            </div>
+            {% endif %}
 
-    <form method="post" class="space-y-4">
-      {% csrf_token %}
-      <input type="hidden" name="next" value="{{ next_url }}">
-      <div>
-        <label for="code" class="block text-sm font-medium text-slate-700 mb-1">Code de verification</label>
-        <input
-          id="code"
-          name="code"
-          type="text"
-          inputmode="numeric"
-          maxlength="6"
-          autocomplete="one-time-code"
-          class="w-full rounded-md border border-slate-300 px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-          placeholder="000000"
-          required
-        >
-      </div>
-      <div class="flex items-center gap-3">
-        <button type="submit" class="inline-flex items-center rounded-md bg-blue-700 text-white px-4 py-2 hover:bg-blue-800 transition">Verifier</button>
-        <a href="?next={{ next_url|urlencode }}&resend=1" class="text-blue-700 hover:text-blue-900 text-sm">Renvoyer un code</a>
-      </div>
-    </form>
+            <form method="post" class="mt-7 space-y-5" id="otp-form">
+                {% csrf_token %}
+                <input type="hidden" name="next" value="{{ next_url }}">
+                <label for="code" class="sr-only">Code de vérification</label>
+                <input id="code" name="code" type="text" inputmode="numeric" pattern="[0-9]{6}" maxlength="6"
+                       autocomplete="one-time-code" required autofocus placeholder="000000"
+                       class="w-full rounded-2xl border border-white/10 bg-white/[0.06] py-4 text-center font-mono text-3xl font-bold tracking-[0.6em] indent-[0.6em] text-white placeholder-slate-600 outline-none transition focus:border-emerald-400/60 focus:ring-4 focus:ring-emerald-500/15">
+                <button type="submit" class="hx-btn hx-btn--primary w-full !py-3.5">
+                    Vérifier et continuer
+                    {% include 'partials/icon.html' with name='arrow-right' class='w-4 h-4 hx-arrow' stroke='2.25' %}
+                </button>
+            </form>
 
-  </div>
-</section>
-{% endblock %}
+            <div class="mt-6 flex items-center justify-between gap-3 text-sm">
+                <a href="?next={{ next_url|urlencode }}&resend=1" class="font-semibold text-sky-300 hover:text-white transition-colors">Renvoyer un code</a>
+                <span class="flex items-center gap-1.5 text-xs text-slate-500">{% include 'partials/icon.html' with name='clock' class='w-3.5 h-3.5' %}Valable {{ code_ttl_minutes }} minute{{ code_ttl_minutes|pluralize }}</span>
+            </div>
+        </div>
+        <p class="mt-6 text-center text-xs text-slate-500"><a href="/" class="hover:text-slate-300 transition-colors">← Retour au site KcoMat</a></p>
+    </div>
+</main>
+<script>
+  // Ne garde que les chiffres et envoie automatiquement au 6e chiffre (collage compris).
+  (function () {
+    var input = document.getElementById('code');
+    var form = document.getElementById('otp-form');
+    if (!input || !form) return;
+    input.addEventListener('input', function () {
+      input.value = input.value.replace(/\D/g, '').slice(0, 6);
+      if (input.value.length === 6) form.requestSubmit ? form.requestSubmit() : form.submit();
+    });
+  })();
+</script>
+</body>
+</html>

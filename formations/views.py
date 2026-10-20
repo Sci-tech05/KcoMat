@@ -1,86 +1,78 @@
 import json
 import logging
-import requests
+import uuid
+from urllib.parse import urlparse
 from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib import messages
 from django.conf import settings
 from django.core.mail import EmailMessage
-from django.http import JsonResponse, HttpResponse, HttpResponseForbidden
+from django.core.exceptions import PermissionDenied
+from django.http import HttpResponse, HttpResponseForbidden
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST
+from django.contrib.auth.decorators import login_required
 from django.utils import timezone
-from .models import Formation, Inscription, CategorieFormation
+from django.db.models import Prefetch
+from django.utils.text import slugify
+from .models import Formation, FormationSessionPassee, Inscription, CategorieFormation
 from .forms import InscriptionForm
 from core.pdf_invoices import build_invoice_response
-from api.fedapay_service import create_fedapay_transaction
+from api.fedapay_service import create_fedapay_transaction, verify_fedapay_payment
 
 
 logger = logging.getLogger(__name__)
 
 
-def _fedapay_base_url(environment):
-    env = (environment or '').strip().lower()
-    if env == 'sandbox':
-        return 'https://sandbox-api.fedapay.com/v1'
-    return 'https://api.fedapay.com/v1'
+SESSION_INSCRIPTIONS_KEY = 'kcomat_inscriptions'
 
 
-def _extract_transaction_object(payload):
-    if isinstance(payload, dict):
-        if 'id' in payload:
-            return payload
-        for value in payload.values():
-            if isinstance(value, dict) and 'id' in value:
-                return value
-    return {}
+def _verify_frais_payment(inscription, candidate_id=None):
+    """Valide le paiement des frais : transaction de CETTE inscription, bon montant."""
+    validated_id = verify_fedapay_payment(
+        stored_transaction_id=inscription.fedapay_frais_id,
+        candidate_transaction_id=candidate_id,
+        expected_amount=settings.KCOMAT_INFO['frais_inscription'],
+        expected_type='inscription_frais',
+        ref_key='inscription_id',
+        expected_ref=inscription.pk,
+    )
+    if validated_id and validated_id != inscription.fedapay_frais_id:
+        inscription.fedapay_frais_id = validated_id
+        inscription.save(update_fields=['fedapay_frais_id'])
+    return bool(validated_id)
 
 
-def _fetch_fedapay_transaction(transaction_id):
-    if not transaction_id:
-        return {}
-
-    api_key = settings.FEDAPAY_CONFIG.get('api_key', '')
-    environment = settings.FEDAPAY_CONFIG.get('environment', 'live')
-    timeout_seconds = int(getattr(settings, 'FEDAPAY_API_TIMEOUT', 30))
-    if not api_key:
-        logger.error("Missing FEDAPAY API key while checking inscription transaction")
-        return {}
-
-    headers = {
-        'Authorization': f'Bearer {api_key}',
-        'Content-Type': 'application/json',
-    }
-    base_url = _fedapay_base_url(environment)
-    try:
-        response = requests.get(
-            f'{base_url}/transactions/{transaction_id}',
-            headers=headers,
-            timeout=timeout_seconds,
-        )
-    except requests.RequestException:
-        logger.exception("Network error while fetching FedaPay transaction %s", transaction_id)
-        return {}
-
-    if response.status_code != 200:
-        logger.warning(
-            "FedaPay transaction fetch failed id=%s status=%s body=%s",
-            transaction_id,
-            response.status_code,
-            response.text[:1200],
-        )
-        return {}
-
-    try:
-        payload = response.json()
-    except ValueError:
-        logger.warning("FedaPay transaction fetch returned non-JSON body id=%s", transaction_id)
-        return {}
-    return _extract_transaction_object(payload)
+def _verify_formation_payment(inscription, candidate_id=None):
+    """Valide le paiement de la formation : transaction de CETTE inscription, prix de la formation."""
+    validated_id = verify_fedapay_payment(
+        stored_transaction_id=inscription.fedapay_formation_id,
+        candidate_transaction_id=candidate_id,
+        expected_amount=int(inscription.formation.prix),
+        expected_type='inscription_formation',
+        ref_key='inscription_id',
+        expected_ref=inscription.pk,
+    )
+    if validated_id and validated_id != inscription.fedapay_formation_id:
+        inscription.fedapay_formation_id = validated_id
+        inscription.save(update_fields=['fedapay_formation_id'])
+    return bool(validated_id)
 
 
-def _is_fedapay_transaction_approved(transaction_id):
-    transaction_data = _fetch_fedapay_transaction(transaction_id)
-    return str(transaction_data.get('status', '')).strip().lower() == 'approved'
+def _remember_inscription(request, inscription):
+    """Memorise en session les inscriptions creees par un visiteur (non connecte)."""
+    ids = set(request.session.get(SESSION_INSCRIPTIONS_KEY, []))
+    ids.add(inscription.pk)
+    request.session[SESSION_INSCRIPTIONS_KEY] = sorted(ids)
+
+
+def _check_inscription_access(request, inscription):
+    """Seul le proprietaire (compte ou session d'origine) ou le staff accede a l'inscription."""
+    user = request.user
+    if user.is_authenticated and (user.is_staff or inscription.utilisateur_id == user.pk):
+        return
+    if inscription.utilisateur_id is None and inscription.pk in request.session.get(SESSION_INSCRIPTIONS_KEY, []):
+        return
+    raise PermissionDenied("Acces refuse a cette inscription.")
 
 
 def _build_frais_invoice_response(inscription):
@@ -197,6 +189,59 @@ def _mark_inscription_formation_paid(inscription):
     _send_inscription_invoice_email(inscription)
 
 
+def _ensure_jitsi_room(inscription):
+    if inscription.jitsi_room_name:
+        return inscription.jitsi_room_name
+    base_slug = slugify(inscription.formation.titre)[:30] or 'formation'
+    short_token = uuid.uuid4().hex[:8]
+    room_name = f"kcomat-{inscription.pk}-{base_slug}-{short_token}"
+    inscription.jitsi_room_name = room_name
+    inscription.jitsi_room_created_at = timezone.now()
+    inscription.save(update_fields=['jitsi_room_name', 'jitsi_room_created_at'])
+    return room_name
+
+
+def _can_access_meet_room(user, inscription):
+    if not user.is_authenticated:
+        return False
+    if user.is_staff:
+        return True
+    return inscription.utilisateur_id == user.pk and inscription.statut == 'complet'
+
+
+def _jitsi_embed_payload(inscription, user):
+    _ensure_jitsi_room(inscription)
+    meet_url = inscription.get_jitsi_room_url()
+    if not meet_url:
+        return {
+            'meet_url': '',
+            'jitsi_domain': '',
+            'jitsi_external_api_url': '',
+            'jitsi_room_name': '',
+            'jitsi_display_name': '',
+            'jitsi_user_email': '',
+        }
+    parsed = urlparse(meet_url)
+    scheme = parsed.scheme or 'https'
+    domain = parsed.netloc
+    room_name = parsed.path.lstrip('/')
+    external_api_url = f"{scheme}://{domain}/external_api.js"
+    display_name = (
+        f"{user.first_name} {user.last_name}".strip()
+        or getattr(user, 'username', '')
+        or f"{inscription.prenom} {inscription.nom}".strip()
+        or 'Participant KcoMat'
+    )
+    return {
+        'meet_url': meet_url,
+        'jitsi_domain': domain,
+        'jitsi_external_api_url': external_api_url,
+        'jitsi_room_name': room_name,
+        'jitsi_display_name': display_name,
+        'jitsi_user_email': getattr(user, 'email', '') or inscription.email or '',
+    }
+
+
 def liste_formations(request):
     categories = CategorieFormation.objects.all()
     cat_slug = request.GET.get('categorie', '')
@@ -213,7 +258,16 @@ def liste_formations(request):
 
 
 def detail_formation(request, slug):
-    formation = get_object_or_404(Formation, slug=slug, actif=True)
+    formation = get_object_or_404(
+        Formation.objects.prefetch_related(
+            Prefetch(
+                'sessions_passees',
+                queryset=FormationSessionPassee.objects.filter(publiee=True).prefetch_related('medias'),
+            )
+        ),
+        slug=slug,
+        actif=True,
+    )
     if request.method == 'POST':
         form = InscriptionForm(request.POST)
     elif request.user.is_authenticated:
@@ -234,6 +288,7 @@ def detail_formation(request, slug):
         if request.user.is_authenticated:
             inscription.utilisateur = request.user
         inscription.save()
+        _remember_inscription(request, inscription)
         # Rediriger vers le paiement des frais d'inscription
         return redirect('formations:paiement_frais', pk=inscription.pk)
     ctx = {
@@ -247,7 +302,8 @@ def detail_formation(request, slug):
 
 def paiement_frais(request, pk):
     """Initie le paiement des frais d'inscription (2000 FCFA) via Fedapay Checkout.js."""
-    inscription = get_object_or_404(Inscription, pk=pk)
+    inscription = get_object_or_404(Inscription.objects.select_related('formation'), pk=pk)
+    _check_inscription_access(request, inscription)
     if inscription.statut != 'en_attente':
         messages.warning(request, "Cette inscription a déjà été traitée.")
         return redirect('formations:liste')
@@ -314,9 +370,7 @@ def paiement_frais(request, pk):
 def paiement_formation(request, pk):
     """Initie le paiement de la formation complete apres paiement des frais."""
     inscription = get_object_or_404(Inscription.objects.select_related('formation', 'utilisateur'), pk=pk)
-
-    if inscription.utilisateur_id and (not request.user.is_authenticated or (request.user != inscription.utilisateur and not request.user.is_staff)):
-        return HttpResponseForbidden('Acces refuse a ce paiement.')
+    _check_inscription_access(request, inscription)
 
     if inscription.statut == 'en_attente':
         messages.warning(request, "Veuillez d'abord payer les frais d'inscription.")
@@ -386,11 +440,9 @@ def paiement_formation(request, pk):
 
 @csrf_exempt
 def callback_frais(request, pk):
-    inscription = get_object_or_404(Inscription, pk=pk)
+    inscription = get_object_or_404(Inscription.objects.select_related('formation'), pk=pk)
     if request.method == 'GET':
-        status_hint = (request.GET.get('status') or '').strip().lower()
-        transaction_id = str(request.GET.get('id') or inscription.fedapay_frais_id or '').strip()
-        if status_hint == 'approved' and transaction_id and _is_fedapay_transaction_approved(transaction_id):
+        if inscription.statut == 'en_attente' and _verify_frais_payment(inscription, request.GET.get('id')):
             try:
                 _mark_inscription_frais_paid(inscription)
             except Exception as e:
@@ -402,14 +454,10 @@ def callback_frais(request, pk):
             data = json.loads(request.body)
             event = data.get('name', '')
             transaction = data.get('data', {}).get('transaction', {})
-            transaction_id = str(transaction.get('id') or inscription.fedapay_frais_id or '').strip()
-            status_hint = str(transaction.get('status', '')).strip().lower()
             if (
                 event == 'transaction.approved'
-                and status_hint == 'approved'
                 and inscription.statut == 'en_attente'
-                and transaction_id
-                and _is_fedapay_transaction_approved(transaction_id)
+                and _verify_frais_payment(inscription, transaction.get('id'))
             ):
                 _mark_inscription_frais_paid(inscription)
         except Exception as e:
@@ -419,11 +467,9 @@ def callback_frais(request, pk):
 
 @csrf_exempt
 def callback_formation(request, pk):
-    inscription = get_object_or_404(Inscription, pk=pk)
+    inscription = get_object_or_404(Inscription.objects.select_related('formation'), pk=pk)
     if request.method == 'GET':
-        status_hint = (request.GET.get('status') or '').strip().lower()
-        transaction_id = str(request.GET.get('id') or inscription.fedapay_formation_id or '').strip()
-        if status_hint == 'approved' and transaction_id and _is_fedapay_transaction_approved(transaction_id):
+        if inscription.statut == 'frais_payes' and _verify_formation_payment(inscription, request.GET.get('id')):
             try:
                 _mark_inscription_formation_paid(inscription)
             except Exception as e:
@@ -435,14 +481,10 @@ def callback_formation(request, pk):
             data = json.loads(request.body)
             event = data.get('name', '')
             transaction = data.get('data', {}).get('transaction', {})
-            transaction_id = str(transaction.get('id') or inscription.fedapay_formation_id or '').strip()
-            status_hint = str(transaction.get('status', '')).strip().lower()
             if (
                 event == 'transaction.approved'
-                and status_hint == 'approved'
-                and inscription.statut in ['frais_payes', 'complet']
-                and transaction_id
-                and _is_fedapay_transaction_approved(transaction_id)
+                and inscription.statut == 'frais_payes'
+                and _verify_formation_payment(inscription, transaction.get('id'))
             ):
                 _mark_inscription_formation_paid(inscription)
         except Exception as e:
@@ -451,10 +493,10 @@ def callback_formation(request, pk):
 
 
 def succes_inscription(request, pk):
-    inscription = get_object_or_404(Inscription, pk=pk)
+    inscription = get_object_or_404(Inscription.objects.select_related('formation'), pk=pk)
+    _check_inscription_access(request, inscription)
     if inscription.statut == 'en_attente':
-        transaction_id = str(request.GET.get('id') or inscription.fedapay_frais_id or '').strip()
-        if transaction_id and _is_fedapay_transaction_approved(transaction_id):
+        if _verify_frais_payment(inscription, request.GET.get('id')):
             try:
                 _mark_inscription_frais_paid(inscription)
             except Exception as e:
@@ -470,14 +512,14 @@ def succes_inscription(request, pk):
 
 
 def succes_formation(request, pk):
-    inscription = get_object_or_404(Inscription, pk=pk)
+    inscription = get_object_or_404(Inscription.objects.select_related('formation'), pk=pk)
+    _check_inscription_access(request, inscription)
     if inscription.statut == 'en_attente':
         messages.warning(request, "Veuillez d'abord payer les frais d'inscription.")
         return redirect('formations:paiement_frais', pk=inscription.pk)
 
     if inscription.statut != 'complet':
-        transaction_id = str(request.GET.get('id') or inscription.fedapay_formation_id or '').strip()
-        if transaction_id and _is_fedapay_transaction_approved(transaction_id):
+        if _verify_formation_payment(inscription, request.GET.get('id')):
             try:
                 _mark_inscription_formation_paid(inscription)
             except Exception as e:
@@ -503,20 +545,55 @@ def mes_inscriptions(request):
     })
 
 
-def facture_frais_pdf(request, pk):
+@login_required
+def lancer_meet_inscription(request, pk):
     inscription = get_object_or_404(Inscription.objects.select_related('formation', 'utilisateur'), pk=pk)
 
-    if inscription.utilisateur_id and (not request.user.is_authenticated or (request.user != inscription.utilisateur and not request.user.is_staff)):
-        return HttpResponseForbidden('Acces refuse a cette facture.')
+    if not _can_access_meet_room(request.user, inscription):
+        return HttpResponseForbidden('Acces refuse a cette session en ligne.')
+
+    if inscription.mode_preference != 'en_ligne':
+        messages.warning(request, "Cette inscription est en presentiel. Activez l'option en ligne pour utiliser Meet.")
+        return redirect('formations:mes_inscriptions')
+
+    return redirect('formations:meet_room', pk=inscription.pk)
+
+
+@login_required
+def meet_room(request, pk):
+    inscription = get_object_or_404(Inscription.objects.select_related('formation', 'utilisateur'), pk=pk)
+
+    if not _can_access_meet_room(request.user, inscription):
+        return HttpResponseForbidden('Acces refuse a cette session en ligne.')
+
+    if inscription.mode_preference != 'en_ligne':
+        messages.warning(request, "Cette inscription est en presentiel. Aucune salle en ligne n'est disponible.")
+        return redirect('formations:mes_inscriptions')
+
+    payload = _jitsi_embed_payload(inscription, request.user)
+    if not payload.get('meet_url') or not payload.get('jitsi_domain') or not payload.get('jitsi_room_name'):
+        messages.error(request, "Impossible de preparer la salle Jitsi pour cette inscription.")
+        return redirect('formations:mes_inscriptions')
+
+    context = {
+        'inscription': inscription,
+        'title': f"Salle en ligne - {inscription.formation.titre}",
+        'is_admin_meet_view': request.user.is_staff,
+        **payload,
+    }
+    return render(request, 'formations/meet_room.html', context)
+
+
+def facture_frais_pdf(request, pk):
+    inscription = get_object_or_404(Inscription.objects.select_related('formation', 'utilisateur'), pk=pk)
+    _check_inscription_access(request, inscription)
 
     return _build_frais_invoice_response(inscription)
 
 
 def facture_formation_pdf(request, pk):
     inscription = get_object_or_404(Inscription.objects.select_related('formation', 'utilisateur'), pk=pk)
-
-    if inscription.utilisateur_id and (not request.user.is_authenticated or (request.user != inscription.utilisateur and not request.user.is_staff)):
-        return HttpResponseForbidden('Acces refuse a cette facture.')
+    _check_inscription_access(request, inscription)
 
     return _build_formation_invoice_response(inscription)
 

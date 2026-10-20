@@ -1,0 +1,12 @@
+{
+  "name": "kcomat-site",
+  "private": true,
+  "description": "Build CSS (Tailwind) du site KcoMat",
+  "scripts": {
+    "build:css": "tailwindcss -c tailwind.config.js -i static/src/input.css -o static/css/app.css --minify",
+    "watch:css": "tailwindcss -c tailwind.config.js -i static/src/input.css -o static/css/app.css --watch"
+  },
+  "devDependencies": {
+    "tailwindcss": "3.4.17"
+  }
+}

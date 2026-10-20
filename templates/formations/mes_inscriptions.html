@@ -1,129 +1,161 @@
 {% extends 'base.html' %}
+{% load kcomat_tags %}
 {% load humanize %}
 
-{% block title %}Mes inscriptions — KcoMat{% endblock %}
+{% block title %}Mes inscriptions{% endblock %}
+{% block robots %}noindex, nofollow{% endblock %}
 
 {% block content %}
-<section class="relative overflow-hidden bg-gradient-to-br from-slate-950 via-blue-950 to-blue-900 py-14 sm:py-16">
-    <div class="absolute inset-0 pointer-events-none">
-        <div class="absolute -top-20 -right-10 w-80 h-80 rounded-full bg-cyan-400/20 blur-3xl"></div>
-        <div class="absolute -bottom-20 left-20 w-96 h-96 rounded-full bg-indigo-400/20 blur-3xl"></div>
-        <div class="absolute inset-0 opacity-[0.08]" style="background-image: linear-gradient(to right, #ffffff 1px, transparent 1px), linear-gradient(to bottom, #ffffff 1px, transparent 1px); background-size: 28px 28px;"></div>
-    </div>
+<section class="relative overflow-hidden bg-gradient-to-br from-slate-950 via-cyan-900 to-emerald-900 py-14 sm:py-16">
+  <div class="absolute inset-0 pointer-events-none">
+    <div class="absolute -top-20 right-0 w-96 h-96 rounded-full bg-cyan-300/20 blur-3xl"></div>
+    <div class="absolute -bottom-20 -left-10 w-[28rem] h-[28rem] rounded-full bg-emerald-300/20 blur-3xl"></div>
+    <div class="absolute inset-0 opacity-[0.08]" style="background-image: linear-gradient(to right, #ffffff 1px, transparent 1px), linear-gradient(to bottom, #ffffff 1px, transparent 1px); background-size: 30px 30px;"></div>
+  </div>
 
-    <div class="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <p class="text-xs uppercase tracking-[0.2em] font-semibold text-cyan-200">Espace formation</p>
-        <h1 class="text-3xl sm:text-4xl font-black text-white mt-2">Mes inscriptions</h1>
-        <p class="text-blue-100/90 mt-2 text-sm sm:text-base">Suivez vos paiements, recuperez vos factures et finalisez vos formations en quelques clics.</p>
+  <div class="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <p class="text-xs uppercase tracking-[0.2em] font-semibold text-cyan-100">Mon parcours</p>
+    <h1 class="text-3xl sm:text-4xl font-black text-white mt-2">Mes inscriptions</h1>
+    <p class="text-cyan-50/90 mt-2 text-sm sm:text-base">Retrouvez vos paiements, vos factures et vos acces de formation au meme endroit.</p>
+
+    <div class="mt-6 inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-4 py-2 text-white text-sm">
+      <span class="font-bold">{{ inscriptions|length }}</span>
+      <span>{% if inscriptions|length > 1 %}inscriptions actives{% else %}inscription active{% endif %}</span>
     </div>
+  </div>
 </section>
 
-<section class="py-12 bg-gray-50">
-    <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-        {% if inscriptions %}
-        <div class="space-y-5">
-            {% for insc in inscriptions %}
-            <article class="rounded-2xl border border-gray-100 bg-white shadow-sm hover:shadow-lg transition-shadow duration-300 overflow-hidden">
-                <div class="p-5 sm:p-6">
-                    <div class="flex flex-col sm:flex-row sm:items-start justify-between gap-6">
-                        <!-- Partie gauche (Image + Info) -->
-                        <div class="flex items-start gap-4 min-w-0 w-full sm:w-auto">
-                            {% if insc.formation.image %}
-                            <img src="{{ insc.formation.image.url }}" alt="{{ insc.formation.titre }}"
-                                class="w-16 h-16 rounded-xl object-cover flex-shrink-0 ring-1 ring-gray-200" />
-                            {% else %}
-                            <div class="w-16 h-16 rounded-xl bg-gradient-to-br from-blue-800 to-blue-600 flex items-center justify-center flex-shrink-0 shadow-md shadow-blue-800/30">
-                                <svg class="w-7 h-7 text-white/60" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13" />
-                                </svg>
-                            </div>
-                            {% endif %}
-                            <div class="min-w-0">
-                                <h3 class="font-bold text-gray-900 text-lg leading-tight">{{ insc.formation.titre }}</h3>
-                                <div class="mt-2 flex flex-wrap items-center gap-2 text-xs">
-                                    <span class="inline-flex items-center gap-1 rounded-full bg-gray-100 px-2.5 py-1 text-gray-600">
-                                        Durée: {{ insc.formation.duree }}
-                                    </span>
-                                    <span class="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2.5 py-1 text-slate-600">
-                                        Inscrit le {{ insc.created_at|date:"d/m/Y" }}
-                                    </span>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Partie droite (Badge + Liens) -->
-                        <div class="flex flex-col sm:items-end gap-2 w-full sm:w-auto pl-20 sm:pl-0">
-                            {% if insc.statut == 'complet' %}
-                            <span class="w-fit inline-flex items-center gap-1.5 bg-green-100 text-green-700 text-xs font-bold px-3 py-1.5 rounded-full">
-                                <svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20">
-                                    <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" />
-                                </svg>
-                                Confirmée
-                            </span>
-                            {% elif insc.statut == 'en_attente' %}
-                            <span class="w-fit inline-flex items-center gap-1.5 bg-amber-100 text-amber-700 text-xs font-bold px-3 py-1.5 rounded-full">
-                                ⏳ En attente
-                            </span>
-                            {% elif insc.statut == 'frais_payes' %}
-                            <span class="w-fit inline-flex items-center gap-1.5 bg-blue-100 text-blue-700 text-xs font-bold px-3 py-1.5 rounded-full">
-                                💳 Frais payés
-                            </span>
-                            {% elif insc.statut == 'complet_formation' %}
-                            <span class="w-fit inline-flex items-center gap-1.5 bg-purple-100 text-purple-700 text-xs font-bold px-3 py-1.5 rounded-full">
-                                🎓 Terminée
-                            </span>
-                            {% elif insc.statut == 'annule' %}
-                            <span class="w-fit inline-flex items-center gap-1.5 bg-red-100 text-red-700 text-xs font-bold px-3 py-1.5 rounded-full">
-                                ✗ Annulée
-                            </span>
-                            {% endif %}
-                            
-                            <div class="text-xs text-gray-500 mt-1">
-                                {% if insc.frais_payes_le %}Frais payés le {{ insc.frais_payes_le|date:"d/m/Y" }}{% else %}Aucun paiement valide{% endif %}
-                            </div>
-                            
-                            <div class="flex flex-wrap sm:flex-col items-center sm:items-end gap-3 sm:gap-1.5 mt-2">
-                                <a href="{% url 'formations:detail' insc.formation.slug %}" class="text-xs text-blue-600 hover:text-blue-800 font-semibold whitespace-nowrap">Voir formation →</a>
-                                <div class="flex items-center gap-3">
-                                    <a href="{% url 'formations:facture_frais' insc.pk %}" target="_blank" class="text-xs text-gray-600 hover:text-gray-900 underline underline-offset-2 decoration-gray-300 hover:decoration-gray-600">Facture frais PDF</a>
-                                    <a href="{% url 'formations:facture_formation' insc.pk %}" target="_blank" class="text-xs text-gray-600 hover:text-gray-900 underline underline-offset-2 decoration-gray-300 hover:decoration-gray-600">Facture formation PDF</a>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                {% if insc.statut == 'en_attente' %}
-                <div class="px-5 sm:px-6 py-4 border-t border-amber-100 bg-amber-50/70 flex items-center justify-between flex-wrap gap-3">
-                    <p class="text-xs sm:text-sm text-amber-700 font-medium">Paiement des frais d'inscription en attente</p>
-                    <a href="{% url 'formations:paiement_frais' insc.id %}" class="inline-flex items-center justify-center rounded-xl bg-amber-500 hover:bg-amber-600 text-white font-bold text-sm px-4 py-2.5 transition-colors">
-                        Payer maintenant — 2 000 FCFA
-                    </a>
-                </div>
-                {% elif insc.statut == 'frais_payes' %}
-                <div class="px-5 sm:px-6 py-4 border-t border-blue-100 bg-blue-50/70 flex items-center justify-between flex-wrap gap-3">
-                    <p class="text-xs sm:text-sm text-blue-800 font-medium">Frais d'inscription regles. Passez au paiement de la formation complete.</p>
-                    <a href="{% url 'formations:paiement_formation' insc.id %}" class="inline-flex items-center justify-center rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-sm px-4 py-2.5 transition-colors">
-                        Payer la formation — {{ insc.formation.prix|intcomma }} FCFA
-                    </a>
-                </div>
-                {% endif %}
-            </article>
-            {% endfor %}
-        </div>
-        {% else %}
-        <div class="text-center py-20 rounded-2xl bg-white border border-gray-100 shadow-sm">
-            <div class="w-20 h-20 bg-blue-50 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-inner">
-                <svg class="w-10 h-10 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                        d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.746 0 3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+<section class="bg-slate-50 py-10 sm:py-12">
+  <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+    {% if inscriptions %}
+    <div class="space-y-6">
+      {% for insc in inscriptions %}
+      <article class="group overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:shadow-xl">
+        <div class="p-5 sm:p-6">
+          <div class="flex flex-col lg:flex-row lg:items-start gap-5 lg:gap-6">
+            <div class="flex items-start gap-4 min-w-0 flex-1">
+              {% if insc.formation.image %}
+              <img src="{{ insc.formation.image|webp:200 }}" loading="lazy" decoding="async" alt="{{ insc.formation.titre }}" class="h-20 w-20 rounded-2xl object-cover ring-1 ring-slate-200 shadow-sm flex-shrink-0">
+              {% else %}
+              <div class="h-20 w-20 rounded-2xl bg-gradient-to-br from-cyan-600 to-emerald-600 text-white flex items-center justify-center shadow-lg shadow-cyan-900/25 flex-shrink-0">
+                <svg class="w-9 h-9" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.746 0 3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/>
                 </svg>
+              </div>
+              {% endif %}
+
+              <div class="min-w-0">
+                <h2 class="text-lg sm:text-xl font-extrabold text-slate-900 leading-tight">{{ insc.formation.titre }}</h2>
+                <div class="mt-2 flex flex-wrap gap-2 text-xs">
+                  <span class="inline-flex items-center rounded-full bg-slate-100 px-2.5 py-1 text-slate-700">Inscription: {{ insc.created_at|date:"d/m/Y" }}</span>
+                  <span class="inline-flex items-center rounded-full bg-cyan-50 px-2.5 py-1 text-cyan-700">Mode: {{ insc.get_mode_preference_display }}</span>
+                  <span class="inline-flex items-center rounded-full bg-emerald-50 px-2.5 py-1 text-emerald-700">Prix: {{ insc.formation.prix|intcomma }} FCFA</span>
+                </div>
+
+                <div class="mt-4">
+                  <div class="flex items-center justify-between text-[11px] sm:text-xs text-slate-500 mb-1.5">
+                    <span>Progression</span>
+                    {% if insc.statut == 'en_attente' %}
+                    <span>Etape 1/3</span>
+                    {% elif insc.statut == 'frais_payes' %}
+                    <span>Etape 2/3</span>
+                    {% elif insc.statut == 'complet' %}
+                    <span>Etape 3/3</span>
+                    {% else %}
+                    <span>Fermee</span>
+                    {% endif %}
+                  </div>
+                  <div class="h-2.5 w-full rounded-full bg-slate-100 overflow-hidden">
+                    {% if insc.statut == 'en_attente' %}
+                    <div class="h-full w-1/3 bg-gradient-to-r from-amber-400 to-amber-500"></div>
+                    {% elif insc.statut == 'frais_payes' %}
+                    <div class="h-full w-2/3 bg-gradient-to-r from-cyan-500 to-sky-600"></div>
+                    {% elif insc.statut == 'complet' %}
+                    <div class="h-full w-full bg-gradient-to-r from-emerald-500 to-teal-600"></div>
+                    {% else %}
+                    <div class="h-full w-full bg-gradient-to-r from-rose-500 to-red-600"></div>
+                    {% endif %}
+                  </div>
+                </div>
+              </div>
             </div>
-            <h3 class="text-xl font-bold text-gray-900 mb-2">Aucune inscription pour l'instant</h3>
-            <p class="text-gray-500 mb-6">Explorez nos formations et inscrivez-vous dès maintenant.</p>
-            <a href="{% url 'formations:liste' %}" class="inline-flex items-center justify-center rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold px-8 py-3 transition-colors">Voir les formations</a>
+
+            <div class="lg:w-56 lg:shrink-0">
+              <div class="flex lg:justify-end">
+                {% if insc.statut == 'complet' %}
+                <span class="inline-flex items-center rounded-full bg-emerald-100 text-emerald-700 px-3 py-1.5 text-xs font-bold">Paiement complet</span>
+                {% elif insc.statut == 'frais_payes' %}
+                <span class="inline-flex items-center rounded-full bg-cyan-100 text-cyan-700 px-3 py-1.5 text-xs font-bold">Frais regles</span>
+                {% elif insc.statut == 'en_attente' %}
+                <span class="inline-flex items-center rounded-full bg-amber-100 text-amber-700 px-3 py-1.5 text-xs font-bold">En attente</span>
+                {% else %}
+                <span class="inline-flex items-center rounded-full bg-rose-100 text-rose-700 px-3 py-1.5 text-xs font-bold">Annulee</span>
+                {% endif %}
+              </div>
+
+              <div class="mt-3 text-xs text-slate-500 lg:text-right">
+                {% if insc.frais_payes_le %}
+                Frais payes le {{ insc.frais_payes_le|date:"d/m/Y" }}
+                {% else %}
+                Frais non payes
+                {% endif %}
+              </div>
+            </div>
+          </div>
+
+          <div class="mt-5 flex flex-wrap gap-2.5">
+            <a href="{% url 'formations:detail' insc.formation.slug %}" class="inline-flex items-center justify-center rounded-xl border border-slate-300 bg-white px-3.5 py-2 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50">
+              Voir la formation
+            </a>
+            <a href="{% url 'formations:facture_frais' insc.pk %}" target="_blank" class="inline-flex items-center justify-center rounded-xl border border-slate-300 bg-white px-3.5 py-2 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50">
+              Facture frais PDF
+            </a>
+            <a href="{% url 'formations:facture_formation' insc.pk %}" target="_blank" class="inline-flex items-center justify-center rounded-xl border border-slate-300 bg-white px-3.5 py-2 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50">
+              Facture formation PDF
+            </a>
+
+            {% if insc.statut == 'en_attente' %}
+            <a href="{% url 'formations:paiement_frais' insc.pk %}" class="inline-flex items-center justify-center rounded-xl bg-amber-500 px-4 py-2 text-sm font-bold text-white transition-colors hover:bg-amber-600">
+              Payer frais - 2 000 FCFA
+            </a>
+            {% elif insc.statut == 'frais_payes' %}
+            <a href="{% url 'formations:paiement_formation' insc.pk %}" class="inline-flex items-center justify-center rounded-xl bg-cyan-600 px-4 py-2 text-sm font-bold text-white transition-colors hover:bg-cyan-700">
+              Payer formation - {{ insc.formation.prix|intcomma }} FCFA
+            </a>
+            {% elif insc.statut == 'complet' and insc.mode_preference == 'en_ligne' %}
+            <a href="{% url 'formations:meet_room' insc.pk %}" class="inline-flex items-center justify-center rounded-xl bg-emerald-600 px-4 py-2 text-sm font-bold text-white transition-colors hover:bg-emerald-700">
+              Rejoindre la session en ligne
+            </a>
+            {% elif insc.statut == 'complet' and insc.mode_preference == 'presentiel' %}
+            <span class="inline-flex items-center justify-center rounded-xl bg-slate-900 px-4 py-2 text-sm font-bold text-white">
+              Session presentielle
+            </span>
+            {% endif %}
+          </div>
+
+          {% if insc.statut == 'complet' and insc.mode_preference == 'en_ligne' %}
+          <p class="mt-3 text-xs text-slate-500">
+            Si Jitsi affiche une erreur de connexion sur meet.jit.si, connectez-vous avec Google, GitHub ou Facebook pour creer la salle puis partagez le lien.
+          </p>
+          {% endif %}
         </div>
-        {% endif %}
+      </article>
+      {% endfor %}
     </div>
+    {% else %}
+    <div class="rounded-3xl border border-slate-200 bg-white px-6 py-14 text-center shadow-sm">
+      <div class="mx-auto mb-4 flex h-20 w-20 items-center justify-center rounded-2xl bg-cyan-50 text-cyan-500">
+        <svg class="h-10 w-10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.746 0 3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/>
+        </svg>
+      </div>
+      <h3 class="text-xl font-black text-slate-900">Aucune inscription pour le moment</h3>
+      <p class="mt-2 text-slate-600">Explorez nos formations et demarrez votre prochain parcours.</p>
+      <a href="{% url 'formations:liste' %}" class="mt-6 inline-flex items-center justify-center rounded-xl bg-cyan-600 px-6 py-3 text-sm font-bold text-white transition-colors hover:bg-cyan-700">
+        Voir les formations
+      </a>
+    </div>
+    {% endif %}
+  </div>
 </section>
 {% endblock %}

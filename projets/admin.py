@@ -1,4 +1,5 @@
 from django.contrib import admin
+from notifications.admin import notifier_abonnes
 from .models import Projet, CategorieProjet, ImageProjet, VideoProjet
 
 
@@ -24,6 +25,7 @@ class VideoProjetInline(admin.TabularInline):
 
 @admin.register(Projet)
 class ProjetAdmin(admin.ModelAdmin):
+    actions = [notifier_abonnes]
     list_display = ['titre', 'categorie', 'client', 'date_realisation', 'en_vedette', 'actif']
     list_filter = ['actif', 'en_vedette', 'categorie']
     list_editable = ['actif', 'en_vedette']

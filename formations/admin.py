@@ -1,16 +1,43 @@
 from django.contrib import admin
+from notifications.admin import notifier_abonnes
 from decimal import Decimal
 from datetime import timedelta
 from django.conf import settings
 from django.http import HttpResponse
-from django.urls import path
+from django.urls import path, reverse
 from django.utils import timezone
+from django.utils.html import format_html
 
 from reportlab.lib.pagesizes import A4, landscape
 from reportlab.lib import colors
 from reportlab.pdfgen import canvas
 
-from .models import CategorieFormation, Formation, Inscription, PaiementFormation
+from .models import (
+    CategorieFormation,
+    Formation,
+    FormationSessionPassee,
+    FormationSessionMedia,
+    Inscription,
+    PaiementFormation,
+)
+
+
+class FormationSessionPasseeInline(admin.StackedInline):
+    model = FormationSessionPassee
+    extra = 0
+    fields = (
+        'titre',
+        'periode',
+        'date_debut',
+        'date_fin',
+        'resume',
+        'image_couverture',
+        'video_apercu_file',
+        'video_apercu_url',
+        'ordre',
+        'publiee',
+    )
+    show_change_link = True
 
 
 @admin.register(CategorieFormation)
@@ -21,6 +48,7 @@ class CategorieFormationAdmin(admin.ModelAdmin):
 
 @admin.register(Formation)
 class FormationAdmin(admin.ModelAdmin):
+    actions = [notifier_abonnes]
     list_display = ['titre', 'categorie', 'prix', 'places_disponibles', 'actif', 'en_vedette', 'nouveau']
     list_filter = ['actif', 'en_vedette', 'nouveau', 'categorie', 'niveau']
     list_editable = ['actif', 'en_vedette', 'nouveau']
@@ -40,17 +68,91 @@ class FormationAdmin(admin.ModelAdmin):
             'fields': ('actif', 'nouveau', 'en_vedette')
         }),
     )
+    inlines = [FormationSessionPasseeInline]
+
+
+class FormationSessionMediaInline(admin.TabularInline):
+    model = FormationSessionMedia
+    extra = 0
+    fields = ('type_media', 'image', 'video_file', 'video_url', 'legende', 'ordre', 'actif')
+
+
+@admin.register(FormationSessionPassee)
+class FormationSessionPasseeAdmin(admin.ModelAdmin):
+    list_display = ['formation', 'titre', 'periode', 'date_debut', 'date_fin', 'publiee', 'ordre']
+    list_filter = ['publiee', 'formation']
+    search_fields = ['formation__titre', 'titre', 'periode', 'resume']
+    list_editable = ['publiee', 'ordre']
+    fieldsets = (
+        ('Informations session', {
+            'fields': ('formation', 'titre', 'periode', 'date_debut', 'date_fin', 'resume')
+        }),
+        ('Visuels et videos', {
+            'fields': ('image_couverture', 'video_apercu_file', 'video_apercu_url')
+        }),
+        ('Publication', {
+            'fields': ('ordre', 'publiee')
+        }),
+    )
+    inlines = [FormationSessionMediaInline]
+
+
+@admin.register(FormationSessionMedia)
+class FormationSessionMediaAdmin(admin.ModelAdmin):
+    list_display = ['session', 'type_media', 'legende', 'actif', 'ordre']
+    list_filter = ['type_media', 'actif', 'session__formation']
+    search_fields = ['session__formation__titre', 'session__titre', 'legende', 'video_url']
+    list_editable = ['actif', 'ordre']
 
 
 @admin.register(Inscription)
 class InscriptionAdmin(admin.ModelAdmin):
-    list_display = ['prenom', 'nom', 'email', 'formation', 'statut', 'created_at']
-    list_filter = ['statut', 'formation']
+    list_display = ['prenom', 'nom', 'email', 'formation', 'mode_preference', 'statut', 'lien_meet', 'created_at']
+    list_filter = ['statut', 'mode_preference', 'formation']
     search_fields = ['nom', 'prenom', 'email', 'telephone']
-    readonly_fields = ['created_at', 'frais_payes_le', 'formation_payee_le']
+    readonly_fields = ['created_at', 'frais_payes_le', 'formation_payee_le', 'jitsi_room_created_at', 'lien_meet']
     date_hierarchy = 'created_at'
     list_select_related = ['formation']
     change_list_template = 'admin/formations/inscription/change_list.html'
+
+    fieldsets = (
+        ('Inscription', {
+            'fields': (
+                'formation',
+                'utilisateur',
+                'prenom',
+                'nom',
+                'email',
+                'telephone',
+                'adresse',
+                'mode_preference',
+                'niveau_actuel',
+                'message',
+                'statut',
+            )
+        }),
+        ('Paiements', {
+            'fields': ('fedapay_frais_id', 'frais_payes_le', 'fedapay_formation_id', 'formation_payee_le')
+        }),
+        ('Formation en ligne (Jitsi)', {
+            'fields': ('jitsi_room_name', 'jitsi_room_created_at', 'lien_meet')
+        }),
+        ('Meta', {
+            'fields': ('created_at',)
+        }),
+    )
+
+    @admin.display(description='Salle Meet')
+    def lien_meet(self, obj):
+        if obj.mode_preference != 'en_ligne':
+            return '-'
+        embed_url = reverse('formations:meet_room', args=[obj.pk])
+        launch_url = reverse('formations:lancer_meet', args=[obj.pk])
+        return format_html(
+            '<a href="{}" target="_blank">Ouvrir la salle intégrée</a> <span style="color:#94a3b8;">|</span> <a href="{}" target="_blank">Lien rapide</a>',
+            embed_url,
+            launch_url,
+        )
 
     def get_urls(self):
         urls = super().get_urls()
@@ -301,12 +403,15 @@ class PaiementFormationAdmin(admin.ModelAdmin):
         'telephone',
         'adresse',
         'niveau_actuel',
+        'mode_preference',
         'message',
         'statut',
         'fedapay_frais_id',
         'frais_payes_le',
         'fedapay_formation_id',
         'formation_payee_le',
+        'jitsi_room_name',
+        'jitsi_room_created_at',
         'created_at',
     ]
     date_hierarchy = 'created_at'

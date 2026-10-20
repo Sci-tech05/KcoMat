@@ -1,84 +1,173 @@
 {% extends 'base.html' %}
+{% load kcomat_tags %}
 {% load humanize %}
 
-{% block title %}Carrières & Stages — KcoMat{% endblock %}
+{% block title %}Carrières & Stages{% endblock %}
+{% block meta_description %}Rejoignez KcoMat : offres de stage, d'emploi et missions freelance en domotique, électricité, électronique, web, IA, drones et solaire à Lokossa, Bénin.{% endblock %}
 
 {% block content %}
-<!-- Hero -->
-<section class="relative bg-gradient-to-br from-gray-900 via-blue-950 to-gray-900 py-20 overflow-hidden">
-  <div class="absolute inset-0 pointer-events-none">
-    <div class="absolute -top-24 -right-24 w-96 h-96 bg-blue-600/10 rounded-full blur-3xl"></div>
-    <div class="absolute bottom-0 left-1/4 w-80 h-80 bg-indigo-900/20 rounded-full blur-2xl"></div>
-  </div>
-  <div class="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-    <h1 class="text-4xl md:text-5xl font-black text-white mb-4 leading-tight">Rejoignez <span class="text-orange-400">KcoMat</span></h1>
-    <p class="text-gray-300 text-lg max-w-2xl mx-auto leading-relaxed">Emplois, stages, missions freelance — construisez votre avenir dans la tech avec nous à Lokossa, Bénin.</p>
-    <div class="flex flex-wrap items-center justify-center gap-3 mt-8">
-      <span class="inline-flex items-center gap-1.5 bg-blue-500/20 text-blue-300 text-xs font-semibold px-3 py-1.5 rounded-full border border-blue-500/30">💼 Emplois</span>
-      <span class="inline-flex items-center gap-1.5 bg-purple-500/20 text-purple-300 text-xs font-semibold px-3 py-1.5 rounded-full border border-purple-500/30">🎓 Stages</span>
-      <span class="inline-flex items-center gap-1.5 bg-orange-500/20 text-orange-300 text-xs font-semibold px-3 py-1.5 rounded-full border border-orange-500/30">🚀 Freelance</span>
+{% include 'partials/page_hero.html' with crumb='Carrières' eyebrow='Carrières & stages' icon='briefcase' accent='blue' title='Construisez votre avenir' highlight='avec KcoMat' subtitle='Stages encadrés, emplois et missions freelance : apprenez et travaillez sur de vrais projets technologiques, à Lokossa et partout au Bénin.' chips='graduation|Stages encadrés;briefcase|Emplois;rocket|Missions freelance;badge-check|Attestation KcoMat' sats='graduation,briefcase,rocket,users,cpu,sparkles' %}
+
+<section class="relative bg-slate-50 py-12 sm:py-16">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+
+    <!-- ===== Filtres ===== -->
+    <div class="rounded-3xl border border-slate-200/80 bg-white p-4 sm:p-5 shadow-[0_8px_30px_-16px_rgba(15,23,42,.18)]">
+      <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+        <nav class="flex flex-wrap gap-2" aria-label="Catégories d'offres">
+          <a href="{% url 'carrieres:liste' %}{% if domaine_filtre %}?domaine={{ domaine_filtre }}{% endif %}"
+             class="car-tab {% if not type_filtre %}is-active{% endif %}" {% if not type_filtre %}aria-current="page"{% endif %}>
+            Toutes <span class="car-tab__count">{{ total_ouvertes }}</span>
+          </a>
+          {% for code, label, n in types %}
+          <a href="?type={{ code }}{% if domaine_filtre %}&domaine={{ domaine_filtre }}{% endif %}"
+             class="car-tab car-tab--{{ code }} {% if type_filtre == code %}is-active{% endif %}" {% if type_filtre == code %}aria-current="page"{% endif %}>
+            {% if code == 'stage' %}{% include 'partials/icon.html' with name='graduation' class='w-4 h-4' %}{% elif code == 'emploi' %}{% include 'partials/icon.html' with name='briefcase' class='w-4 h-4' %}{% else %}{% include 'partials/icon.html' with name='rocket' class='w-4 h-4' %}{% endif %}
+            {{ label }}{% if code != 'freelance' %}s{% endif %} <span class="car-tab__count">{{ n }}</span>
+          </a>
+          {% endfor %}
+        </nav>
+        <p class="text-sm text-slate-500">
+          <span class="font-bold text-slate-900">{{ nb_ouvertes }}</span> offre{{ nb_ouvertes|pluralize }} ouverte{{ nb_ouvertes|pluralize }}
+          {% if domaine_filtre or type_filtre %}· <a href="{% url 'carrieres:liste' %}" class="font-semibold text-blue-600 hover:text-blue-700">Réinitialiser</a>{% endif %}
+        </p>
+      </div>
+      {% if domaines %}
+      <div class="mt-4 pt-4 border-t border-slate-100 -mx-1 flex gap-2 overflow-x-auto pb-1 [scrollbar-width:none]" aria-label="Domaines">
+        {% for cle, label, n in domaines %}
+        <a href="?{% if type_filtre %}type={{ type_filtre }}&{% endif %}{% if domaine_filtre != cle %}domaine={{ cle }}{% endif %}"
+           class="car-chip {% if domaine_filtre == cle %}is-active{% endif %}">
+          {% include 'partials/icon.html' with name=cle|domaine_icon class='w-4 h-4' %}
+          {{ label }} <span class="opacity-60">{{ n }}</span>
+        </a>
+        {% endfor %}
+      </div>
+      {% endif %}
     </div>
-  </div>
-</section>
 
-<section class="py-14 bg-gray-50 min-h-screen">
-  <div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
-
-    <!-- Filtres -->
-    <div class="flex flex-wrap gap-2 mb-10">
-      <a href="{% url 'carrieres:liste' %}" class="px-4 py-2 rounded-xl text-sm font-semibold transition-colors {% if not type_filtre %}bg-blue-600 text-white shadow-sm{% else %}bg-white text-gray-600 border border-gray-200 hover:border-blue-400 hover:text-blue-600{% endif %}">Toutes les offres</a>
-      <a href="?type=emploi" class="px-4 py-2 rounded-xl text-sm font-semibold transition-colors {% if type_filtre == 'emploi' %}bg-blue-600 text-white shadow-sm{% else %}bg-white text-gray-600 border border-gray-200 hover:border-blue-400 hover:text-blue-600{% endif %}">💼 Emplois</a>
-      <a href="?type=stage" class="px-4 py-2 rounded-xl text-sm font-semibold transition-colors {% if type_filtre == 'stage' %}bg-blue-600 text-white shadow-sm{% else %}bg-white text-gray-600 border border-gray-200 hover:border-blue-400 hover:text-blue-600{% endif %}">🎓 Stages</a>
-      <a href="?type=freelance" class="px-4 py-2 rounded-xl text-sm font-semibold transition-colors {% if type_filtre == 'freelance' %}bg-blue-600 text-white shadow-sm{% else %}bg-white text-gray-600 border border-gray-200 hover:border-blue-400 hover:text-blue-600{% endif %}">🚀 Freelance</a>
-    </div>
-
+    <!-- ===== Offres ===== -->
     {% if offres %}
-    <div class="space-y-4">
+    <div class="mt-10 grid gap-6 sm:gap-7 md:grid-cols-2 xl:grid-cols-3">
       {% for offre in offres %}
-      <div class="bg-white rounded-2xl border border-gray-100 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 overflow-hidden">
-        <div class="flex items-stretch">
-          <div class="w-1.5 flex-shrink-0 {% if offre.type == 'emploi' %}bg-blue-500{% elif offre.type == 'stage' %}bg-purple-500{% else %}bg-blue-500{% endif %}"></div>
-          <div class="flex-1 p-5 flex flex-col sm:flex-row items-start sm:items-center gap-4">
-            <div class="w-12 h-12 rounded-xl flex-shrink-0 flex items-center justify-center text-xl {% if offre.type == 'emploi' %}bg-blue-50{% elif offre.type == 'stage' %}bg-purple-50{% else %}bg-blue-50{% endif %}">
-              {% if offre.type == 'emploi' %}💼{% elif offre.type == 'stage' %}🎓{% else %}🚀{% endif %}
+      <article class="car-card group {% if offre.est_cloturee %}is-closed{% endif %}">
+        <a href="{% url 'carrieres:detail' offre.slug %}" class="absolute inset-0 z-10" aria-label="Voir l'offre : {{ offre.titre }}"></a>
+
+        <!-- Visuel -->
+        <div class="car-card__media">
+          {% if offre.image %}
+          <img src="{{ offre.image|webp:720 }}" alt="" loading="lazy" decoding="async" width="720" height="450"
+               class="h-full w-full object-cover transition-transform duration-700 group-hover:scale-105">
+          {% else %}
+          <div class="car-card__fallback car-card__fallback--{{ offre.type_offre }}">
+            {% include 'partials/icon.html' with name=offre.domaine_icon class='w-16 h-16' stroke='1.25' %}
+          </div>
+          {% endif %}
+          <div class="absolute inset-0 bg-gradient-to-t from-slate-950/75 via-slate-950/10 to-transparent"></div>
+          <div class="absolute top-4 left-4 right-4 flex items-start justify-between gap-2">
+            <div class="flex flex-wrap gap-1.5">
+              <span class="car-type car-type--{{ offre.type_offre }}">{{ offre.get_type_offre_display }}</span>
+              {% if offre.mise_en_avant and not offre.est_cloturee %}<span class="inline-flex items-center gap-1 rounded-[.55rem] bg-amber-400 px-2 py-1 text-[.7rem] font-extrabold uppercase tracking-wide text-amber-950">{% include 'partials/icon.html' with name='star' class='w-3 h-3 fill-current' %} À la une</span>{% endif %}
             </div>
-            <div class="flex-1 min-w-0">
-              <div class="flex flex-wrap items-center gap-2 mb-1.5">
-                <span class="text-xs font-bold px-2.5 py-0.5 rounded-full {% if offre.type == 'emploi' %}bg-blue-100 text-blue-700{% elif offre.type == 'stage' %}bg-purple-100 text-purple-700{% else %}bg-blue-100 text-blue-700{% endif %}">{{ offre.get_type_display }}</span>
-                {% if offre.localisation %}<span class="text-xs text-gray-400 flex items-center gap-1"><svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0zM15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg>{{ offre.localisation }}</span>{% endif %}
+            {% if offre.est_cloturee %}
+            <span class="car-deadline bg-slate-900/80 text-slate-300">Clôturée</span>
+            {% elif offre.jours_restants is not None and offre.jours_restants <= 14 %}
+            <span class="car-deadline bg-rose-500/90 text-white">{% if offre.jours_restants == 0 %}Dernier jour{% else %}J-{{ offre.jours_restants }}{% endif %}</span>
+            {% endif %}
+          </div>
+          <span class="absolute bottom-4 left-4 inline-flex items-center gap-1.5 rounded-lg bg-white/15 px-2.5 py-1 text-xs font-semibold text-white backdrop-blur-md ring-1 ring-white/20">
+            {% include 'partials/icon.html' with name=offre.domaine_icon class='w-3.5 h-3.5' %}{{ offre.get_domaine_display }}
+          </span>
+        </div>
+
+        <!-- Contenu -->
+        <div class="flex flex-1 flex-col p-6">
+          <h2 class="text-lg font-extrabold leading-snug text-slate-900 transition-colors group-hover:text-blue-700">{{ offre.titre }}</h2>
+          {% if offre.resume %}<p class="mt-2 text-sm leading-relaxed text-slate-500 line-clamp-2">{{ offre.resume }}</p>{% endif %}
+
+          <ul class="mt-4 flex flex-wrap gap-x-4 gap-y-1.5 text-xs font-medium text-slate-500">
+            <li class="flex items-center gap-1.5">{% include 'partials/icon.html' with name='map-pin' class='w-3.5 h-3.5 text-slate-400' %}{{ offre.localite }}</li>
+            {% if offre.date_limite %}<li class="flex items-center gap-1.5">{% include 'partials/icon.html' with name='calendar' class='w-3.5 h-3.5 text-slate-400' %}{% if offre.est_cloturee %}Clôturée le{% else %}Jusqu'au{% endif %} {{ offre.date_limite|date:"j M Y" }}</li>{% endif %}
+            {% if offre.places %}<li class="flex items-center gap-1.5">{% include 'partials/icon.html' with name='users' class='w-3.5 h-3.5 text-slate-400' %}{{ offre.places }} place{{ offre.places|pluralize }}</li>{% endif %}
+          </ul>
+
+          <!-- Formules / montant -->
+          <div class="mt-5 rounded-2xl bg-slate-50 p-3.5 ring-1 ring-inset ring-slate-100">
+            <p class="text-[11px] font-bold uppercase tracking-wider text-slate-400">{{ offre.libelle_montant }}</p>
+            {% with formules=offre.formules.all %}
+            {% if formules %}
+            <div class="mt-2 grid gap-1.5">
+              {% for f in formules %}
+              <div class="flex items-center justify-between gap-3 rounded-xl px-3 py-2 {% if f.recommandee %}bg-white ring-1 ring-blue-200 shadow-sm{% endif %}">
+                <span class="flex items-center gap-2 text-sm font-semibold text-slate-700" {% if f.recommandee %}title="Formule conseillée"{% endif %}>
+                  {% if f.recommandee %}{% include 'partials/icon.html' with name='star' class='w-4 h-4 text-blue-600 fill-current' %}{% else %}{% include 'partials/icon.html' with name='clock' class='w-4 h-4 text-slate-400' %}{% endif %}{{ f.duree }}
+                </span>
+                <span class="text-base font-black text-slate-900 whitespace-nowrap">{% if f.montant is not None %}{{ f.montant|intcomma }} <span class="text-xs font-semibold text-slate-400">FCFA</span>{% else %}Sur devis{% endif %}</span>
               </div>
-              <h3 class="text-lg font-extrabold text-gray-900 mb-1 truncate">{{ offre.titre }}</h3>
-              <p class="text-sm text-gray-500 line-clamp-1">{{ offre.description_courte }}</p>
+              {% endfor %}
             </div>
-            <div class="flex flex-col items-end gap-3 flex-shrink-0">
-              {% if offre.remuneration %}<div class="text-green-600 font-black text-sm bg-green-50 border border-green-100 px-3 py-1 rounded-full">{{ offre.remuneration }}</div>{% endif %}
-              <a href="{% url 'carrieres:detail' offre.slug %}" class="inline-flex items-center gap-2 bg-gray-900 hover:bg-orange-600 text-white text-sm font-bold px-5 py-2.5 rounded-xl transition-colors">
-                Postuler
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3"/></svg>
-              </a>
-            </div>
+            {% else %}
+            <p class="mt-1 text-base font-black text-slate-900">{{ offre.remuneration|default:"À définir ensemble" }}</p>
+            {% endif %}
+            {% endwith %}
+          </div>
+
+          <div class="mt-auto pt-5 flex items-center justify-between">
+            <span class="inline-flex items-center gap-1.5 text-sm font-bold text-blue-600">
+              {% if offre.est_cloturee %}Consulter l'offre{% else %}Voir l'offre et postuler{% endif %}
+              {% include 'partials/icon.html' with name='arrow-right' class='w-4 h-4 transition-transform group-hover:translate-x-1' stroke='2.25' %}
+            </span>
           </div>
         </div>
-      </div>
+      </article>
       {% endfor %}
     </div>
 
     {% else %}
-    <div class="text-center py-24">
-      <div class="w-20 h-20 bg-blue-50 rounded-2xl flex items-center justify-center mx-auto mb-5">
-        <svg class="w-10 h-10 text-blue-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
+    <div class="mt-10 rounded-3xl border border-dashed border-slate-300 bg-white px-6 py-16 text-center">
+      <span class="mx-auto grid h-16 w-16 place-items-center rounded-2xl bg-blue-50 text-blue-600">{% include 'partials/icon.html' with name='search' class='w-8 h-8' %}</span>
+      <h2 class="mt-5 text-xl font-extrabold text-slate-900">Aucune offre ouverte dans cette sélection</h2>
+      <p class="mx-auto mt-2 max-w-md text-slate-500">Élargissez votre recherche ou envoyez-nous une candidature spontanée : nous étudions tous les profils motivés.</p>
+      <div class="mt-7 flex flex-wrap justify-center gap-3">
+        {% if domaine_filtre or type_filtre %}<a href="{% url 'carrieres:liste' %}" class="inline-flex items-center gap-2 rounded-xl border border-slate-200 px-5 py-3 text-sm font-bold text-slate-700 hover:bg-slate-50">Toutes les offres</a>{% endif %}
+        <a href="https://wa.me/{{ KCOMAT.whatsapp }}?text=Bonjour%20KcoMat%2C%20je%20souhaite%20envoyer%20une%20candidature%20spontan%C3%A9e." target="_blank" rel="noopener"
+           class="inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-5 py-3 text-sm font-bold text-white hover:bg-emerald-700">
+          {% include 'partials/icon.html' with name='message' class='w-4 h-4' %} Candidature spontanée (WhatsApp)
+        </a>
       </div>
-      <h3 class="text-xl font-bold text-gray-900 mb-2">Aucune offre disponible pour cette section</h3>
-      <p class="text-gray-500 mb-8 max-w-md mx-auto">Envoyez une candidature spontanée, nous serons ravis d'échanger.</p>
-      <a href="https://wa.me/{{ KCOMAT.whatsapp }}?text=Bonjour%20KcoMat%2C%20je%20souhaite%20envoyer%20une%20candidature%20spontan%C3%A9e%20!" target="_blank" rel="noopener"
-        class="inline-flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white font-bold px-8 py-3.5 rounded-xl transition-colors">
-        <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"/></svg>
-        Candidature sur WhatsApp
-      </a>
     </div>
     {% endif %}
 
+    <!-- ===== Comment postuler ===== -->
+    <div class="mt-16 grid gap-4 md:grid-cols-3">
+      {% for step in "search|Choisissez une offre|Stage, emploi ou mission freelance : comparez durées, frais et missions.#send|Postulez en ligne|CV, lettre et motivation en quelques minutes ; un e-mail confirme la réception.#user-check|Échangez avec l'équipe|Les profils retenus sont contactés pour un entretien puis le démarrage."|split:"#" %}
+      {% with p=step|split:"|" %}
+      <div class="flex gap-4 rounded-2xl bg-white p-5 ring-1 ring-slate-200/80">
+        <span class="grid h-11 w-11 flex-shrink-0 place-items-center rounded-xl bg-gradient-to-br from-blue-600 to-cyan-500 text-white shadow-lg shadow-blue-600/25">{% include 'partials/icon.html' with name=p.0 class='w-5 h-5' stroke='2' %}</span>
+        <div>
+          <p class="font-mono text-[11px] font-bold tracking-widest text-blue-600">ÉTAPE {{ forloop.counter }}</p>
+          <h3 class="font-extrabold text-slate-900">{{ p.1 }}</h3>
+          <p class="mt-1 text-sm text-slate-500">{{ p.2 }}</p>
+        </div>
+      </div>
+      {% endwith %}
+      {% endfor %}
+    </div>
+
+    <!-- LinkedIn : suivre les nouvelles offres -->
+    <a href="{{ KCOMAT.linkedin }}" target="_blank" rel="noopener"
+       class="group mt-8 flex flex-col sm:flex-row items-start sm:items-center gap-5 rounded-2xl border border-[#0A66C2]/20 bg-gradient-to-r from-[#0A66C2]/[0.06] to-white p-6 transition-all hover:border-[#0A66C2]/40 hover:shadow-md">
+      <span class="grid place-items-center w-14 h-14 rounded-2xl bg-[#0A66C2] text-white flex-shrink-0 shadow-lg shadow-blue-900/20">
+        <svg class="w-7 h-7" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/></svg>
+      </span>
+      <span class="flex-1">
+        <span class="block text-lg font-extrabold text-gray-900">Suivez KcoMat sur LinkedIn</span>
+        <span class="block text-sm text-gray-500 mt-0.5">Soyez informé en premier de nos nouvelles offres de stage et d'emploi, et découvrez la vie de l'équipe.</span>
+      </span>
+      <span class="inline-flex items-center gap-2 rounded-xl bg-[#0A66C2] px-5 py-2.5 text-sm font-bold text-white transition-transform group-hover:translate-x-0.5">
+        Suivre la page
+        {% include 'partials/icon.html' with name='external' class='w-4 h-4' stroke='2.25' %}
+      </span>
+    </a>
   </div>
 </section>
-
 {% endblock %}

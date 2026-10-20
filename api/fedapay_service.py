@@ -178,3 +178,127 @@ def create_fedapay_transaction(data: dict[str, Any]) -> dict[str, Any]:
     except Exception:
         logger.exception("Unexpected error while creating FedaPay transaction")
         return {"success": False, "error": "Erreur interne lors de la création de la transaction", "status_code": 500}
+
+
+def fetch_fedapay_transaction(transaction_id) -> dict[str, Any]:
+    """Lit une transaction FedaPay par son id (cote serveur, cle secrete)."""
+    transaction_id = str(transaction_id or "").strip()
+    if not transaction_id.isdigit():
+        return {}
+
+    api_key = settings.FEDAPAY_CONFIG.get("api_key", "")
+    environment = settings.FEDAPAY_CONFIG.get("environment", "live")
+    timeout_seconds = int(getattr(settings, "FEDAPAY_API_TIMEOUT", 30))
+    if not api_key:
+        logger.error("Missing FEDAPAY API key while fetching transaction")
+        return {}
+
+    headers = {
+        "Authorization": f"Bearer {api_key}",
+        "Content-Type": "application/json",
+    }
+    try:
+        response = requests.get(
+            f"{_fedapay_base_url(environment)}/transactions/{transaction_id}",
+            headers=headers,
+            timeout=timeout_seconds,
+        )
+    except requests.RequestException:
+        logger.exception("Network error while fetching FedaPay transaction %s", transaction_id)
+        return {}
+
+    if response.status_code != 200:
+        logger.warning(
+            "FedaPay transaction fetch failed id=%s status=%s body=%s",
+            transaction_id,
+            response.status_code,
+            response.text[:1200],
+        )
+        return {}
+
+    try:
+        return _extract_transaction_object(response.json())
+    except ValueError:
+        logger.warning("FedaPay transaction fetch returned non-JSON body id=%s", transaction_id)
+        return {}
+
+
+def _metadata_matches(transaction: dict[str, Any], expected_type: str, ref_key: str, expected_ref) -> bool | None:
+    """True/False si les metadonnees sont presentes, None si FedaPay ne les renvoie pas."""
+    metadata = transaction.get("custom_metadata") or transaction.get("metadata")
+    if not isinstance(metadata, dict) or not metadata:
+        return None
+    return (
+        str(metadata.get("type", "")) == expected_type
+        and str(metadata.get(ref_key, "")) == str(expected_ref)
+    )
+
+
+def verify_fedapay_payment(
+    *,
+    stored_transaction_id,
+    candidate_transaction_id=None,
+    expected_amount,
+    expected_type: str,
+    ref_key: str,
+    expected_ref,
+) -> str | None:
+    """
+    Verifie qu'un paiement FedaPay correspond exactement a l'objet attendu.
+
+    - La transaction stockee en base (creee par le serveur pour cet objet) est la
+      reference ; elle doit etre approuvee, du bon montant et de la bonne devise.
+    - Un id fourni par l'URL/le webhook (candidate) n'est accepte que si FedaPay
+      confirme en plus des metadonnees pointant vers CE type et CETTE reference
+      (cas ou l'utilisateur a relance le paiement et ecrase l'id stocke).
+
+    Retourne l'id de la transaction validee, ou None.
+    """
+    stored_id = str(stored_transaction_id or "").strip()
+    candidate_id = str(candidate_transaction_id or "").strip()
+
+    checks = []
+    if stored_id:
+        checks.append((stored_id, False))
+    if candidate_id and candidate_id != stored_id:
+        checks.append((candidate_id, True))
+
+    expected_currency = str(settings.PAYMENT_CONFIG.get("currency", "XOF")).upper()
+
+    for transaction_id, metadata_required in checks:
+        transaction = fetch_fedapay_transaction(transaction_id)
+        if not transaction:
+            continue
+        if str(transaction.get("id", "")) != transaction_id:
+            continue
+        if str(transaction.get("status", "")).strip().lower() != "approved":
+            continue
+
+        try:
+            amount = int(transaction.get("amount"))
+        except (TypeError, ValueError):
+            amount = None
+        if amount != int(expected_amount):
+            logger.warning(
+                "FedaPay amount mismatch tx=%s type=%s ref=%s got=%s expected=%s",
+                transaction_id, expected_type, expected_ref, amount, expected_amount,
+            )
+            continue
+
+        currency = transaction.get("currency")
+        currency_iso = currency.get("iso") if isinstance(currency, dict) else currency
+        if currency_iso and str(currency_iso).upper() != expected_currency:
+            logger.warning("FedaPay currency mismatch tx=%s got=%s", transaction_id, currency_iso)
+            continue
+
+        metadata_ok = _metadata_matches(transaction, expected_type, ref_key, expected_ref)
+        if metadata_ok is False or (metadata_required and metadata_ok is not True):
+            logger.warning(
+                "FedaPay metadata mismatch tx=%s type=%s ref=%s",
+                transaction_id, expected_type, expected_ref,
+            )
+            continue
+
+        return transaction_id
+
+    return None

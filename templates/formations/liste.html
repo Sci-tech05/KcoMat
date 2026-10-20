@@ -2,45 +2,12 @@
 {% load humanize %}
 {% load kcomat_tags %}
 
-{% block title %}Formations — KcoMat{% endblock %}
+{% block title %}Formations en électronique, IoT, IA et drones{% endblock %}
+{% block meta_description %}Formations 100 % pratiques à Lokossa et en ligne : électronique, domotique, IoT, intelligence artificielle, drones, web. Inscription et paiement Mobile Money.{% endblock %}
 
 {% block content %}
 
-<!-- ===== PAGE HERO ===== -->
-<section class="relative bg-gradient-to-br from-gray-900 via-blue-950 to-gray-900 py-20 overflow-hidden">
-  <div class="absolute inset-0 pointer-events-none">
-    <div class="absolute -top-24 -right-24 w-96 h-96 bg-blue-600/10 rounded-full blur-3xl"></div>
-    <div class="absolute bottom-0 left-1/4 w-80 h-80 bg-indigo-900/20 rounded-full blur-2xl"></div>
-  </div>
-  <div class="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-    <div class="max-w-3xl mx-auto text-center">
-      <h1 class="text-4xl md:text-5xl font-black text-white mb-4 leading-tight">
-        Formations techniques <span class="text-blue-400">certifiées</span>
-      </h1>
-      <p class="text-gray-300 text-lg mb-8 leading-relaxed">
-        Apprenez les technologies qui font l'avenir. Formateurs experts, pratique intensive, attestation officielle incluse.
-      </p>
-      <div class="flex items-center justify-center gap-3 flex-wrap">
-        <span class="inline-flex items-center gap-1.5 bg-green-500/20 text-green-400 text-xs font-semibold px-3 py-1.5 rounded-full border border-green-500/30">
-          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-          Attestation officielle KcoMat
-        </span>
-        <span class="inline-flex items-center gap-1.5 bg-blue-500/20 text-blue-300 text-xs font-semibold px-3 py-1.5 rounded-full border border-blue-500/30">
-          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 18h.01M8 21h8a2 2 0 002-2v-2a2 2 0 00-2-2H8a2 2 0 00-2 2v2a2 2 0 002 2zM12 3v4m0 0C10.343 7 9 8.343 9 10v1h6v-1c0-1.657-1.343-3-3-3z"/></svg>
-          Paiement Mobile Money
-        </span>
-        <span class="inline-flex items-center gap-1.5 bg-purple-500/20 text-purple-300 text-xs font-semibold px-3 py-1.5 rounded-full border border-purple-500/30">
-          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/></svg>
-          100% pratique
-        </span>
-        <span class="inline-flex items-center gap-1.5 bg-amber-500/20 text-amber-300 text-xs font-semibold px-3 py-1.5 rounded-full border border-amber-500/30">
-          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"/></svg>
-          2 000 FCFA à l'inscription
-        </span>
-      </div>
-    </div>
-  </div>
-</section>
+{% include 'partials/page_hero.html' with crumb='Formations' eyebrow='Centre de formation KcoMat' icon='graduation' accent='blue' title='Formations techniques' highlight='certifiées' subtitle="Apprenez les technologies qui font l'avenir : formateurs experts, pratique intensive sur du vrai matériel, attestation officielle incluse." chips="badge-check|Attestation officielle;smartphone|Paiement Mobile Money;zap|100 % pratique;wallet|2 000 FCFA à l'inscription" sats='cpu,wifi,bot,rocket,zap,shield' %}
 
 
 <!-- ===== FILTRES + GRILLE ===== -->
@@ -68,13 +35,13 @@
       <article class="formation-card group flex flex-col">
 
         <!-- Header visuel -->
-        <div class="relative overflow-hidden h-48 flex-shrink-0
+        <a href="{% url 'formations:detail' formation.slug %}" class="block relative overflow-hidden h-48 flex-shrink-0
           {% if formation.niveau == 'avance' %}bg-gradient-to-br from-purple-900 via-purple-800 to-indigo-800
           {% elif formation.niveau == 'intermediaire' %}bg-gradient-to-br from-blue-900 via-blue-800 to-cyan-800
           {% else %}bg-gradient-to-br from-gray-900 via-blue-900 to-blue-800{% endif %}">
 
           {% if formation.image %}
-          <img src="{{ formation.image.url }}" alt="{{ formation.titre }}" class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
+          <img src="{{ formation.image|webp:800 }}" loading="lazy" decoding="async" alt="{{ formation.titre }}" class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
           {% else %}
           <!-- Icône thématique par formation -->
           <div class="w-full h-full flex items-center justify-center opacity-20">
@@ -141,7 +108,7 @@
             <span class="text-xs font-bold bg-red-500/80 backdrop-blur-sm text-white px-2.5 py-1.5 rounded-full">Complet</span>
             {% endif %}
           </div>
-        </div>
+        </a>
 
         <!-- Contenu carte -->
         <div class="p-5 flex flex-col flex-1">

@@ -29,6 +29,7 @@ def inscription(request):
     if request.method == 'POST' and form.is_valid():
         user = form.save()
         login(request, user)
+        request.session['proposer_notifications'] = True  # propose l'abonnement aux notifications
         messages.success(request, "✅ Compte créé avec succès ! Bienvenue chez KcoMat.")
         return redirect('accounts:dashboard')
     return render(request, 'accounts/inscription.html', {'form': form, 'title': 'Créer un compte'})
