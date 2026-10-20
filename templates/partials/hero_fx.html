@@ -1,0 +1,35 @@
+{% comment %}
+Fond animé des héros « Silicon Night » : grille PCB, halos, pistes de circuit
+parcourues d'impulsions lumineuses. Décoratif (aria-hidden), coupé si l'utilisateur
+préfère réduire les animations (voir .hx-* dans static/css/kcomat.css).
+{% endcomment %}
+<div class="hx-bg" aria-hidden="true">
+  <div class="hx-aurora hx-aurora--a"></div>
+  <div class="hx-aurora hx-aurora--b"></div>
+  <div class="hx-aurora hx-aurora--c"></div>
+  <div class="hx-grid"></div>
+  <svg class="hx-traces" viewBox="0 0 1440 720" preserveAspectRatio="xMidYMid slice">
+    <g class="hx-trace">
+      <path d="M-20 120 H260 L320 180 H520"/>
+      <path d="M-20 560 H180 L260 480 H420 L470 430"/>
+      <path d="M1460 90 H1180 L1120 150 H960"/>
+      <path d="M1460 420 H1260 L1200 480 H1040 L1000 520"/>
+      <path d="M1460 640 H1300 L1240 580 H1120"/>
+      <path d="M700 -20 V60 L760 120 V200"/>
+    </g>
+    <g class="hx-nodes">
+      <circle cx="520" cy="180" r="4"/><circle cx="470" cy="430" r="4"/><circle cx="960" cy="150" r="4"/>
+      <circle cx="1000" cy="520" r="4"/><circle cx="1120" cy="580" r="4"/><circle cx="760" cy="200" r="4"/>
+    </g>
+    <g class="hx-pulses">
+      <path pathLength="1000" style="--hx-delay:0s"    d="M-20 120 H260 L320 180 H520"/>
+      <path pathLength="1000" style="--hx-delay:-2.2s" d="M-20 560 H180 L260 480 H420 L470 430"/>
+      <path pathLength="1000" style="--hx-delay:-4.1s" d="M1460 90 H1180 L1120 150 H960"/>
+      <path pathLength="1000" style="--hx-delay:-1.3s" d="M1460 420 H1260 L1200 480 H1040 L1000 520"/>
+      <path pathLength="1000" style="--hx-delay:-3.4s" d="M1460 640 H1300 L1240 580 H1120"/>
+      <path pathLength="1000" style="--hx-delay:-5s"   d="M700 -20 V60 L760 120 V200"/>
+    </g>
+  </svg>
+  <div class="hx-vignette"></div>
+</div>
+<div class="hx-edge" aria-hidden="true"></div>

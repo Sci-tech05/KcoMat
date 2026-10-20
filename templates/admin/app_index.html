@@ -1,0 +1,3 @@
+{% extends "admin/app_index.html" %}
+{# Titre : nom français de l'application (AppConfig.verbose_name) au lieu du label technique #}
+{% block content_title %}{{ app_list.0.name|default:title }}{% endblock %}

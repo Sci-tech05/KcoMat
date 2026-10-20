@@ -1,0 +1,8 @@
+{% comment %}Boutons d'export PDF par période. Usage : {% include 'admin/includes/pdf_periodes.html' with url_name='admin:…_report_pdf' %}{% endcomment %}
+{% url url_name as report_url %}
+<div class="d-flex flex-wrap align-items-center mr-2" style="gap:.4rem">
+  <a href="{{ report_url }}?period=day" class="pdf-btn"><i class="fas fa-file-pdf"></i> Jour</a>
+  <a href="{{ report_url }}?period=week" class="pdf-btn"><i class="fas fa-file-pdf"></i> Semaine</a>
+  <a href="{{ report_url }}?period=month" class="pdf-btn"><i class="fas fa-file-pdf"></i> Mois</a>
+  <a href="{{ report_url }}?period=year" class="pdf-btn"><i class="fas fa-file-pdf"></i> Année</a>
+</div>

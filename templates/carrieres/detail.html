@@ -1,129 +1,372 @@
 {% extends 'base.html' %}
-{% load humanize %}
+{% load humanize kcomat_tags static %}
 
-{% block title %}{{ offre.titre }} — Carrières KcoMat{% endblock %}
+{% block title %}{{ offre.titre }} — Carrières{% endblock %}
+{% block meta_description %}{{ offre.resume }}{% endblock %}
+{% block og_image %}{% if offre.image %}{{ SITE_URL }}{{ offre.image.url }}{% else %}{{ block.super }}{% endif %}{% endblock %}
+
+{% block structured_data %}
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "JobPosting",
+  "title": "{{ offre.titre|escapejs }}",
+  "description": "{{ offre.description|escapejs }}",
+  "datePosted": "{{ offre.created_at|date:'c' }}",
+  {% if offre.date_limite %}"validThrough": "{{ offre.date_limite|date:'Y-m-d' }}T23:59:59",{% endif %}
+  "employmentType": "{% if offre.type_offre == 'stage' %}INTERN{% elif offre.type_offre == 'freelance' %}CONTRACTOR{% else %}FULL_TIME{% endif %}",
+  "industry": "{{ offre.get_domaine_display|escapejs }}",
+  {% if offre.image %}"image": "{{ SITE_URL }}{{ offre.image.url }}",{% endif %}
+  "hiringOrganization": {"@type": "Organization", "@id": "{{ SITE_URL }}/#organisation", "name": "KcoMat", "sameAs": "{{ SITE_URL }}/", "logo": "{{ SITE_URL }}{% static 'img/logo.png' %}"},
+  "jobLocation": {"@type": "Place", "address": {"@type": "PostalAddress", "addressLocality": "{{ offre.localite|escapejs }}", "addressCountry": "BJ"}},
+  "directApply": true
+}
+</script>
+{% endblock %}
 
 {% block content %}
+{% with t=offre.type_offre %}
 
-<!-- Hero -->
-<section class="relative bg-gradient-to-br from-gray-900 via-orange-950 to-gray-900 py-16 overflow-hidden">
-  <div class="absolute inset-0 pointer-events-none">
-    <div class="absolute -top-20 -right-20 w-80 h-80 bg-orange-600/10 rounded-full blur-3xl"></div>
-    <div class="absolute bottom-0 left-1/3 w-64 h-64 bg-orange-900/15 rounded-full blur-2xl"></div>
-  </div>
-  <div class="relative max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
+<!-- ===================== HÉRO ===================== -->
+<section class="hx py-12 sm:py-16 lg:py-20" style="{% if t == 'stage' %}--hx-a:#06B6D4;--hx-b:#0A84FF;--hx-c:#22D3EE;--hx-t1:#67E8F9;--hx-t2:#22D3EE;--hx-t3:#60A5FA{% elif t == 'freelance' %}--hx-a:#F59E0B;--hx-b:#F97316;--hx-c:#FBBF24;--hx-t1:#FDE68A;--hx-t2:#FBBF24;--hx-t3:#FB923C{% else %}--hx-a:#0A84FF;--hx-b:#22D3EE;--hx-c:#60A5FA;--hx-t1:#60A5FA;--hx-t2:#22D3EE;--hx-t3:#A5B4FC{% endif %}">
+  {% include 'partials/hero_fx.html' %}
+  <div class="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <nav class="hx-crumbs hx-in" aria-label="Fil d'Ariane">
+      <a href="{% url 'core:accueil' %}">Accueil</a>
+      {% include 'partials/icon.html' with name='chevron-right' class='w-3 h-3' %}
+      <a href="{% url 'carrieres:liste' %}">Carrières</a>
+      {% include 'partials/icon.html' with name='chevron-right' class='w-3 h-3' %}
+      <span class="text-slate-300 truncate max-w-[14rem] sm:max-w-none" aria-current="page">{{ offre.titre }}</span>
+    </nav>
 
-    <a href="{% url 'carrieres:liste' %}" class="inline-flex items-center gap-2 text-orange-400 hover:text-orange-300 text-sm mb-8 transition-colors group">
-      <svg class="w-4 h-4 transition-transform group-hover:-translate-x-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
-      Toutes les offres
-    </a>
-
-    <div class="flex flex-wrap gap-2 mb-5">
-      <span class="text-xs font-bold px-3 py-1.5 rounded-full {% if offre.type == 'emploi' %}bg-blue-500/20 border border-blue-500/30 text-blue-300{% elif offre.type == 'stage' %}bg-purple-500/20 border border-purple-500/30 text-purple-300{% else %}bg-orange-500/20 border border-orange-500/30 text-orange-300{% endif %}">{{ offre.get_type_display }}</span>
-      {% if offre.localisation %}<span class="text-xs font-medium px-3 py-1.5 rounded-full bg-white/10 text-gray-300 flex items-center gap-1.5"><svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0zM15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg>{{ offre.localisation }}</span>{% endif %}
-    </div>
-
-    <h1 class="text-3xl md:text-4xl font-black text-white mb-3 leading-tight">{{ offre.titre }}</h1>
-    {% if offre.remuneration %}
-    <div class="inline-flex items-center gap-2 bg-green-500/20 border border-green-500/30 text-green-300 font-bold text-lg px-4 py-2 rounded-xl">
-      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-      {{ offre.remuneration }}
-    </div>
-    {% endif %}
-  </div>
-</section>
-
-<!-- Contenu -->
-<section class="py-12 bg-gray-50 min-h-screen">
-  <div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
-    <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
-
-      <!-- Colonne principale -->
-      <div class="lg:col-span-2 space-y-6">
-
-        <!-- Description -->
-        <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
-          <h2 class="text-xl font-extrabold text-gray-900 mb-4 flex items-center gap-2">
-            <div class="w-7 h-7 rounded-lg bg-orange-100 flex items-center justify-center">
-              <svg class="w-4 h-4 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
-            </div>
-            Description du poste
-          </h2>
-          <div class="text-gray-600 leading-relaxed text-sm space-y-2">{{ offre.description|linebreaksbr }}</div>
+    <div class="mt-8 grid lg:grid-cols-[1.15fr_1fr] gap-10 lg:gap-14 items-center">
+      <div>
+        <div class="hx-in flex flex-wrap gap-2" style="--d:.06s">
+          <span class="car-type car-type--{{ t }} !text-xs">{{ offre.get_type_offre_display }}</span>
+          <span class="inline-flex items-center gap-1.5 rounded-lg bg-white/10 px-2.5 py-1 text-xs font-semibold text-slate-200 ring-1 ring-white/15">
+            {% include 'partials/icon.html' with name=offre.domaine_icon class='w-3.5 h-3.5' %}{{ offre.get_domaine_display }}
+          </span>
+          {% if offre.mise_en_avant and not offre.est_cloturee %}<span class="inline-flex items-center gap-1 rounded-lg bg-amber-400/15 px-2.5 py-1 text-xs font-bold text-amber-300 ring-1 ring-amber-300/25">{% include 'partials/icon.html' with name='star' class='w-3 h-3 fill-current' %} À la une</span>{% endif %}
+          {% if offre.est_cloturee %}<span class="inline-flex items-center rounded-lg bg-rose-500/15 px-2.5 py-1 text-xs font-bold text-rose-300 ring-1 ring-rose-300/25">Candidatures closes</span>{% endif %}
         </div>
 
-        <!-- Compétences -->
-        {% if offre.competences_requises %}
-        <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
-          <h2 class="text-xl font-extrabold text-gray-900 mb-4 flex items-center gap-2">
-            <div class="w-7 h-7 rounded-lg bg-blue-100 flex items-center justify-center">
-              <svg class="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
-            </div>
-            Compétences requises
-          </h2>
-          <div class="text-gray-600 leading-relaxed text-sm space-y-2">{{ offre.competences_requises|linebreaksbr }}</div>
-        </div>
-        {% endif %}
+        <h1 class="hx-title hx-in mt-5 text-3xl sm:text-4xl lg:text-5xl" style="--d:.12s">{{ offre.titre }}</h1>
+        {% if offre.resume %}<p class="hx-lead hx-in mt-4 text-lg max-w-xl" style="--d:.2s">{{ offre.resume }}</p>{% endif %}
 
-        <!-- Contact WhatsApp -->
-        <div class="bg-gradient-to-r from-green-50 to-emerald-50 border border-green-100 rounded-2xl p-5 flex items-center gap-4">
-          <div class="w-10 h-10 bg-green-500 rounded-xl flex items-center justify-center flex-shrink-0">
-            <svg class="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"/></svg>
+        <!-- Chiffres clés -->
+        <dl class="hx-in mt-8 grid grid-cols-2 sm:grid-cols-4 gap-2.5" style="--d:.28s">
+          <div class="car-fact">
+            <dt>{% include 'partials/icon.html' with name='clock' class='w-4 h-4' %}{% if formules %}Durée{% else %}Format{% endif %}</dt>
+            <dd>{% if durees %}{{ durees }}{% else %}{{ offre.get_type_offre_display }}{% endif %}</dd>
           </div>
-          <div class="flex-1">
-            <p class="font-bold text-gray-800 text-sm">Une question avant de postuler ?</p>
-            <p class="text-xs text-gray-500 mt-0.5">Contactez-nous directement sur WhatsApp</p>
+          <div class="car-fact">
+            <dt>{% include 'partials/icon.html' with name='map-pin' class='w-4 h-4' %}Lieu</dt>
+            <dd>{{ offre.localite }}</dd>
           </div>
-          <a href="https://wa.me/{{ KCOMAT.whatsapp }}?text=Bonjour%20KcoMat%2C%20j%27ai%20une%20question%20sur%20l%27offre%20%3A%20{{ offre.titre|urlencode }}" target="_blank" class="flex-shrink-0 bg-green-600 hover:bg-green-700 text-white text-xs font-bold px-4 py-2 rounded-xl transition-colors">Contacter</a>
+          <div class="car-fact">
+            <dt>{% include 'partials/icon.html' with name='calendar' class='w-4 h-4' %}Clôture</dt>
+            <dd>{% if offre.date_limite %}{{ offre.date_limite|date:"j M Y" }}{% if not offre.est_cloturee and offre.jours_restants is not None %}<span class="block text-[11px] font-semibold text-amber-300">{% if offre.jours_restants == 0 %}Dernier jour{% else %}Plus que {{ offre.jours_restants }} jour{{ offre.jours_restants|pluralize }}{% endif %}</span>{% endif %}{% else %}Ouverte{% endif %}</dd>
+          </div>
+          <div class="car-fact">
+            <dt>{% include 'partials/icon.html' with name='users' class='w-4 h-4' %}Places</dt>
+            <dd>{% if offre.places %}{{ offre.places }}{% else %}Selon besoins{% endif %}</dd>
+          </div>
+        </dl>
+
+        <div class="hx-in mt-8 flex flex-wrap items-center gap-3" style="--d:.36s">
+          {% if not offre.est_cloturee %}
+          <a href="#postuler" class="hx-btn hx-btn--primary">
+            {% include 'partials/icon.html' with name='send' class='w-4 h-4' stroke='2' %} Postuler maintenant
+          </a>
+          {% endif %}
+          <a href="https://wa.me/?text={{ offre.titre|urlencode }}%20%E2%80%94%20KcoMat%20{{ CANONICAL_URL|urlencode }}" target="_blank" rel="noopener" class="hx-btn hx-btn--glass !py-3 !px-4 text-sm" aria-label="Partager l'offre sur WhatsApp">
+            {% include 'partials/icon.html' with name='share' class='w-4 h-4' %} Partager
+          </a>
+          <a href="https://www.linkedin.com/sharing/share-offsite/?url={{ CANONICAL_URL|urlencode }}" target="_blank" rel="noopener" class="hx-btn hx-btn--glass !py-3 !px-4 text-sm" aria-label="Partager l'offre sur LinkedIn">
+            <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/></svg>
+            LinkedIn
+          </a>
         </div>
       </div>
 
-      <!-- Sidebar formulaire -->
-      <div>
-        <div class="bg-white rounded-2xl border border-gray-100 shadow-sm sticky top-24 overflow-hidden">
+      <!-- Visuel -->
+      <div class="hx-in relative" style="--d:.18s">
+        <div class="relative overflow-hidden rounded-[1.75rem] ring-1 ring-white/15 shadow-2xl shadow-black/50 aspect-[16/11] bg-slate-900">
+          {% if offre.image %}
+          <img src="{{ offre.image|webp:1200 }}" alt="{{ offre.titre }}" width="1200" height="825" fetchpriority="high" decoding="async" class="h-full w-full object-cover">
+          {% else %}
+          <div class="car-card__fallback car-card__fallback--{{ t }} h-full">{% include 'partials/icon.html' with name=offre.domaine_icon class='w-24 h-24' stroke='1' %}</div>
+          {% endif %}
+          <div class="absolute inset-0 bg-gradient-to-t from-slate-950/60 via-transparent to-transparent"></div>
+        </div>
+        <!-- Pastille prix -->
+        <div class="hx-stat hx-float absolute -bottom-6 left-5 sm:-left-6" style="--d:-2s">
+          <span class="hx-stat__icon bg-emerald-400/15 text-emerald-300">{% include 'partials/icon.html' with name='wallet' class='w-5 h-5' %}</span>
+          <span>
+            <span class="block text-[11px] text-slate-400">{% if offre.prix_min is not None %}{{ offre.libelle_montant }} dès{% else %}{{ offre.libelle_montant }}{% endif %}</span>
+            <span class="block text-lg font-black leading-tight">{% if offre.prix_min is not None %}{{ offre.prix_min|intcomma }} <span class="text-xs font-semibold text-slate-400">FCFA</span>{% else %}{{ offre.remuneration|default:"À définir" }}{% endif %}</span>
+          </span>
+        </div>
+        <div class="absolute -top-5 right-5 sm:-right-5 hidden sm:block"><div class="hx-stat hx-float" style="--d:-4s">
+          <span class="hx-stat__icon bg-sky-400/15 text-sky-300">{% include 'partials/icon.html' with name='badge-check' class='w-5 h-5' %}</span>
+          <span><span class="block text-sm font-bold leading-none">{% if t == 'stage' %}Attestation{% elif t == 'emploi' %}Contrat{% else %}Mission{% endif %}</span><span class="block text-[11px] text-slate-400 mt-1">{% if t == 'stage' %}délivrée par KcoMat{% elif t == 'emploi' %}et formation continue{% else %}payée par Mobile Money{% endif %}</span></span>
+        </div></div>
+      </div>
+    </div>
+  </div>
+</section>
 
-          <!-- Header -->
-          <div class="bg-gradient-to-r from-orange-600 to-orange-700 px-5 py-5 text-center">
-            
-            <h3 class="text-lg font-black text-white">Postuler à cette offre</h3>
-            <p class="text-orange-100 text-xs mt-1">Formulaire de candidature</p>
-          </div>
+<!-- ===================== CONTENU ===================== -->
+<section class="bg-slate-50 py-12 sm:py-16">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 grid lg:grid-cols-[minmax(0,1fr)_24rem] gap-8 lg:gap-10 items-start">
 
-          <div class="p-5">
-            {% if messages %}
-            {% for msg in messages %}
-            <div class="mb-3 p-3 rounded-xl text-sm font-medium {% if 'success' in msg.tags %}bg-green-50 border border-green-200 text-green-800{% else %}bg-red-50 border border-red-200 text-red-800{% endif %}" x-data="{ show: true }" x-show="show" x-init="setTimeout(() => show = false, 4000)">
-              {{ msg }}
+    <div class="space-y-6 min-w-0">
+      <!-- Le poste -->
+      <article class="car-block">
+        <header class="car-block__head"><span class="car-block__icon">{% include 'partials/icon.html' with name='file' class='w-5 h-5' %}</span><h2>Le poste</h2></header>
+        <div class="prose-car">{{ offre.description|linebreaks }}</div>
+        {% if offre.niveau_requis %}
+        <p class="mt-5 inline-flex items-start gap-2 rounded-xl bg-blue-50 px-4 py-3 text-sm text-blue-900 ring-1 ring-inset ring-blue-100">
+          {% include 'partials/icon.html' with name='graduation' class='w-4 h-4 mt-0.5 flex-shrink-0 text-blue-600' %}
+          <span><span class="font-bold">Niveau requis :</span> {{ offre.niveau_requis }}</span>
+        </p>
+        {% endif %}
+      </article>
+
+      <!-- Missions -->
+      {% with missions=offre.missions_list %}{% if missions %}
+      <article class="car-block">
+        <header class="car-block__head"><span class="car-block__icon">{% include 'partials/icon.html' with name='target' class='w-5 h-5' %}</span><h2>Vos missions</h2></header>
+        <ol class="space-y-3">
+          {% for m in missions %}
+          <li class="flex gap-4 rounded-2xl bg-slate-50/80 p-4 ring-1 ring-inset ring-slate-100">
+            <span class="font-mono text-sm font-bold text-blue-600 pt-0.5">{{ forloop.counter|stringformat:"02d" }}</span>
+            <span class="text-[15px] leading-relaxed text-slate-700">{{ m }}</span>
+          </li>
+          {% endfor %}
+        </ol>
+      </article>
+      {% endif %}{% endwith %}
+
+      <!-- Compétences -->
+      {% with competences=offre.competences_list %}{% if competences %}
+      <article class="car-block">
+        <header class="car-block__head"><span class="car-block__icon">{% include 'partials/icon.html' with name='cpu' class='w-5 h-5' %}</span><h2>Compétences requises</h2></header>
+        <div class="grid gap-3 sm:grid-cols-2">
+          {% for label, detail in competences %}
+          <div class="flex gap-3.5 rounded-2xl border border-slate-100 p-4 transition-colors hover:border-blue-200 hover:bg-blue-50/40">
+            <span class="grid h-10 w-10 flex-shrink-0 place-items-center rounded-xl bg-gradient-to-br from-blue-600 to-cyan-500 text-white shadow-md shadow-blue-600/20">{% include 'partials/icon.html' with name=label|competence_icon class='w-5 h-5' stroke='2' %}</span>
+            <div>
+              {% if label %}<p class="font-bold text-slate-900">{{ label }}</p>{% endif %}
+              <p class="text-sm leading-relaxed text-slate-600">{{ detail|capfirst }}</p>
             </div>
-            {% endfor %}
+          </div>
+          {% endfor %}
+        </div>
+      </article>
+      {% endif %}{% endwith %}
+
+      <!-- Profil -->
+      <article class="car-block">
+        <header class="car-block__head"><span class="car-block__icon">{% include 'partials/icon.html' with name='user-check' class='w-5 h-5' %}</span><h2>Profil recherché</h2></header>
+        <ul class="grid gap-2.5 sm:grid-cols-2">
+          {% for q in offre.profil_list %}
+          <li class="flex items-start gap-2.5 text-[15px] text-slate-700">
+            <span class="mt-0.5 grid h-5 w-5 flex-shrink-0 place-items-center rounded-full bg-emerald-100 text-emerald-600">{% include 'partials/icon.html' with name='check' class='w-3.5 h-3.5' stroke='3' %}</span>{{ q }}
+          </li>
+          {% endfor %}
+        </ul>
+      </article>
+
+      <!-- Formules -->
+      {% if formules %}
+      <article class="car-block" id="formules">
+        <header class="car-block__head"><span class="car-block__icon">{% include 'partials/icon.html' with name='wallet' class='w-5 h-5' %}</span><h2>Durée &amp; {{ offre.libelle_montant|lower }}</h2></header>
+        <div class="grid gap-4 sm:grid-cols-2">
+          {% for f in formules %}
+          <div class="car-plan {% if f.recommandee %}is-featured{% endif %}">
+            {% if f.recommandee %}<span class="car-plan__badge">{% include 'partials/icon.html' with name='star' class='w-3 h-3 fill-current' %} Formule conseillée</span>{% endif %}
+            <p class="text-sm font-bold uppercase tracking-wider {% if f.recommandee %}text-blue-600{% else %}text-slate-400{% endif %}">{{ f.duree }}</p>
+            <p class="mt-2 text-4xl font-black tracking-tight text-slate-900">{% if f.montant is not None %}{{ f.montant|intcomma }}<span class="ml-1 text-base font-bold text-slate-400">FCFA</span>{% else %}Sur devis{% endif %}</p>
+            {% if f.description %}<p class="mt-3 text-sm leading-relaxed text-slate-500">{{ f.description }}</p>{% endif %}
+            {% if not offre.est_cloturee %}
+            <a href="#postuler" data-formule="{{ f.pk }}" class="car-plan__cta">Choisir cette formule {% include 'partials/icon.html' with name='arrow-right' class='w-4 h-4' stroke='2.25' %}</a>
+            {% endif %}
+          </div>
+          {% endfor %}
+        </div>
+        {% if offre.nature_montant == 'frais' %}<p class="mt-4 text-xs text-slate-400">Les frais couvrent l'encadrement, l'accès au matériel et l'attestation de stage. Ils sont réglés au démarrage du stage, après acceptation de votre candidature.</p>{% endif %}
+      </article>
+      {% endif %}
+
+      <!-- Avantages -->
+      <article class="car-block">
+        <header class="car-block__head"><span class="car-block__icon">{% include 'partials/icon.html' with name='gift' class='w-5 h-5' %}</span><h2>Ce que vous gagnez</h2></header>
+        <div class="grid gap-3 sm:grid-cols-2">
+          {% for a in offre.avantages_list %}
+          <div class="flex items-start gap-3 rounded-2xl bg-gradient-to-br from-slate-50 to-white p-4 ring-1 ring-inset ring-slate-100">
+            <span class="grid h-9 w-9 flex-shrink-0 place-items-center rounded-xl bg-white text-blue-600 shadow-sm ring-1 ring-slate-100">
+              {% cycle 'badge-check' 'cpu' 'graduation' 'sparkles' 'rocket' as av_icon silent %}{% include 'partials/icon.html' with name=av_icon class='w-[18px] h-[18px]' %}
+            </span>
+            <span class="text-[15px] leading-relaxed text-slate-700">{{ a }}</span>
+          </div>
+          {% endfor %}
+        </div>
+      </article>
+
+      <!-- Processus -->
+      <article class="car-block">
+        <header class="car-block__head"><span class="car-block__icon">{% include 'partials/icon.html' with name='chart' class='w-5 h-5' %}</span><h2>Comment se passe le recrutement ?</h2></header>
+        <ol class="grid gap-4 sm:grid-cols-4">
+          {% for step in "send|Candidature|Vous postulez en ligne ; un e-mail confirme la réception.#search|Étude du dossier|Notre équipe étudie votre CV et votre motivation.#message|Entretien|Les profils retenus sont contactés pour un échange.#rocket|Démarrage|Accueil, présentation de l'équipe et début du parcours."|split:"#" %}{% with p=step|split:"|" %}
+          <li class="car-step">
+            <span class="car-step__icon">{% include 'partials/icon.html' with name=p.0 class='w-5 h-5' stroke='2' %}</span>
+            <p class="mt-3 font-mono text-[11px] font-bold tracking-widest text-blue-600">0{{ forloop.counter }}</p>
+            <p class="font-extrabold text-slate-900">{{ p.1 }}</p>
+            <p class="mt-1 text-sm text-slate-500">{{ p.2 }}</p>
+          </li>
+          {% endwith %}{% endfor %}
+        </ol>
+      </article>
+
+      <!-- Offres similaires -->
+      {% if similaires %}
+      <div class="pt-4">
+        <h2 class="text-xl font-extrabold text-slate-900">Offres similaires</h2>
+        <div class="mt-4 grid gap-4 sm:grid-cols-3">
+          {% for s in similaires %}
+          <a href="{% url 'carrieres:detail' s.slug %}" class="group rounded-2xl bg-white p-4 ring-1 ring-slate-200/80 transition hover:-translate-y-0.5 hover:shadow-lg hover:ring-blue-200">
+            <span class="car-type car-type--{{ s.type_offre }}">{{ s.get_type_offre_display }}</span>
+            <p class="mt-3 font-bold leading-snug text-slate-900 group-hover:text-blue-700">{{ s.titre }}</p>
+            <p class="mt-2 flex items-center gap-1.5 text-xs text-slate-500">{% include 'partials/icon.html' with name=s.domaine_icon class='w-3.5 h-3.5' %}{{ s.get_domaine_display }}</p>
+          </a>
+          {% endfor %}
+        </div>
+      </div>
+      {% endif %}
+    </div>
+
+    <!-- ===================== CANDIDATURE ===================== -->
+    <aside id="postuler" class="lg:sticky lg:top-24 scroll-mt-24">
+      <div class="overflow-hidden rounded-3xl bg-white shadow-[0_30px_60px_-30px_rgba(15,23,42,.35)] ring-1 ring-slate-200/80">
+        <div class="relative overflow-hidden bg-slate-950 px-6 py-6 text-white">
+          <div class="absolute -right-10 -top-16 h-40 w-40 rounded-full bg-blue-500/30 blur-2xl"></div>
+          <p class="relative font-mono text-[11px] font-bold uppercase tracking-[0.18em] text-sky-300">Candidature</p>
+          <h2 class="relative mt-1 text-xl font-extrabold">Postuler à cette offre</h2>
+          <p class="relative mt-1 text-sm text-slate-400">Réponse par e-mail ou téléphone · 5 minutes suffisent</p>
+        </div>
+
+        <div class="p-6">
+          {% if offre.est_cloturee %}
+          <div class="rounded-2xl bg-slate-50 p-5 text-center ring-1 ring-slate-100">
+            <p class="font-bold text-slate-900">Les candidatures sont closes</p>
+            <p class="mt-1 text-sm text-slate-500">Cette offre a pris fin le {{ offre.date_limite|date:"j F Y" }}.</p>
+            <a href="{% url 'carrieres:liste' %}" class="mt-4 inline-flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-bold text-white hover:bg-blue-700">Voir les offres ouvertes</a>
+          </div>
+          {% else %}
+          <form method="post" enctype="multipart/form-data" class="space-y-4">
+            {% csrf_token %}
+            {% if form.non_field_errors %}<div class="rounded-xl bg-rose-50 px-4 py-3 text-sm text-rose-700 ring-1 ring-rose-100">{{ form.non_field_errors.0 }}</div>{% endif %}
+
+            {% if form.formule %}
+            <fieldset>
+              <legend class="car-label">Formule souhaitée <span class="text-rose-500">*</span></legend>
+              <div class="mt-2 grid gap-2">
+                {% for f in formules %}
+                <label class="car-radio">
+                  <input type="radio" name="formule" value="{{ f.pk }}" class="peer sr-only" required {% if form.formule.value|stringformat:"s" == f.pk|stringformat:"s" or not form.formule.value and f.recommandee %}checked{% endif %}>
+                  <span class="car-radio__box">
+                    <span class="flex flex-col">
+                      <span class="font-bold text-slate-900">{{ f.duree }}</span>
+                      {% if f.recommandee %}<span class="text-[11px] font-semibold text-blue-600">Conseillée</span>{% endif %}
+                    </span>
+                    <span class="font-black text-slate-900">{% if f.montant is not None %}{{ f.montant|intcomma }} <span class="text-xs font-semibold text-slate-400">FCFA</span>{% else %}Sur devis{% endif %}</span>
+                  </span>
+                </label>
+                {% endfor %}
+              </div>
+              {% if form.formule.errors %}<p class="car-error">{{ form.formule.errors.0 }}</p>{% endif %}
+            </fieldset>
             {% endif %}
 
-            <form method="post" enctype="multipart/form-data" class="space-y-3">
-              {% csrf_token %}
-              {% for field in form %}
+            <div class="grid grid-cols-2 gap-3">
+              {% for name in "prenom,nom"|split:"," %}{% for field in form %}{% if field.name == name %}
               <div>
-                <label for="{{ field.id_for_label }}" class="block text-xs font-semibold text-gray-600 mb-1">{{ field.label }}{% if field.field.required %} <span class="text-red-500">*</span>{% endif %}</label>
-                {% if field.field.widget.input_type == 'textarea' %}
-                <textarea name="{{ field.html_name }}" id="{{ field.id_for_label }}" rows="3" class="w-full px-3 py-2 text-sm border {% if field.errors %}border-red-400 bg-red-50{% else %}border-gray-200 bg-gray-50{% endif %} rounded-lg focus:bg-white focus:border-orange-500 focus:ring-1 focus:ring-orange-500/30 outline-none transition resize-none" {% if field.field.required %}required{% endif %}>{{ field.value|default:'' }}</textarea>
-                {% elif field.field.widget.input_type == 'file' %}
-                <input type="file" name="{{ field.html_name }}" id="{{ field.id_for_label }}" class="w-full px-3 py-2 text-sm border border-gray-200 bg-gray-50 rounded-lg focus:border-orange-500 outline-none transition file:mr-3 file:py-1 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-orange-50 file:text-orange-700" {% if field.field.required %}required{% endif %} />
-                {% else %}
-                <input type="{{ field.field.widget.input_type }}" name="{{ field.html_name }}" id="{{ field.id_for_label }}" value="{{ field.value|default:'' }}" class="w-full px-3 py-2 text-sm border {% if field.errors %}border-red-400 bg-red-50{% else %}border-gray-200 bg-gray-50{% endif %} rounded-lg focus:bg-white focus:border-orange-500 focus:ring-1 focus:ring-orange-500/30 outline-none transition" {% if field.field.required %}required{% endif %} />
-                {% endif %}
-                {% if field.errors %}<p class="text-xs text-red-600 mt-0.5">{{ field.errors.0 }}</p>{% endif %}
+                <label for="{{ field.id_for_label }}" class="car-label">{{ field.label }} <span class="text-rose-500">*</span></label>
+                <input type="text" name="{{ field.html_name }}" id="{{ field.id_for_label }}" value="{{ field.value|default:'' }}" autocomplete="{{ field.field.widget.attrs.autocomplete }}" required class="car-input {% if field.errors %}is-invalid{% endif %}">
+                {% if field.errors %}<p class="car-error">{{ field.errors.0 }}</p>{% endif %}
               </div>
-              {% endfor %}
-              <button type="submit" class="w-full bg-orange-600 hover:bg-orange-700 text-white font-black py-3 rounded-xl transition-colors flex items-center justify-center gap-2 shadow-sm shadow-orange-200 mt-2">
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/></svg>
-                Envoyer ma candidature
-              </button>
-            </form>
-          </div>
+              {% endif %}{% endfor %}{% endfor %}
+            </div>
+
+            {% for field in form %}{% if field.name == 'email' or field.name == 'telephone' %}
+            <div>
+              <label for="{{ field.id_for_label }}" class="car-label">{{ field.label }} <span class="text-rose-500">*</span></label>
+              <input type="{% if field.name == 'email' %}email{% else %}tel{% endif %}" name="{{ field.html_name }}" id="{{ field.id_for_label }}" value="{{ field.value|default:'' }}"
+                     placeholder="{{ field.field.widget.attrs.placeholder }}" autocomplete="{{ field.field.widget.attrs.autocomplete }}" {% if field.name == 'telephone' %}inputmode="tel"{% endif %} required class="car-input {% if field.errors %}is-invalid{% endif %}">
+              {% if field.errors %}<p class="car-error">{{ field.errors.0 }}</p>{% endif %}
+            </div>
+            {% endif %}{% endfor %}
+
+            {% for field in form %}{% if field.name == 'cv' or field.name == 'lettre_motivation' %}
+            <div>
+              <label for="{{ field.id_for_label }}" class="car-label">{{ field.label }}{% if field.field.required %} <span class="text-rose-500">*</span>{% endif %}</label>
+              <label class="car-file {% if field.errors %}is-invalid{% endif %}">
+                {% include 'partials/icon.html' with name='file' class='w-5 h-5 text-blue-600 flex-shrink-0' %}
+                <span class="car-file__name truncate" data-placeholder="{% if field.name == 'cv' %}Choisir mon CV{% else %}Ajouter ma lettre (facultatif){% endif %}">{% if field.name == 'cv' %}Choisir mon CV{% else %}Ajouter ma lettre (facultatif){% endif %}</span>
+                <input type="file" name="{{ field.html_name }}" id="{{ field.id_for_label }}" accept=".pdf,.doc,.docx" class="sr-only" {% if field.field.required %}required{% endif %}>
+              </label>
+              {% if field.errors %}<p class="car-error">{{ field.errors.0 }}</p>{% endif %}
+            </div>
+            {% endif %}{% endfor %}
+
+            {% for field in form %}{% if field.name == 'message' %}
+            <div>
+              <label for="{{ field.id_for_label }}" class="car-label">{{ field.label }}</label>
+              <textarea name="{{ field.html_name }}" id="{{ field.id_for_label }}" rows="4" maxlength="1500" placeholder="{{ field.field.widget.attrs.placeholder }}" class="car-input resize-y {% if field.errors %}is-invalid{% endif %}">{{ field.value|default:'' }}</textarea>
+              <p class="mt-1 text-[11px] text-slate-400">Une motivation détaillée améliore l'étude de votre dossier.</p>
+            </div>
+            {% endif %}{% endfor %}
+
+            <button type="submit" class="hx-btn hx-btn--primary w-full !py-3.5">
+              {% include 'partials/icon.html' with name='send' class='w-4 h-4' stroke='2' %} Envoyer ma candidature
+            </button>
+            <p class="flex items-start gap-2 text-[11px] leading-relaxed text-slate-400">
+              {% include 'partials/icon.html' with name='lock' class='w-3.5 h-3.5 mt-0.5 flex-shrink-0' %}
+              Vos documents sont confidentiels et réservés à l'équipe de recrutement KcoMat.
+            </p>
+          </form>
+          {% endif %}
+
+          <a href="https://wa.me/{{ KCOMAT.whatsapp }}?text=Bonjour%20KcoMat%2C%20j%27ai%20une%20question%20sur%20l%27offre%20%3A%20{{ offre.titre|urlencode }}" target="_blank" rel="noopener"
+             class="mt-5 flex items-center gap-3 rounded-2xl bg-emerald-50 p-3.5 ring-1 ring-inset ring-emerald-100 transition hover:bg-emerald-100/70">
+            <span class="grid h-9 w-9 flex-shrink-0 place-items-center rounded-xl bg-emerald-500 text-white">{% include 'partials/icon.html' with name='message' class='w-4 h-4' stroke='2' %}</span>
+            <span class="text-sm"><span class="block font-bold text-slate-800">Une question avant de postuler ?</span><span class="text-slate-500">Écrivez-nous sur WhatsApp</span></span>
+          </a>
         </div>
       </div>
-
-    </div>
+    </aside>
   </div>
 </section>
+{% endwith %}
 
+<script>
+  (function () {
+    // « Choisir cette formule » : présélectionne la formule dans le formulaire
+    document.querySelectorAll('[data-formule]').forEach(function (link) {
+      link.addEventListener('click', function () {
+        var radio = document.querySelector('input[name="formule"][value="' + link.dataset.formule + '"]');
+        if (radio) { radio.checked = true; }
+      });
+    });
+    // Affiche le nom du fichier choisi
+    document.querySelectorAll('.car-file input[type=file]').forEach(function (input) {
+      input.addEventListener('change', function () {
+        var label = input.parentElement.querySelector('.car-file__name');
+        label.textContent = input.files.length ? input.files[0].name : label.dataset.placeholder;
+        input.parentElement.classList.toggle('has-file', input.files.length > 0);
+      });
+    });
+  })();
+</script>
 {% endblock %}

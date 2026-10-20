@@ -1,12 +1,38 @@
 {% extends 'base.html' %}
+{% load kcomat_tags %}
 {% load humanize %}
 
-{% block title %}{{ produit.nom }} — Boutique KcoMat{% endblock %}
+{% block title %}{{ produit.nom }} — Boutique{% endblock %}
+{% block meta_description %}{{ produit.description_courte }}{% endblock %}
+{% block og_image %}{% if produit.image %}{{ SITE_URL }}{{ produit.image.url }}{% else %}{{ block.super }}{% endif %}{% endblock %}
+{% block structured_data %}
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "Product",
+  "name": "{{ produit.nom|escapejs }}",
+  "description": "{{ produit.description_courte|escapejs }}",
+  "url": "{{ CANONICAL_URL }}",
+  {% if produit.image %}"image": "{{ SITE_URL }}{{ produit.image.url }}",{% endif %}
+  {% if produit.categorie %}"category": "{{ produit.categorie.nom|escapejs }}",{% endif %}
+  "brand": {"@type": "Brand", "name": "KcoMat"},
+  "offers": {
+    "@type": "Offer",
+    "price": "{{ produit.prix }}",
+    "priceCurrency": "XOF",
+    "availability": "https://schema.org/{% if produit.stock %}InStock{% else %}OutOfStock{% endif %}",
+    "url": "{{ CANONICAL_URL }}",
+    "seller": {"@id": "{{ SITE_URL }}/#organisation"}
+  }
+}
+</script>
+{% endblock %}
 
 {% block content %}
 
 <!-- Hero strip -->
-<div class="bg-gradient-to-r from-gray-900 to-gray-800 text-white py-10">
+<div class="hx py-12" style="--hx-a:#10B981;--hx-b:#0A84FF;--hx-c:#34D399">
+  {% include 'partials/hero_fx.html' %}
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <!-- Breadcrumb -->
         <nav class="flex items-center gap-2 text-sm text-gray-400 mb-4">
@@ -51,13 +77,13 @@
                 <div class="bg-white rounded-2xl overflow-hidden shadow-sm border border-gray-100 relative" style="height: 420px;">
 
                     {% if produit.image %}
-                    <img src="{{ produit.image.url }}" alt="{{ produit.nom }}"
+                    <img src="{{ produit.image|webp:1000 }}" fetchpriority="high" decoding="async" alt="{{ produit.nom }}"
                         class="w-full h-full object-contain"
                         x-show="active === 0" />
                     {% endif %}
 
                     {% for img in produit.images.all %}
-                    <img src="{{ img.image.url }}" alt="{{ produit.nom }}"
+                    <img src="{{ img.image|webp:1000 }}" loading="lazy" decoding="async" alt="{{ produit.nom }}"
                         class="w-full h-full object-contain absolute inset-0"
                         x-show="active === {{ forloop.counter0 }}{% if produit.image %} + 1{% endif %}" />
                     {% endfor %}
@@ -90,14 +116,14 @@
                     <button @click="active = 0"
                         class="w-16 h-16 rounded-xl overflow-hidden border-2 transition-all"
                         :class="active === 0 ? 'border-blue-500 shadow-md' : 'border-gray-200 hover:border-gray-400'">
-                        <img src="{{ produit.image.url }}" alt="" class="w-full h-full object-cover" />
+                        <img src="{{ produit.image|webp:160 }}" loading="lazy" decoding="async" alt="" class="w-full h-full object-cover" />
                     </button>
                     {% endif %}
                     {% for img in produit.images.all %}
                     <button @click="active = {{ forloop.counter0 }}{% if produit.image %} + 1{% endif %}"
                         class="w-16 h-16 rounded-xl overflow-hidden border-2 transition-all"
                         :class="active === {{ forloop.counter0 }}{% if produit.image %} + 1{% endif %} ? 'border-blue-500 shadow-md' : 'border-gray-200 hover:border-gray-400'">
-                        <img src="{{ img.image.url }}" alt="" class="w-full h-full object-cover" />
+                        <img src="{{ img.image|webp:160 }}" loading="lazy" decoding="async" alt="" class="w-full h-full object-cover" />
                     </button>
                     {% endfor %}
                 </div>

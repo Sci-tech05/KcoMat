@@ -1,20 +1,44 @@
 ﻿{% extends 'base.html' %}
+{% load kcomat_tags %}
 {% load humanize %}
 
-{% block title %}{{ formation.titre }} â€” KcoMat{% endblock %}
+{% block title %}{{ formation.titre }} — Formation{% endblock %}
+{% block meta_description %}{{ formation.description_courte }}{% endblock %}
+{% block og_image %}{% if formation.image %}{{ SITE_URL }}{{ formation.image.url }}{% else %}{{ block.super }}{% endif %}{% endblock %}
+{% block structured_data %}
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "Course",
+  "name": "{{ formation.titre|escapejs }}",
+  "description": "{{ formation.description_courte|escapejs }}",
+  "url": "{{ CANONICAL_URL }}",
+  {% if formation.image %}"image": "{{ SITE_URL }}{{ formation.image.url }}",{% endif %}
+  "inLanguage": "fr",
+  "educationalLevel": "{{ formation.get_niveau_display|escapejs }}",
+  "provider": {"@id": "{{ SITE_URL }}/#organisation", "@type": "Organization", "name": "KcoMat", "url": "{{ SITE_URL }}/"},
+  "offers": {
+    "@type": "Offer",
+    "category": "Paid",
+    "price": "{{ formation.prix }}",
+    "priceCurrency": "XOF",
+    "availability": "https://schema.org/{% if formation.places_disponibles %}InStock{% else %}SoldOut{% endif %}",
+    "url": "{{ CANONICAL_URL }}"
+  },
+  "hasCourseInstance": {
+    "@type": "CourseInstance",
+    "courseMode": ["Onsite", "Online"],
+    "location": {"@type": "Place", "name": "KcoMat", "address": {"@type": "PostalAddress", "addressLocality": "Lokossa", "addressCountry": "BJ"}}
+  }
+}
+</script>
+{% endblock %}
 
 {% block content %}
 
 <!-- ===== PAGE HERO ===== -->
-<section class="relative overflow-hidden
-  {% if formation.niveau == 'avance' %}bg-gradient-to-br from-purple-950 via-indigo-900 to-gray-900
-  {% elif formation.niveau == 'intermediaire' %}bg-gradient-to-br from-blue-950 via-blue-900 to-gray-900
-  {% else %}bg-gradient-to-br from-gray-900 via-blue-950 to-gray-900{% endif %}
-  py-16">
-  <div class="absolute inset-0 pointer-events-none">
-    <div class="absolute -top-20 -right-20 w-80 h-80 bg-blue-600/10 rounded-full blur-3xl"></div>
-    <div class="absolute bottom-0 left-1/3 w-64 h-64 bg-indigo-900/20 rounded-full blur-2xl"></div>
-  </div>
+<section class="hx py-16 lg:py-20" style="{% if formation.niveau == 'avance' %}--hx-a:#8B5CF6;--hx-b:#0A84FF;--hx-c:#C084FC{% elif formation.niveau == 'intermediaire' %}--hx-a:#06B6D4;--hx-b:#10B981;--hx-c:#22D3EE{% else %}--hx-a:#0A84FF;--hx-b:#22D3EE;--hx-c:#60A5FA{% endif %}">
+  {% include 'partials/hero_fx.html' %}
   <div class="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
 
     <!-- Retour -->
@@ -90,7 +114,7 @@
       <!-- Image -->
       {% if formation.image %}
       <div class="lg:col-span-2 hidden lg:block">
-        <img src="{{ formation.image.url }}" alt="{{ formation.titre }}" class="w-full rounded-2xl object-cover h-60 shadow-2xl ring-1 ring-white/10" />
+        <img src="{{ formation.image|webp:1200 }}" fetchpriority="high" decoding="async" alt="{{ formation.titre }}" class="w-full rounded-2xl object-cover h-60 shadow-2xl ring-1 ring-white/10" />
       </div>
       {% else %}
       <div class="lg:col-span-2 hidden lg:flex items-center justify-center">
@@ -168,6 +192,97 @@
         </div>
         {% endif %}
 
+        <!-- Formations anterieures -->
+        {% if formation.sessions_passees.all %}
+        <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
+          <h2 class="text-xl font-extrabold text-gray-900 mb-5 flex items-center gap-2">
+            <div class="w-7 h-7 rounded-lg bg-indigo-100 flex items-center justify-center">
+              <svg class="w-4 h-4 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+            </div>
+            Formations antérieures
+          </h2>
+
+          <div class="space-y-6">
+            {% for session in formation.sessions_passees.all %}
+            <article class="rounded-2xl border border-gray-100 bg-gray-50 p-4 sm:p-5">
+              <div class="flex flex-wrap items-start justify-between gap-3 mb-3">
+                <div>
+                  <h3 class="text-base sm:text-lg font-bold text-gray-900">
+                    {{ session.titre|default:"Session precedente" }}
+                  </h3>
+                  <p class="text-sm text-indigo-700 font-semibold mt-1">{{ session.get_periode_affichage }}</p>
+                </div>
+              </div>
+
+              {% if session.resume %}
+              <p class="text-sm text-gray-600 leading-relaxed mb-4">{{ session.resume }}</p>
+              {% endif %}
+
+              {% if session.image_couverture or session.video_apercu_file or session.video_apercu_url %}
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
+                {% if session.image_couverture %}
+                <div class="bg-white border border-gray-100 rounded-xl overflow-hidden">
+                  <img src="{{ session.image_couverture|webp:800 }}" loading="lazy" decoding="async" alt="{{ session.titre|default:'Session precedente' }}" class="w-full h-52 object-cover" />
+                </div>
+                {% endif %}
+                {% if session.video_apercu_file or session.video_apercu_url %}
+                <div class="bg-white border border-gray-100 rounded-xl overflow-hidden">
+                  {% if session.video_apercu_file %}
+                  <video class="w-full h-52 bg-black" controls preload="metadata">
+                    <source src="{{ session.video_apercu_file.url }}">
+                  </video>
+                  {% elif session.video_apercu_url %}
+                  <iframe
+                    class="w-full h-52"
+                    src="{{ session.get_video_apercu_embed_url }}"
+                    title="{{ session.titre|default:'Session precedente' }}"
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                    referrerpolicy="strict-origin-when-cross-origin"
+                    allowfullscreen></iframe>
+                  {% endif %}
+                </div>
+                {% endif %}
+              </div>
+              {% endif %}
+
+              {% with medias=session.medias.all %}
+              {% if medias %}
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {% for media in medias %}
+                {% if media.actif %}
+                <div class="bg-white border border-gray-100 rounded-xl overflow-hidden">
+                  {% if media.type_media == 'image' and media.image %}
+                  <img src="{{ media.image|webp:800 }}" loading="lazy" decoding="async" alt="{{ media.legende|default:session.titre }}" class="w-full h-52 object-cover" />
+                  {% elif media.type_media == 'video' %}
+                    {% if media.video_file %}
+                    <video class="w-full h-52 bg-black" controls preload="metadata">
+                      <source src="{{ media.video_file.url }}">
+                    </video>
+                    {% elif media.video_url %}
+                    <iframe
+                      class="w-full h-52"
+                      src="{{ media.get_video_embed_url }}"
+                      title="{{ media.legende|default:session.titre }}"
+                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                      referrerpolicy="strict-origin-when-cross-origin"
+                      allowfullscreen></iframe>
+                    {% endif %}
+                  {% endif %}
+                  {% if media.legende %}
+                  <p class="text-xs text-gray-600 px-3 py-2 border-t border-gray-100">{{ media.legende }}</p>
+                  {% endif %}
+                </div>
+                {% endif %}
+                {% endfor %}
+              </div>
+              {% endif %}
+              {% endwith %}
+            </article>
+            {% endfor %}
+          </div>
+        </div>
+        {% endif %}
+
         <!-- Infos pratiques (mobile uniquement) -->
         <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 lg:hidden">
           <h3 class="font-extrabold text-gray-900 mb-4 flex items-center gap-2">
@@ -227,7 +342,15 @@
                 <label for="{{ field.id_for_label }}" class="block text-xs font-semibold text-gray-600 mb-1">
                   {{ field.label }}{% if field.field.required %} <span class="text-red-500">*</span>{% endif %}
                 </label>
-                {% if field.field.widget.input_type == 'textarea' %}
+                {% if field.name == 'mode_preference' %}
+                <select name="{{ field.html_name }}" id="{{ field.id_for_label }}"
+                  class="w-full px-3 py-2 text-sm border rounded-lg {% if field.errors %}border-red-400 bg-red-50{% else %}border-gray-200 bg-gray-50{% endif %} focus:bg-white focus:border-blue-500 focus:ring-1 focus:ring-blue-500/30 outline-none transition"
+                  {% if field.field.required %}required{% endif %}>
+                  {% for value, label in field.field.choices %}
+                  <option value="{{ value }}" {% if field.value == value %}selected{% endif %}>{{ label }}</option>
+                  {% endfor %}
+                </select>
+                {% elif field.field.widget.input_type == 'textarea' %}
                 <textarea name="{{ field.html_name }}" id="{{ field.id_for_label }}" rows="2"
                   class="w-full px-3 py-2 text-sm border rounded-lg {% if field.errors %}border-red-400 bg-red-50{% else %}border-gray-200 bg-gray-50{% endif %} focus:bg-white focus:border-blue-500 focus:ring-1 focus:ring-blue-500/30 outline-none transition resize-none"
                   {% if field.field.required %}required{% endif %}>{{ field.value|default:'' }}</textarea>

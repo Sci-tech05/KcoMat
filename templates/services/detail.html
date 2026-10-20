@@ -1,16 +1,15 @@
 {% extends 'base.html' %}
+{% load kcomat_tags %}
 
-{% block title %}{{ service.titre }} — Services KcoMat{% endblock %}
+{% block title %}{{ service.titre }} — Services{% endblock %}
+{% block meta_description %}{{ service.description_courte }}{% endblock %}
+{% block og_image %}{% if service.image %}{{ SITE_URL }}{{ service.image.url }}{% else %}{{ block.super }}{% endif %}{% endblock %}
 
 {% block content %}
 
 <!-- ===== HERO ===== -->
-<section class="page-hero relative overflow-hidden">
-    <!-- déco cercles -->
-    <div class="absolute inset-0 pointer-events-none overflow-hidden">
-        <div id="hero-blob" class="absolute -top-24 -right-24 w-96 h-96 rounded-full opacity-10 blur-3xl"></div>
-        <div id="hero-blob2" class="absolute -bottom-16 -left-16 w-64 h-64 rounded-full opacity-10 blur-2xl"></div>
-    </div>
+<section class="hx py-16 lg:py-20" style="--hx-a:#06B6D4;--hx-b:#10B981;--hx-c:#22D3EE">
+  {% include 'partials/hero_fx.html' %}
 
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
        
@@ -43,7 +42,7 @@
             <!-- Droite : mini info cards -->
             <div class="hidden lg:flex flex-col gap-4">
                 <div class="bg-white/5 border border-white/10 rounded-2xl p-5 backdrop-blur-sm text-center">
-                    <div class="text-3xl mb-2">📋</div>
+                    <div class="mx-auto mb-3 grid place-items-center w-12 h-12 rounded-2xl bg-white/10 text-cyan-300">{% include 'partials/icon.html' with name='sparkles' class='w-6 h-6' %}</div>
                     <div class="text-white font-bold text-lg">Devis gratuit</div>
                     <div class="text-gray-400 text-sm mt-1">Remplissez le formulaire ci-dessous, notre équipe vous contacte rapidement avec une estimation personnalisée.</div>
                 </div>
@@ -101,7 +100,7 @@
                 {% if service.image %}
                 <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden group">
                     <div class="relative overflow-hidden">
-                        <img src="{{ service.image.url }}" alt="{{ service.titre }}"
+                        <img src="{{ service.image|webp:1200 }}" fetchpriority="high" decoding="async" alt="{{ service.titre }}"
                              class="w-full h-72 object-cover transition-transform duration-500 group-hover:scale-105" />
                         <div class="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
                         <div class="absolute bottom-4 left-4 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
@@ -245,6 +244,8 @@
     var b2 = document.getElementById('hero-blob2');
     if (b1) b1.style.backgroundColor = color;
     if (b2) b2.style.backgroundColor = color;
+    var heroFx = document.querySelector('section.hx');
+    if (heroFx) { heroFx.style.setProperty('--hx-a', color); heroFx.style.setProperty('--hx-c', color); }
 
     // Hero icon
     var heroIcon = document.getElementById('hero-icon-wrap');
