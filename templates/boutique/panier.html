@@ -1,7 +1,9 @@
 {% extends 'base.html' %}
+{% load kcomat_tags %}
 {% load humanize %}
 
-{% block title %}Mon Panier — KcoMat{% endblock %}
+{% block title %}Mon panier{% endblock %}
+{% block robots %}noindex, nofollow{% endblock %}
 
 {% block content %}
 
@@ -46,9 +48,9 @@
                     <!-- Image -->
                     <div class="w-20 h-20 flex-shrink-0 bg-gray-50 rounded-xl overflow-hidden border border-gray-100">
                         {% if item.produit.image %}
-                        <img src="{{ item.produit.image.url }}" alt="{{ item.produit.nom }}" class="w-full h-full object-cover" />
+                        <img src="{{ item.produit.image|webp:200 }}" loading="lazy" decoding="async" alt="{{ item.produit.nom }}" class="w-full h-full object-cover" />
                         {% elif item.produit.images.first %}
-                        <img src="{{ item.produit.images.first.image.url }}" alt="{{ item.produit.nom }}" class="w-full h-full object-cover" />
+                        <img src="{{ item.produit.images.first.image|webp:200 }}" loading="lazy" decoding="async" alt="{{ item.produit.nom }}" class="w-full h-full object-cover" />
                         {% else %}
                         <div class="w-full h-full flex items-center justify-center text-gray-300">
                             <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">

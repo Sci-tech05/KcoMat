@@ -1,0 +1,68 @@
+{% load kcomat_tags %}{% comment %}
+Héro premium des pages intérieures.
+  {% include 'partials/page_hero.html' with crumb='Formations' eyebrow='Centre de formation' icon='graduation'
+     title='Formations techniques' highlight='certifiées' subtitle='…' accent='blue'
+     chips='badge-check|Attestation;smartphone|Mobile Money' sats='cpu,wifi,bot,rocket,zap,shield' %}
+accent : blue (défaut) | green | cyan | purple | orange | amber
+{% endcomment %}
+<section class="hx" style="{% if accent == 'green' %}--hx-a:#10B981;--hx-b:#0A84FF;--hx-c:#34D399;--hx-t1:#34D399;--hx-t2:#22D3EE;--hx-t3:#A7F3D0{% elif accent == 'cyan' %}--hx-a:#06B6D4;--hx-b:#10B981;--hx-c:#22D3EE;--hx-t1:#67E8F9;--hx-t2:#22D3EE;--hx-t3:#6EE7B7{% elif accent == 'purple' %}--hx-a:#8B5CF6;--hx-b:#0A84FF;--hx-c:#C084FC;--hx-t1:#C084FC;--hx-t2:#818CF8;--hx-t3:#22D3EE{% elif accent == 'orange' %}--hx-a:#F97316;--hx-b:#8B5CF6;--hx-c:#FB923C;--hx-t1:#FDBA74;--hx-t2:#FB923C;--hx-t3:#F472B6{% elif accent == 'amber' %}--hx-a:#F59E0B;--hx-b:#10B981;--hx-c:#FBBF24;--hx-t1:#FDE68A;--hx-t2:#FBBF24;--hx-t3:#34D399{% else %}--hx-a:#0A84FF;--hx-b:#22D3EE;--hx-c:#60A5FA;--hx-t1:#60A5FA;--hx-t2:#22D3EE;--hx-t3:#A5B4FC{% endif %}">
+  {% include 'partials/hero_fx.html' %}
+  <div class="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-14 sm:py-20 lg:py-24">
+    <div class="grid lg:grid-cols-[1.45fr_1fr] gap-12 items-center">
+      <div>
+        <nav class="hx-crumbs hx-in" aria-label="Fil d'Ariane">
+          <a href="{% url 'core:accueil' %}">Accueil</a>
+          {% include 'partials/icon.html' with name='chevron-right' class='w-3 h-3' %}
+          <span class="text-slate-300" aria-current="page">{{ crumb }}</span>
+        </nav>
+
+        <div class="hx-in mt-6" style="--d:.08s">
+          <span class="hx-eyebrow">
+            <span class="hx-eyebrow__tag" style="background:color-mix(in srgb, var(--hx-c) 16%, transparent);color:var(--hx-t1)">
+              {% include 'partials/icon.html' with name=icon class='w-3.5 h-3.5' stroke='2' %}
+            </span>
+            {{ eyebrow }}
+          </span>
+        </div>
+
+        <h1 class="hx-title hx-in mt-6 text-4xl sm:text-5xl lg:text-6xl" style="--d:.16s">
+          {{ title }} <span class="hx-gradient-text">{{ highlight }}</span>
+        </h1>
+
+        {% if subtitle %}
+        <p class="hx-lead hx-in mt-5 text-lg sm:text-xl max-w-2xl" style="--d:.26s">{{ subtitle }}</p>
+        {% endif %}
+
+        {% if chips %}
+        <div class="hx-in mt-8 flex flex-wrap gap-2.5" style="--d:.36s">
+          {% for chip in chips|split:";" %}{% with parts=chip|split:"|" %}
+          <span class="hx-chip">
+            <span class="hx-chip__icon">{% include 'partials/icon.html' with name=parts.0 class='w-4 h-4' stroke='2' %}</span>
+            {{ parts.1 }}
+          </span>
+          {% endwith %}{% endfor %}
+        </div>
+        {% endif %}
+      </div>
+
+      <!-- Composition orbitale (décorative) -->
+      <div class="hidden lg:flex justify-center hx-in" style="--d:.2s" aria-hidden="true">
+        {% with s=sats|default:"cpu,wifi,bot,zap,sparkles,shield"|split:"," %}
+        <div class="hx-orbit-wrap">
+          <div class="hx-orbit">
+            <span class="hx-orbit__sat" style="top:-1.375rem;left:calc(50% - 1.375rem)">{% include 'partials/icon.html' with name=s.0 class='w-5 h-5' %}</span>
+            <span class="hx-orbit__sat" style="top:calc(50% - 1.375rem);right:-1.375rem">{% include 'partials/icon.html' with name=s.1 class='w-5 h-5' %}</span>
+            <span class="hx-orbit__sat" style="bottom:-1.375rem;left:calc(50% - 1.375rem)">{% include 'partials/icon.html' with name=s.2 class='w-5 h-5' %}</span>
+            <span class="hx-orbit__sat" style="top:calc(50% - 1.375rem);left:-1.375rem">{% include 'partials/icon.html' with name=s.3 class='w-5 h-5' %}</span>
+          </div>
+          <div class="hx-orbit hx-orbit--inner">
+            <span class="hx-orbit__sat !w-9 !h-9 !rounded-xl" style="top:14%;right:2%">{% include 'partials/icon.html' with name=s.4 class='w-4 h-4' %}</span>
+            <span class="hx-orbit__sat !w-9 !h-9 !rounded-xl" style="bottom:14%;left:2%">{% include 'partials/icon.html' with name=s.5 class='w-4 h-4' %}</span>
+          </div>
+          <div class="hx-core">{% include 'partials/icon.html' with name=icon class='w-14 h-14' stroke='1.5' %}</div>
+        </div>
+        {% endwith %}
+      </div>
+    </div>
+  </div>
+</section>

@@ -1,0 +1,22 @@
+{% extends "admin/change_list.html" %}
+
+{% block date_hierarchy %}
+<div class="kx-month">
+  <div class="kx-month__head">
+    <div>
+      <span class="kx-month__eyebrow"><i class="fas fa-briefcase mr-1"></i> Offres d'emploi, de stage et freelance</span>
+      <h3 class="kx-month__title">{{ nb_publiees }} publiée{{ nb_publiees|pluralize }} <small>· {{ nb_masquees }} masquée{{ nb_masquees|pluralize }} · {{ nb_sans_image }} sans image</small></h3>
+    </div>
+    <form method="post" action="{% url 'admin:carrieres_offre_charger_catalogue' %}">
+      {% csrf_token %}
+      <button type="submit" class="btn btn-primary"><i class="fas fa-magic mr-1"></i> Charger le catalogue d'offres ({{ catalogue_total }})</button>
+    </form>
+  </div>
+  <p class="kx-month__hint"><i class="fas fa-info-circle mr-1"></i>
+    Le catalogue ajoute des offres <b>prérédigées</b> (stage, emploi et freelance pour chaque domaine), <b>masquées</b> par défaut.
+    Pour en afficher une : ouvrez-la, <b>ajoutez une image</b>, ajustez les textes, la date limite ou les formules si besoin, puis cochez « Publiée ».
+    Vous pouvez aussi publier plusieurs offres d'un coup avec l'action « Publier les offres sélectionnées » (les offres sans image sont ignorées).
+  </p>
+</div>
+{{ block.super }}
+{% endblock %}

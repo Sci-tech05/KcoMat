@@ -3,7 +3,7 @@
 {% load kcomat_tags %}
 {% load static %}
 
-{% block title %}Accueil{% endblock %}
+{% block title %}Formations tech, composants et services à Lokossa{% endblock %}
 
 {% block extra_head %}
 <style>
@@ -34,48 +34,7 @@
   }
   @keyframes kco-blink { 0%,100%{opacity:1} 50%{opacity:0} }
 
-  /* Smooth blobs transition */
-  .hero-blob { transition: transform 0.12s ease-out; }
 
-  /* ── Services Section ── */
-  .svc-card {
-    opacity: 0;
-    transform: translateY(48px) scale(0.93);
-    transition:
-      opacity   0.65s cubic-bezier(.22,1,.36,1),
-      transform 0.65s cubic-bezier(.22,1,.36,1),
-      background 0.3s ease,
-      border-color 0.3s ease,
-      box-shadow 0.3s ease;
-  }
-  .svc-card.in-view {
-    opacity: 1;
-    transform: translateY(0) scale(1);
-  }
-  /* stagger per card */
-  .svc-grid > .svc-card:nth-child(1)  { transition-delay:.00s }
-  .svc-grid > .svc-card:nth-child(2)  { transition-delay:.07s }
-  .svc-grid > .svc-card:nth-child(3)  { transition-delay:.14s }
-  .svc-grid > .svc-card:nth-child(4)  { transition-delay:.21s }
-  .svc-grid > .svc-card:nth-child(5)  { transition-delay:.28s }
-  .svc-grid > .svc-card:nth-child(6)  { transition-delay:.35s }
-  .svc-grid > .svc-card:nth-child(7)  { transition-delay:.42s }
-  .svc-grid > .svc-card:nth-child(8)  { transition-delay:.49s }
-
-  /* Icon spin + glow on hover */
-  .svc-card:hover .svc-icon {
-    transform: rotate(15deg) scale(1.15);
-    box-shadow: 0 0 20px 4px rgba(167,139,250,.45);
-    background: rgba(139,92,246,.5) !important;
-  }
-  .svc-icon { transition: transform 0.35s cubic-bezier(.34,1.56,.64,1), box-shadow 0.35s ease, background 0.35s ease; }
-
-  /* Floating orbs in services bg */
-  @keyframes svc-float-a { 0%,100%{transform:translate(0,0) scale(1)} 50%{transform:translate(30px,-25px) scale(1.07)} }
-  @keyframes svc-float-b { 0%,100%{transform:translate(0,0) scale(1)} 50%{transform:translate(-20px,20px) scale(1.05)} }
-  .svc-orb-a { animation: svc-float-a 9s ease-in-out infinite; }
-  .svc-orb-b { animation: svc-float-b 11s ease-in-out infinite; }
-  .svc-orb-c { animation: svc-float-a 7s ease-in-out infinite reverse; }
 </style>
 {% endblock %}
 
@@ -84,152 +43,241 @@
 <!-- ===================================================
      HERO SECTION
 =================================================== -->
-<section class="relative min-h-screen flex items-center overflow-hidden">
-    <!-- Background video -->
-    <video
-        autoplay
-        loop
-        muted
-        playsinline
-        class="absolute inset-0 w-full h-full object-cover z-0"
-        poster="{% static 'img/hero-poster.jpg' %}">
-        <source src="{% static 'img/hero-video.mp4' %}" type="video/mp4">
-    </video>
+<section id="hero" class="hx flex flex-col lg:min-h-[calc(100svh-4rem)]">
+    {% include 'partials/hero_fx.html' %}
 
-    <!-- Dark overlay + gradient tint -->
-    <div class="absolute inset-0 bg-gradient-to-br from-blue-950/80 via-gray-700/75 to-blue-900/70 z-10"></div>
-
-    <!-- Animated blobs (kept on top of overlay) -->
-    <div class="absolute inset-0 overflow-hidden pointer-events-none z-10">
-        <div class="absolute -top-40 -right-40 w-96 h-96 bg-blue-600/20 rounded-full blur-3xl"></div>
-        <div class="absolute -bottom-40 -left-40 w-96 h-96 bg-green-500/15 rounded-full blur-3xl"></div>
-        <div class="absolute inset-0 opacity-5 hero-grid-pattern"></div>
+    <!-- Image de fond (LCP) + vidéo grand écran, très atténuées sous le décor -->
+    <div class="absolute inset-0 -z-20" aria-hidden="true">
+        <picture>
+            <source media="(max-width: 1023px)" srcset="{% static 'img/hero-poster-960.webp' %}" type="image/webp">
+            <img src="{% static 'img/hero-poster.webp' %}" alt="" width="1600" height="800"
+                 fetchpriority="high" decoding="async"
+                 class="absolute inset-0 w-full h-full object-cover opacity-[0.10] mix-blend-luminosity">
+        </picture>
+        <video id="hero-video" muted loop playsinline preload="none"
+               class="absolute inset-0 w-full h-full object-cover opacity-[0.10] mix-blend-luminosity hidden lg:block"
+               poster="{% static 'img/hero-poster.webp' %}">
+            <source data-src="{% static 'img/hero-video.mp4' %}" type="video/mp4">
+        </video>
     </div>
+    <script>
+      (function () {
+        var video = document.getElementById('hero-video');
+        var connection = navigator.connection || {};
+        if (!video
+            || !window.matchMedia('(min-width: 1024px)').matches
+            || window.matchMedia('(prefers-reduced-motion: reduce)').matches
+            || connection.saveData
+            || /(^|-)2g$/.test(connection.effectiveType || '')) {
+          return;
+        }
+        video.querySelectorAll('source').forEach(function (source) { source.src = source.dataset.src; });
+        video.load();
+        var playPromise = video.play();
+        if (playPromise && playPromise.catch) { playPromise.catch(function () {}); }
+      })();
+    </script>
 
-    <div class="relative z-20 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 lg:py-32">
-        <div class="grid lg:grid-cols-2 gap-12 items-center">
-            <!-- Left: Text -->
-            <div class="animate-fade-in-up">
+    <div class="relative flex-1 flex items-center">
+        <div class="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-14 sm:py-20 lg:py-16">
+            <div class="grid lg:grid-cols-[1.08fr_1fr] gap-14 lg:gap-10 xl:gap-16 items-center">
 
-                <!-- Typing badge -->
-                <div class="inline-flex items-center gap-2.5 bg-blue-600/20 border border-blue-500/30 rounded-full px-4 py-1.5 text-blue-300 text-sm font-medium mb-6">
-                  <span class="w-2 h-2 bg-green-400 rounded-full animate-pulse flex-shrink-0"></span>
-                  Apprenez <span id="hero-typing" class="text-white font-semibold">l'électronique</span>
-                </div>
+                <!-- ============ Texte ============ -->
+                <div>
+                    <div class="hx-in" style="--d:.05s">
+                        <span class="hx-eyebrow">
+                            <span class="hx-eyebrow__tag"><span class="hx-dot"></span>LIVE</span>
+                            <span>Apprenez <span id="hero-typing" class="text-white font-semibold">l'électronique</span></span>
+                        </span>
+                    </div>
 
-                <h1 class="text-4xl sm:text-5xl lg:text-6xl font-black text-white leading-tight mb-6">
-                    Maîtrisez les
-                    <span class="text-gradient block">technologies</span>
-                    d'aujourd'hui pour construire
-                    <span class="text-green-400"> l'Afrique de demain</span>
-                </h1>
+                    <h1 class="hx-title hx-in mt-7 text-5xl sm:text-6xl xl:text-[4.6rem]" style="--d:.15s">
+                        Construisez
+                        <span class="hx-gradient-text">l'Afrique de demain.</span>
+                    </h1>
 
-                <p class="text-lg text-gray-300 leading-relaxed mb-8 max-w-xl">
-                    KcoMat propose des formations pratiques en électronique, domotique, IA, drones et développement
-                    web.
-                    Rejoignez des centaines d'apprenants qui bâtissent l'avenir technologique du Bénin.
-                </p>
+                    <p class="hx-lead hx-in mt-6 text-lg sm:text-xl max-w-xl" style="--d:.28s">
+                        <span class="text-white font-semibold">Maîtrisez les technologies d'aujourd'hui</span> :
+                        formations 100&nbsp;% pratiques en électronique, IoT, IA et drones, composants livrés partout
+                        au Bénin et solutions sur mesure, depuis Lokossa.
+                    </p>
 
-                <div class="flex flex-wrap gap-4">
-                    <a href="{% url 'formations:liste' %}" class="btn-primary text-base px-7 py-3.5">
-                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.746 0 3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
-                        </svg>
-                        Voir les formations
+                    <div class="hx-in mt-9 flex flex-col sm:flex-row gap-3.5" style="--d:.4s">
+                        <a href="{% url 'formations:liste' %}" class="hx-btn hx-btn--primary">
+                            {% include 'partials/icon.html' with name='graduation' class='w-5 h-5' %}
+                            Explorer les formations
+                            {% include 'partials/icon.html' with name='arrow-right' class='w-4 h-4 hx-arrow' stroke='2.25' %}
+                        </a>
+                        <a href="{% url 'boutique:liste' %}" class="hx-btn hx-btn--glass">
+                            {% include 'partials/icon.html' with name='cpu' class='w-5 h-5' %}
+                            Boutique composants
+                        </a>
+                    </div>
+
+                    <!-- Preuve sociale -->
+                    <div class="hx-in mt-11 flex flex-wrap items-center gap-x-8 gap-y-5" style="--d:.52s">
+                        <div class="flex items-center gap-3.5">
+                            <div class="flex -space-x-2.5" aria-hidden="true">
+                                <span class="w-9 h-9 rounded-full ring-2 ring-[#060A14] bg-gradient-to-br from-blue-500 to-cyan-400 grid place-items-center text-xs font-bold">KC</span>
+                                <span class="w-9 h-9 rounded-full ring-2 ring-[#060A14] bg-gradient-to-br from-emerald-500 to-teal-400 grid place-items-center text-xs font-bold">AM</span>
+                                <span class="w-9 h-9 rounded-full ring-2 ring-[#060A14] bg-gradient-to-br from-violet-500 to-fuchsia-400 grid place-items-center text-xs font-bold">JD</span>
+                                <span class="w-9 h-9 rounded-full ring-2 ring-[#060A14] bg-slate-800 grid place-items-center text-[10px] font-bold text-slate-300">+200</span>
+                            </div>
+                            <div>
+                                <div class="flex gap-0.5 text-amber-400" aria-label="Note 5 sur 5">
+                                    {% for i in "12345" %}{% include 'partials/icon.html' with name='star' class='w-3.5 h-3.5 fill-current' %}{% endfor %}
+                                </div>
+                                <p class="text-sm text-slate-400 mt-0.5"><span class="font-semibold text-white">200+ apprenants</span> formés</p>
+                            </div>
+                        </div>
+                        <div class="hidden sm:block w-px h-10 bg-white/10"></div>
+                        <ul class="flex flex-wrap gap-x-5 gap-y-2 text-sm text-slate-400">
+                            <li class="flex items-center gap-1.5">{% include 'partials/icon.html' with name='badge-check' class='w-4 h-4 text-emerald-400' %}Attestation officielle</li>
+                            <li class="flex items-center gap-1.5">{% include 'partials/icon.html' with name='smartphone' class='w-4 h-4 text-sky-400' %}Mobile Money</li>
+                        </ul>
+                    </div>
+
+                    {% with f=formations_vedette.0 %}
+                    <a href="{% if f %}{% url 'formations:detail' f.slug %}{% else %}{% url 'formations:liste' %}{% endif %}"
+                       class="hx-in hx-glass md:hidden mt-10 flex items-center gap-4 p-4 !rounded-2xl" style="--d:.6s">
+                        <span class="grid place-items-center w-12 h-12 rounded-xl bg-gradient-to-br from-blue-500 to-cyan-400 text-white flex-shrink-0">
+                            {% include 'partials/icon.html' with name='wifi' class='w-5 h-5' stroke='2' %}
+                        </span>
+                        <span class="min-w-0 flex-1">
+                            <span class="block text-[11px] font-semibold uppercase tracking-wider text-sky-300">Formation à la une</span>
+                            <span class="block truncate font-bold text-white">{% if f %}{{ f.titre }}{% else %}Domotique &amp; IoT{% endif %}</span>
+                        </span>
+                        <span class="text-right flex-shrink-0">
+                            <span class="block text-lg font-black text-emerald-300 leading-none">{% if f %}{{ f.prix|intcomma }}{% else %}20 000{% endif %}</span>
+                            <span class="block text-[10px] font-semibold text-slate-500 mt-1">FCFA</span>
+                        </span>
                     </a>
-                    <a href="{% url 'boutique:liste' %}"
-                        class="btn-outline text-base px-7 py-3.5 border-white/30 text-white hover:bg-white hover:text-gray-900">
-                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
-                        </svg>
-                        Boutique composants
-                    </a>
+                    {% endwith %}
                 </div>
 
-                <!-- Trust indicators -->
-                <div class="flex flex-wrap items-center gap-6 mt-10 pt-8 border-t border-white/10">
-                    <div class="flex items-center gap-2 text-gray-300 text-sm">
-                        <svg class="w-5 h-5 text-green-400" fill="currentColor" viewBox="0 0 20 20">
-                            <path fill-rule="evenodd"
-                                d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
-                                clip-rule="evenodd" />
-                        </svg>
-                        Formation certifiée
-                    </div>
-                    <div class="flex items-center gap-2 text-gray-300 text-sm">
-                        <svg class="w-5 h-5 text-green-400" fill="currentColor" viewBox="0 0 20 20">
-                            <path fill-rule="evenodd"
-                                d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
-                                clip-rule="evenodd" />
-                        </svg>
-                        100% pratique
-                    </div>
-                    <div class="flex items-center gap-2 text-gray-300 text-sm">
-                        <svg class="w-5 h-5 text-green-400" fill="currentColor" viewBox="0 0 20 20">
-                            <path fill-rule="evenodd"
-                                d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
-                                clip-rule="evenodd" />
-                        </svg>
-                        Paiement Mobile Money
-                    </div>
-                </div>
-            </div>
+                <!-- ============ Composition « labo » ============ -->
+                <div class="relative hx-in hidden md:block" style="--d:.3s">
+                    <div class="hx-float" style="--d:-1s">
+                        <div id="hero-lab" class="hx-glass relative p-5 sm:p-6 transition-transform duration-300 ease-out will-change-transform">
+                            <!-- Barre de fenêtre -->
+                            <div class="flex items-center justify-between">
+                                <div class="flex items-center gap-1.5" aria-hidden="true">
+                                    <span class="w-2.5 h-2.5 rounded-full bg-rose-400/80"></span>
+                                    <span class="w-2.5 h-2.5 rounded-full bg-amber-400/80"></span>
+                                    <span class="w-2.5 h-2.5 rounded-full bg-emerald-400/80"></span>
+                                </div>
+                                <span class="font-mono text-[11px] tracking-wider text-slate-500">kcomat://lab/esp32</span>
+                                <span class="w-14" aria-hidden="true"></span>
+                            </div>
 
-            <!-- Right: Floating cards -->
-            <div class="hidden lg:block relative">
-                <!-- Main card -->
-                <div class="relative">
-                    <div class="bg-white/10 backdrop-blur-md border border-white/20 rounded-3xl p-8 text-white">
-                        <div class="text-sm font-semibold text-blue-300 mb-2">🔥 Formation populaire</div>
-                        <h3 class="text-2xl font-bold mb-1">Domotique & IoT</h3>
-                        <p class="text-gray-300 text-sm mb-4">Contrôlez votre maison avec des capteurs intelligents</p>
-                        <div class="flex items-center justify-between">
-                            <span class="text-3xl font-black text-green-400">20 000 <span
-                                    class="text-sm font-medium text-gray-300">FCFA</span></span>
-                            <a href="{% url 'formations:liste' %}"
-                                class="bg-blue-600 hover:bg-blue-500 text-white text-sm font-semibold px-4 py-2 rounded-lg transition-colors">S'inscrire</a>
-                        </div>
-                    </div>
-
-                    <!-- Floating stat cards -->
-                    <div class="absolute -top-6 -right-6 bg-white rounded-2xl shadow-xl p-4 flex items-center gap-3">
-                        <div class="w-10 h-10 bg-green-100 rounded-xl flex items-center justify-center">
-                            <svg class="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                    d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
+                            <!-- Carte électronique animée -->
+                            <svg class="hx-board mt-4 w-full h-auto" viewBox="0 0 360 230" role="img" aria-label="Microcontrôleur relié à des capteurs">
+                                <defs>
+                                    <linearGradient id="hxChip" x1="0" y1="0" x2="1" y2="1">
+                                        <stop offset="0" stop-color="#1E293B"/><stop offset="1" stop-color="#0B1220"/>
+                                    </linearGradient>
+                                    <linearGradient id="hxCore" x1="0" y1="0" x2="1" y2="1">
+                                        <stop offset="0" stop-color="#0A84FF"/><stop offset="1" stop-color="#22D3EE"/>
+                                    </linearGradient>
+                                    <filter id="hxGlow" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="6"/></filter>
+                                </defs>
+                                <!-- Pistes -->
+                                <path class="hx-wire" d="M130 105 H80 L60 85 H44"/>
+                                <path class="hx-wire" d="M230 100 H280 L300 80 H318"/>
+                                <path class="hx-wire" d="M150 180 V200 L130 215 H62"/>
+                                <path class="hx-wire" d="M210 180 V200 L230 215 H300"/>
+                                <path class="hx-signal" pathLength="1000" stroke="#22D3EE" style="--hx-delay:0s" d="M130 105 H80 L60 85 H44"/>
+                                <path class="hx-signal" pathLength="1000" stroke="#60A5FA" style="--hx-delay:-1.2s" d="M230 100 H280 L300 80 H318"/>
+                                <path class="hx-signal" pathLength="1000" stroke="#34D399" style="--hx-delay:-2.1s" d="M150 180 V200 L130 215 H62"/>
+                                <path class="hx-signal" pathLength="1000" stroke="#A78BFA" style="--hx-delay:-.6s" d="M210 180 V200 L230 215 H300"/>
+                                <!-- Broches -->
+                                <g>
+                                    {% for x in "0123456" %}<rect class="hx-pin" x="{{ forloop.counter0|multiply:13|add:139 }}" y="68" width="4" height="10" rx="1"/><rect class="hx-pin" x="{{ forloop.counter0|multiply:13|add:139 }}" y="182" width="4" height="10" rx="1"/>{% endfor %}
+                                    {% for y in "012345" %}<rect class="hx-pin" x="118" y="{{ forloop.counter0|multiply:14|add:92 }}" width="10" height="4" rx="1"/><rect class="hx-pin" x="232" y="{{ forloop.counter0|multiply:14|add:92 }}" width="10" height="4" rx="1"/>{% endfor %}
+                                </g>
+                                <!-- Puce -->
+                                <rect x="130" y="80" width="100" height="100" rx="14" fill="url(#hxChip)" stroke="rgba(148,163,184,.35)"/>
+                                <rect x="152" y="102" width="56" height="56" rx="9" fill="url(#hxCore)" opacity=".55" filter="url(#hxGlow)"/>
+                                <rect x="152" y="102" width="56" height="56" rx="9" fill="url(#hxCore)"/>
+                                <text x="180" y="128" text-anchor="middle" font-family="ui-monospace,Menlo,Consolas,monospace" font-size="11" font-weight="700" fill="#fff">ESP32</text>
+                                <text x="180" y="143" text-anchor="middle" font-family="ui-monospace,Menlo,Consolas,monospace" font-size="7.5" fill="rgba(255,255,255,.75)">KCOMAT</text>
+                                <circle cx="142" cy="92" r="2.5" fill="#64748B"/>
+                                <!-- Périphériques -->
+                                <g font-family="ui-monospace,Menlo,Consolas,monospace" font-size="8.5" fill="#94A3B8">
+                                    <rect x="4" y="70" width="40" height="30" rx="7" fill="#0F172A" stroke="rgba(34,211,238,.45)"/>
+                                    <text x="24" y="89" text-anchor="middle" fill="#67E8F9">DHT22</text>
+                                    <rect x="318" y="64" width="38" height="32" rx="7" fill="#0F172A" stroke="rgba(96,165,250,.45)"/>
+                                    <path d="M331 84 a8 8 0 0 1 12 0 M327.5 80 a13 13 0 0 1 19 0" fill="none" stroke="#93C5FD" stroke-width="1.6" stroke-linecap="round"/>
+                                    <circle cx="337" cy="87" r="1.6" fill="#93C5FD"/>
+                                    <rect x="22" y="200" width="40" height="30" rx="7" fill="#0F172A" stroke="rgba(52,211,153,.45)"/>
+                                    <circle class="hx-led" cx="42" cy="215" r="6" fill="#34D399"/>
+                                    <circle class="hx-led" cx="42" cy="215" r="10" fill="#34D399" opacity=".25"/>
+                                    <rect x="300" y="200" width="56" height="30" rx="7" fill="#0F172A" stroke="rgba(167,139,250,.45)"/>
+                                    <text x="328" y="219" text-anchor="middle" fill="#C4B5FD">RELAIS</text>
+                                </g>
                             </svg>
-                        </div>
-                        <div>
-                            <div class="text-xl font-black text-gray-900">200+</div>
-                            <div class="text-xs text-gray-500">Apprenants</div>
+
+                            <!-- Mini terminal -->
+                            <div class="hx-term mt-4 rounded-xl border border-white/10 bg-black/40 px-4 py-3 text-slate-400">
+                                <div><span class="text-sky-400">$</span> kcomat flash --board esp32</div>
+                                <div><span class="text-emerald-400">✓</span> capteurs : 4 actifs · <span class="text-slate-200">24,6 °C</span></div>
+                                <div class="hx-caret"><span class="text-emerald-400">✓</span> MQTT connecté → tableau de bord</div>
+                            </div>
+
+                            <!-- Prochaine formation (dynamique) -->
+                            {% with f=formations_vedette.0 %}
+                            <a href="{% if f %}{% url 'formations:detail' f.slug %}{% else %}{% url 'formations:liste' %}{% endif %}"
+                               class="group mt-4 flex items-center gap-4 rounded-2xl border border-white/10 bg-white/[0.04] p-3.5 transition-colors hover:bg-white/[0.08]">
+                                <span class="grid place-items-center w-11 h-11 rounded-xl bg-gradient-to-br from-blue-500 to-cyan-400 text-white shadow-lg shadow-blue-900/40 flex-shrink-0">
+                                    {% include 'partials/icon.html' with name='wifi' class='w-5 h-5' stroke='2' %}
+                                </span>
+                                <span class="min-w-0 flex-1">
+                                    <span class="block text-[11px] font-semibold uppercase tracking-wider text-sky-300">Formation à la une</span>
+                                    <span class="block truncate font-bold text-white">{% if f %}{{ f.titre }}{% else %}Domotique &amp; IoT{% endif %}</span>
+                                </span>
+                                <span class="text-right flex-shrink-0">
+                                    <span class="block text-lg font-black text-emerald-300 leading-none">{% if f %}{{ f.prix|intcomma }}{% else %}20 000{% endif %}</span>
+                                    <span class="block text-[10px] font-semibold text-slate-500 mt-1">FCFA</span>
+                                </span>
+                                {% include 'partials/icon.html' with name='chevron-right' class='w-4 h-4 text-slate-500 transition-transform group-hover:translate-x-0.5' stroke='2.25' %}
+                            </a>
+                            {% endwith %}
                         </div>
                     </div>
 
-                    <div class="absolute -bottom-6 -left-6 bg-white rounded-2xl shadow-xl p-4 flex items-center gap-3">
-                        <div class="w-10 h-10 bg-blue-100 rounded-xl flex items-center justify-center">
-                            <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                    d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z" />
-                            </svg>
-                        </div>
-                        <div>
-                            <div class="text-xl font-black text-gray-900">10+</div>
-                            <div class="text-xs text-gray-500">Formations</div>
-                        </div>
+                    <!-- Pastilles flottantes (coins extérieurs de la carte) -->
+                    <div class="hx-stat hx-float absolute -top-9 -right-3 xl:-right-7" style="--d:-5s">
+                        <span class="hx-stat__icon bg-sky-400/15 text-sky-300">{% include 'partials/icon.html' with name='graduation' class='w-5 h-5' %}</span>
+                        <span><span class="block text-lg font-black leading-none">10+</span><span class="block text-[11px] text-slate-400 mt-1">Formations</span></span>
+                    </div>
+                    <div class="hx-stat hx-float absolute -bottom-14 -left-3 xl:-left-9" style="--d:-2s">
+                        <span class="hx-stat__icon bg-violet-400/15 text-violet-300">{% include 'partials/icon.html' with name='bot' class='w-5 h-5' %}</span>
+                        <span><span class="block text-sm font-bold leading-none">Edge AI</span><span class="block text-[11px] text-slate-400 mt-1">TinyML · Vision</span></span>
                     </div>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Bottom wave -->
-    <div class="absolute bottom-0 left-0 right-0 z-20">
-        <svg viewBox="0 0 1440 80" xmlns="http://www.w3.org/2000/svg" class="w-full fill-gray-50">
-            <path
-                d="M0,64L80,58.7C160,53,320,43,480,48C640,53,800,75,960,74.7C1120,75,1280,53,1360,42.7L1440,32L1440,80L1360,80C1280,80,1120,80,960,80C800,80,640,80,480,80C320,80,160,80,80,80L0,80Z" />
-        </svg>
+    <!-- Bandeau technologies -->
+    <div class="relative border-t border-white/[0.06] bg-black/20 py-5">
+        <div class="hx-marquee" aria-label="Technologies enseignées">
+            {% for pass in "12" %}
+            <div class="hx-marquee__track" {% if forloop.last %}aria-hidden="true"{% endif %}>
+                <span class="hx-marquee__item">{% include 'partials/icon.html' with name='cpu' class='w-4 h-4' %}ESP32</span>
+                <span class="hx-marquee__item">{% include 'partials/icon.html' with name='cpu' class='w-4 h-4' %}Arduino</span>
+                <span class="hx-marquee__item">{% include 'partials/icon.html' with name='grid' class='w-4 h-4' %}Raspberry Pi</span>
+                <span class="hx-marquee__item">{% include 'partials/icon.html' with name='zap' class='w-4 h-4' %}MicroPython</span>
+                <span class="hx-marquee__item">{% include 'partials/icon.html' with name='bot' class='w-4 h-4' %}TinyML</span>
+                <span class="hx-marquee__item">{% include 'partials/icon.html' with name='wifi' class='w-4 h-4' %}MQTT · LoRa</span>
+                <span class="hx-marquee__item">{% include 'partials/icon.html' with name='rocket' class='w-4 h-4' %}Drones</span>
+                <span class="hx-marquee__item">{% include 'partials/icon.html' with name='home' class='w-4 h-4' %}Domotique</span>
+                <span class="hx-marquee__item">{% include 'partials/icon.html' with name='sparkles' class='w-4 h-4' %}Solaire</span>
+                <span class="hx-marquee__item">{% include 'partials/icon.html' with name='shield' class='w-4 h-4' %}Cybersécurité</span>
+                <span class="hx-marquee__item">{% include 'partials/icon.html' with name='grid' class='w-4 h-4' %}Web &amp; Mobile</span>
+            </div>
+            {% endfor %}
+        </div>
     </div>
 </section>
 
@@ -331,7 +379,7 @@
                 <!-- Image -->
                 <div class="relative overflow-hidden h-48 bg-gradient-to-br from-blue-900 to-blue-700">
                     {% if formation.image %}
-                    <img src="{{ formation.image.url }}" alt="{{ formation.titre }}"
+                    <img src="{{ formation.image|webp:800 }}" loading="lazy" decoding="async" alt="{{ formation.titre }}"
                         class="w-full h-full object-cover" />
                     {% else %}
                     <div class="w-full h-full flex items-center justify-center">
@@ -407,70 +455,153 @@
 <!-- ===================================================
      SERVICES SECTION
 =================================================== -->
-<section class="relative py-24 overflow-hidden" style="background: linear-gradient(135deg, #0f0c29 0%, #302b63 40%, #24243e 100%);">
-
-  <!-- Animated floating orbs -->
-  <div class="absolute inset-0 pointer-events-none overflow-hidden">
-    <div class="svc-orb-a absolute -top-32 -left-32 w-96 h-96 rounded-full opacity-30" style="background:radial-gradient(circle, #7c3aed 0%, transparent 70%);"></div>
-    <div class="svc-orb-b absolute top-1/2 -right-40 w-80 h-80 rounded-full opacity-25" style="background:radial-gradient(circle, #4f46e5 0%, transparent 70%);"></div>
-    <div class="svc-orb-c absolute -bottom-20 left-1/3 w-72 h-72 rounded-full opacity-20" style="background:radial-gradient(circle, #06b6d4 0%, transparent 70%);"></div>
-    <!-- Dot grid pattern -->
-    <div class="absolute inset-0" style="background-image:radial-gradient(circle, rgba(255,255,255,.06) 1px, transparent 1px); background-size:28px 28px;"></div>
-  </div>
+<section class="hx pt-20 sm:pt-24 pb-12 sm:pb-14" aria-labelledby="services-title">
+  {% include 'partials/hero_fx.html' %}
 
   <div class="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-
-    <!-- Header -->
-    <div class="text-center mb-14 reveal">
-      <div class="inline-flex items-center gap-2 bg-violet-500/20 border border-violet-500/30 text-violet-300 text-xs font-semibold px-4 py-1.5 rounded-full mb-5">
-        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
-        Nos Services
+    <!-- En-tête + contrôles -->
+    <div class="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-8 mb-12">
+      <div class="max-w-2xl reveal">
+        <span class="hx-eyebrow">
+          <span class="hx-eyebrow__tag" style="background:rgba(34,211,238,.14);color:#67E8F9">{% include 'partials/icon.html' with name='zap' class='w-3.5 h-3.5' stroke='2' %}</span>
+          Nos services
+        </span>
+        <h2 id="services-title" class="hx-title mt-5 text-3xl sm:text-4xl lg:text-5xl">
+          Des solutions technologiques <span class="hx-gradient-text">sur mesure pour vous</span>
+        </h2>
+        <p class="hx-lead mt-4 text-base sm:text-lg">Installation, automatisation, développement et formation : une équipe locale pour concrétiser vos projets, partout au Bénin.</p>
       </div>
-      <h2 class="text-3xl md:text-4xl font-black text-white mb-3">Des solutions technologiques<br/><span class="text-transparent bg-clip-text" style="background-image:linear-gradient(90deg,#a78bfa,#38bdf8);">sur mesure pour vous</span></h2>
-      <div class="w-14 h-1 rounded-full mx-auto mt-4" style="background:linear-gradient(90deg,#7c3aed,#06b6d4);"></div>
-    </div>
-
-    <!-- Grid -->
-    <div class="svc-grid grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
-      {% if services %}
-      {% for service in services %}
-      <a href="{% url 'services:detail' service.slug %}" class="svc-card group relative rounded-2xl p-6 text-center cursor-pointer overflow-hidden" style="background:rgba(255,255,255,.04); border:1px solid rgba(255,255,255,.08);">
-        <!-- Card shimmer on hover -->
-        <div class="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" style="background:linear-gradient(135deg,rgba(139,92,246,.12) 0%,rgba(56,189,248,.08) 100%);"></div>
-        <!-- Left accent bar -->
-        <div class="absolute left-0 top-4 bottom-4 w-0.5 rounded-full opacity-0 group-hover:opacity-100 transition-all duration-300" style="background:linear-gradient(180deg,#7c3aed,#06b6d4);"></div>
-        <!-- Icon -->
-        <div class="svc-icon w-14 h-14 rounded-2xl flex items-center justify-center mb-4 mx-auto" style="background:rgba(124,58,237,.25);">
-          <svg class="w-7 h-7 text-violet-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
-        </div>
-        <h3 class="font-bold text-white mb-2 text-sm group-hover:text-violet-200 transition-colors">{{ service.titre }}</h3>
-        <p class="text-gray-400 text-xs leading-relaxed">{{ service.description_courte|truncatechars:80 }}</p>
-        <!-- Arrow appearing on hover -->
-        <div class="mt-3 text-violet-400 text-xs font-semibold opacity-0 group-hover:opacity-100 translate-y-2 group-hover:translate-y-0 transition-all duration-300">Voir le service →</div>
-      </a>
-      {% endfor %}
-      {% else %}
-      {% for item in "Installations électriques|⚡,Automatisation intelligente|🤖,Domotique|🏠,Solaire photovoltaïque|☀️,Caméras de surveillance|📷,Dépannage électrique|🔧,Développement web|💻,Solutions sur mesure|✨"|split:"," %}
-      <div class="svc-card group relative rounded-2xl p-6 text-center overflow-hidden" style="background:rgba(255,255,255,.04); border:1px solid rgba(255,255,255,.08);">
-        <div class="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" style="background:linear-gradient(135deg,rgba(139,92,246,.12) 0%,rgba(56,189,248,.08) 100%);"></div>
-        <div class="absolute left-0 top-4 bottom-4 w-0.5 rounded-full opacity-0 group-hover:opacity-100 transition-all duration-300" style="background:linear-gradient(180deg,#7c3aed,#06b6d4);"></div>
-        <div class="svc-icon w-14 h-14 rounded-2xl flex items-center justify-center mb-4 mx-auto text-2xl" style="background:rgba(124,58,237,.25);">{{ item|split:"|"|last }}</div>
-        <h3 class="font-bold text-white mb-2 text-sm group-hover:text-violet-200 transition-colors">{{ item|split:"|"|first }}</h3>
-        <p class="text-gray-400 text-xs leading-relaxed">Service professionnel fourni par nos experts certifiés.</p>
-        <div class="mt-3 text-violet-400 text-xs font-semibold opacity-0 group-hover:opacity-100 translate-y-2 group-hover:translate-y-0 transition-all duration-300">En savoir plus →</div>
+      <div class="flex items-center gap-3">
+        <button type="button" class="svc-nav" data-svc-dir="-1" aria-controls="svc-track" aria-label="Services précédents">
+          {% include 'partials/icon.html' with name='chevron-right' class='w-5 h-5 rotate-180' stroke='2.25' %}
+        </button>
+        <button type="button" class="svc-nav" data-svc-dir="1" aria-controls="svc-track" aria-label="Services suivants">
+          {% include 'partials/icon.html' with name='chevron-right' class='w-5 h-5' stroke='2.25' %}
+        </button>
+        <a href="{% url 'services:liste' %}" class="hx-btn hx-btn--glass !py-3 !px-5 text-sm ml-1">
+          Tous les services
+          {% include 'partials/icon.html' with name='arrow-right' class='w-4 h-4 hx-arrow' stroke='2.25' %}
+        </a>
       </div>
-      {% endfor %}
-      {% endif %}
-    </div>
-
-    <!-- CTA -->
-    <div class="text-center mt-12">
-      <a href="{% url 'services:liste' %}" class="inline-flex items-center gap-2 font-bold px-8 py-3.5 rounded-xl text-white transition-all hover:-translate-y-0.5 hover:shadow-lg hover:shadow-violet-900/40" style="background:linear-gradient(135deg,#7c3aed,#4f46e5);">
-        Découvrir tous nos services
-        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3"/></svg>
-      </a>
     </div>
   </div>
+
+  <!-- Carrousel : défilement continu, pause au survol / toucher / focus, glisser possible -->
+  <div class="relative">
+    <div id="svc-track" class="svc-track" tabindex="0" role="region" aria-roledescription="carrousel" aria-label="Nos services">
+      {% for pass in "123" %}
+      {% if services %}
+        {% for service in services %}
+        <a href="{% url 'services:detail' service.slug %}" class="svc-slide group" {% if not forloop.parentloop.first %}aria-hidden="true" tabindex="-1"{% endif %}>
+          <span class="svc-slide__num">{{ forloop.counter|stringformat:"02d" }}</span>
+          <span class="svc-slide__icon">{% include 'partials/icon.html' with name=service.titre|service_icon class='w-7 h-7' stroke='1.75' %}</span>
+          <h3 class="mt-6 text-lg font-bold text-white leading-snug">{{ service.titre }}</h3>
+          <p class="mt-2.5 text-sm text-slate-400 leading-relaxed line-clamp-3">{{ service.description_courte }}</p>
+          <span class="svc-slide__cta">Voir le service {% include 'partials/icon.html' with name='arrow-right' class='w-4 h-4' stroke='2.25' %}</span>
+        </a>
+        {% endfor %}
+      {% else %}
+        {% for item in "Installations électriques|zap,Automatisation intelligente|bot,Domotique|home,Solaire photovoltaïque|sun,Caméras de surveillance|camera,Dépannage électrique|wrench,Développement web|grid,Solutions sur mesure|sparkles"|split:"," %}
+        {% with parts=item|split:"|" %}
+        <a href="{% url 'services:liste' %}" class="svc-slide group" {% if not forloop.parentloop.first %}aria-hidden="true" tabindex="-1"{% endif %}>
+          <span class="svc-slide__num">{{ forloop.counter|stringformat:"02d" }}</span>
+          <span class="svc-slide__icon">{% include 'partials/icon.html' with name=parts.1 class='w-7 h-7' stroke='1.75' %}</span>
+          <h3 class="mt-6 text-lg font-bold text-white leading-snug">{{ parts.0 }}</h3>
+          <p class="mt-2.5 text-sm text-slate-400 leading-relaxed">Service professionnel assuré par nos techniciens qualifiés.</p>
+          <span class="svc-slide__cta">En savoir plus {% include 'partials/icon.html' with name='arrow-right' class='w-4 h-4' stroke='2.25' %}</span>
+        </a>
+        {% endwith %}
+        {% endfor %}
+      {% endif %}
+      {% endfor %}
+    </div>
+  </div>
+
+  <script>
+    (function () {
+      var track = document.getElementById('svc-track');
+      if (!track) return;
+      var reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      var COPIES = 3, speed = 0.45;    // la liste est rendue 3 fois ; ~27 px/s
+      var paused = false, resumeTimer = null;
+
+      function setWidth() { return track.scrollWidth / COPIES; }
+      // Garde la position dans la copie du milieu : boucle infinie dans les deux sens.
+      function normalize(x) {
+        var w = setWidth();
+        while (x < w) x += w;
+        while (x >= 2 * w) x -= w;
+        return x;
+      }
+      var pos = 0;
+      function init() { pos = normalize(setWidth()); track.scrollLeft = pos; }
+      init();
+      window.addEventListener('resize', function () { pos = normalize(track.scrollLeft); track.scrollLeft = pos; });
+
+      function pause() { paused = true; clearTimeout(resumeTimer); }
+      function resumeLater(delay) {
+        clearTimeout(resumeTimer);
+        resumeTimer = setTimeout(function () {
+          pos = normalize(track.scrollLeft); track.scrollLeft = pos; paused = false;
+        }, delay || 1500);
+      }
+      function tick() {
+        if (!paused && !document.hidden) {
+          pos = normalize(pos + speed);
+          track.scrollLeft = pos;
+        }
+        requestAnimationFrame(tick);
+      }
+
+      track.addEventListener('mouseenter', pause);
+      track.addEventListener('mouseleave', function () { if (!dragging) resumeLater(400); });
+      track.addEventListener('focusin', pause);
+      track.addEventListener('focusout', function () { resumeLater(800); });
+      track.addEventListener('touchstart', pause, { passive: true });
+      track.addEventListener('touchend', function () { resumeLater(2500); }, { passive: true });
+      track.addEventListener('wheel', function () { pause(); resumeLater(2000); }, { passive: true });
+      track.addEventListener('dragstart', function (e) { e.preventDefault(); });
+
+      // Glisser à la souris (sans déclencher le lien en fin de glisser)
+      var dragging = false, moved = false, startX = 0, startLeft = 0;
+      track.addEventListener('pointerdown', function (e) {
+        if (e.pointerType !== 'mouse' || e.button !== 0) return;
+        dragging = true; moved = false; startX = e.clientX; startLeft = track.scrollLeft;
+        pause(); track.classList.add('is-dragging');
+      });
+      window.addEventListener('pointermove', function (e) {
+        if (!dragging) return;
+        if (Math.abs(e.clientX - startX) > 5) moved = true;
+        track.scrollLeft = startLeft - (e.clientX - startX);
+      });
+      window.addEventListener('pointerup', function () {
+        if (!dragging) return;
+        dragging = false; track.classList.remove('is-dragging');
+        pos = normalize(track.scrollLeft); track.scrollLeft = pos;
+        if (!track.matches(':hover')) resumeLater(1200);
+      });
+      track.addEventListener('click', function (e) { if (moved) { e.preventDefault(); moved = false; } }, true);
+
+      // Flèches (et touches ← → quand le carrousel a le focus)
+      function go(direction) {
+        var slide = track.querySelector('.svc-slide');
+        var step = slide ? slide.getBoundingClientRect().width + 20 : 320;
+        pause();
+        pos = normalize(track.scrollLeft); track.scrollLeft = pos;   // recentrage invisible
+        track.scrollTo({ left: pos + step * direction, behavior: reduce ? 'auto' : 'smooth' });
+        resumeLater(2600);
+      }
+      document.querySelectorAll('[data-svc-dir]').forEach(function (button) {
+        button.addEventListener('click', function () { go(Number(button.dataset.svcDir)); });
+      });
+      track.addEventListener('keydown', function (e) {
+        if (e.key === 'ArrowRight') { e.preventDefault(); go(1); }
+        if (e.key === 'ArrowLeft') { e.preventDefault(); go(-1); }
+      });
+
+      if (!reduce) requestAnimationFrame(tick);
+    })();
+  </script>
 </section>
 
 
@@ -662,7 +793,7 @@
                 <p class="text-gray-600 text-sm leading-relaxed italic mb-5">"{{ temoignage.texte }}"</p>
                 <div class="flex items-center gap-3">
                     {% if temoignage.photo %}
-                    <img src="{{ temoignage.photo.url }}" alt="{{ temoignage.nom }}"
+                    <img src="{{ temoignage.photo|webp:120 }}" loading="lazy" decoding="async" alt="{{ temoignage.nom }}"
                         class="w-10 h-10 rounded-full object-cover" />
                     {% else %}
                     <div class="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
@@ -797,31 +928,24 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   // ══════════════════════════════════════════════
-  // 4. SERVICES CARDS — staggered IntersectionObserver
+  // 4. INCLINAISON 3D de la carte « labo » du héro (souris, grand écran)
   // ══════════════════════════════════════════════
-  const svcObs = new IntersectionObserver((entries) => {
-    entries.forEach(entry => {
-      if (entry.isIntersecting) {
-        entry.target.classList.add('in-view');
-        svcObs.unobserve(entry.target);
-      }
-    });
-  }, { threshold: 0.12, rootMargin: '0px 0px -40px 0px' });
-  document.querySelectorAll('.svc-card').forEach(el => svcObs.observe(el));
-
-  // ══════════════════════════════════════════════
-  // 5. PARALLAX sur les blobs du hero
-  // ══════════════════════════════════════════════
-  const hero = document.querySelector('section.relative.min-h-screen');
-  if (hero) {
-    const blobs = hero.querySelectorAll('.blur-3xl');
-    blobs.forEach(b => b.classList.add('hero-blob'));
+  const hero = document.getElementById('hero');
+  const lab = document.getElementById('hero-lab');
+  const fineMouse = window.matchMedia('(hover: hover) and (pointer: fine)').matches;
+  const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if (hero && lab && fineMouse && !reduce) {
+    let frame = null;
     hero.addEventListener('mousemove', (e) => {
-      const rx = (e.clientX / window.innerWidth  - 0.5) * 30;
-      const ry = (e.clientY / window.innerHeight - 0.5) * 30;
-      if (blobs[0]) blobs[0].style.transform = `translate(${rx}px, ${ry}px)`;
-      if (blobs[1]) blobs[1].style.transform = `translate(${-rx}px, ${-ry}px)`;
+      if (frame) return;
+      frame = requestAnimationFrame(() => {
+        const rx = (e.clientY / window.innerHeight - 0.5) * -6;
+        const ry = (e.clientX / window.innerWidth - 0.5) * 8;
+        lab.style.transform = `perspective(1200px) rotateX(${rx}deg) rotateY(${ry}deg)`;
+        frame = null;
+      });
     }, { passive: true });
+    hero.addEventListener('mouseleave', () => { lab.style.transform = ''; });
   }
 
 });

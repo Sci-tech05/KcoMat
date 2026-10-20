@@ -1,24 +1,13 @@
 {% extends 'base.html' %}
+{% load kcomat_tags %}
 {% load humanize %}
 
 {% block title %}Boutique — Composants & matériels{% endblock %}
+{% block meta_description %}Boutique KcoMat : Arduino, ESP32, capteurs, modules et matériel électronique. Paiement Mobile Money et livraison au Bénin.{% endblock %}
 
 {% block content %}
 
-<!-- PAGE HERO -->
-<section class="page-hero">
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div class="max-w-3xl mx-auto text-center">
-            <h1 class="text-4xl md:text-5xl font-black text-white mb-4">
-                Composants & <span class="text-green-400">matériels</span>
-            </h1>
-            <p class="text-gray-300 text-lg max-w-2xl mx-auto">
-                Arduino, ESP32, capteurs, actionneurs, kits domotique… Tout ce dont vous avez besoin pour vos projets au
-                Bénin.
-            </p>
-        </div>
-    </div>
-</section>
+{% include 'partials/page_hero.html' with crumb='Boutique' eyebrow='Boutique composants' icon='cpu' accent='green' title='Composants &' highlight='matériels' subtitle='Arduino, ESP32, capteurs, actionneurs, kits domotique… tout ce dont vous avez besoin pour vos projets, au Bénin.' chips='truck|Livraison partout au Bénin;smartphone|Paiement Mobile Money;badge-check|Matériel testé' sats='zap,wifi,bag,grid,sparkles,truck' %}
 
 <!-- FILTRES + GRILLE -->
 <section class="py-16 bg-gray-50">
@@ -58,10 +47,10 @@
                 <!-- Image -->
                 <a href="{% url 'boutique:detail' produit.slug %}" class="relative h-44 bg-white rounded-t-2xl block cursor-pointer flex items-center justify-center overflow-hidden">
                     {% if produit.image %}
-                    <img src="{{ produit.image.url }}" alt="{{ produit.nom }}"
+                    <img src="{{ produit.image|webp:600 }}" loading="lazy" decoding="async" alt="{{ produit.nom }}"
                         class="w-full h-full object-contain group-hover:scale-105 transition-transform duration-300 p-2" />
                     {% elif produit.images.first %}
-                    <img src="{{ produit.images.first.image.url }}" alt="{{ produit.nom }}"
+                    <img src="{{ produit.images.first.image|webp:600 }}" loading="lazy" decoding="async" alt="{{ produit.nom }}"
                         class="w-full h-full object-contain group-hover:scale-105 transition-transform duration-300 p-2" />
                     {% else %}
                     <div class="w-full h-full flex items-center justify-center text-gray-300">
@@ -94,7 +83,7 @@
                             hx-swap="outerHTML">
                             {% csrf_token %}
                             <input type="hidden" name="quantite" value="1" />
-                            <button type="submit" class="btn-green w-full py-2 text-xs font-bold">+ Panier</button>
+                            <button type="submit" class="w-full py-2 text-xs font-bold rounded-xl bg-blue-600 hover:bg-blue-700 text-white transition-colors">+ Panier</button>
                         </form>
                         {% else %}
                         <button disabled

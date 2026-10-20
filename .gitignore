@@ -4,20 +4,40 @@ venv/
 env/
 ENV/
 
+# ─── Python ───────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.coverage
+htmlcov/
+
 # ─── Django ───────────────────────────────────────────────
 *.sqlite3
+*.sqlite3-journal
 *.log
+staticfiles/
+# Fichiers uploadés : ne pas versionner (sauvegarder sur le serveur)
+media/
+
+# ─── Front ────────────────────────────────────────────────
+node_modules/
+tailwindcss*.exe
 
 # ─── Variables d'environnement ────────────────────────────
 .env
 .env.*
 !.env.example
 
-# ─── VS Code ──────────────────────────────────────────────
+# ─── Archives / binaires lourds ───────────────────────────
+*.zip
+*.apk
+
+# ─── Éditeurs ─────────────────────────────────────────────
 .vscode/
+.idea/
 
 # ─── Système ──────────────────────────────────────────────
 .DS_Store
 Thumbs.db
 desktop.ini
-

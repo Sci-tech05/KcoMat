@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="robots" content="noindex" />
+  <title>Erreur temporaire | KcoMat</title>
+  <!-- Page autonome : aucun accès base de données, aucun contexte, CSS en ligne -->
+  <style>
+    *{box-sizing:border-box}
+    body{margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px;
+      font-family:Inter,ui-sans-serif,system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;
+      background:#111827;color:#f9fafb;
+      background-image:linear-gradient(rgba(255,255,255,.04) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.04) 1px,transparent 1px);
+      background-size:32px 32px}
+    main{max-width:560px;text-align:center}
+    .code{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:.875rem;font-weight:600;letter-spacing:.2em;color:#60a5fa}
+    h1{margin:.75rem 0 0;font-size:clamp(2rem,1.5rem + 2.5vw,3rem);font-weight:900;line-height:1.1}
+    p{margin:1.25rem 0 0;color:#d1d5db;font-size:1.0625rem;line-height:1.6}
+    .actions{margin-top:2.5rem;display:flex;flex-wrap:wrap;gap:1rem;justify-content:center}
+    a{display:inline-flex;align-items:center;justify-content:center;padding:.875rem 1.75rem;border-radius:.75rem;font-weight:600;text-decoration:none}
+    .primary{background:#2563eb;color:#fff}
+    .primary:hover{background:#1d4ed8}
+    .secondary{border:2px solid rgba(255,255,255,.3);color:#fff}
+    .secondary:hover{background:#fff;color:#111827}
+    a:focus-visible{outline:2px solid #60a5fa;outline-offset:2px}
+  </style>
+</head>
+<body>
+  <main>
+    <p class="code">ERREUR 500</p>
+    <h1>Un incident technique est survenu</h1>
+    <p>Notre équipe a été prévenue automatiquement. Réessayez dans quelques minutes. Si vous étiez en train de payer, votre paiement n'est pas perdu : contactez-nous avant de recommencer.</p>
+    <div class="actions">
+      <a class="primary" href="/">Retour à l'accueil</a>
+      <a class="secondary" href="https://wa.me/22996780099" target="_blank" rel="noopener">WhatsApp KcoMat</a>
+    </div>
+  </main>
+</body>
+</html>

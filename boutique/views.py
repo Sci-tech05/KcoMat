@@ -1,11 +1,11 @@
 import json
 import logging
-import requests
 from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib import messages
 from django.conf import settings
 from django.core.mail import EmailMessage
-from django.http import JsonResponse, HttpResponse, HttpResponseForbidden
+from django.core.exceptions import PermissionDenied
+from django.http import HttpResponse
 from django.urls import reverse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST
@@ -13,75 +13,46 @@ from django.utils import timezone
 from .models import Produit, CategorieProduit, Panier, PanierItem, Commande, CommandeItem
 from .forms import CommandeForm
 from core.pdf_invoices import build_invoice_response
-from api.fedapay_service import create_fedapay_transaction
+from api.fedapay_service import create_fedapay_transaction, verify_fedapay_payment
 
 
 logger = logging.getLogger(__name__)
 
 
-def _fedapay_base_url(environment):
-    env = (environment or '').strip().lower()
-    if env == 'sandbox':
-        return 'https://sandbox-api.fedapay.com/v1'
-    return 'https://api.fedapay.com/v1'
+SESSION_COMMANDES_KEY = 'kcomat_commandes'
 
 
-def _extract_transaction_object(payload):
-    if isinstance(payload, dict):
-        if 'id' in payload:
-            return payload
-        for value in payload.values():
-            if isinstance(value, dict) and 'id' in value:
-                return value
-    return {}
+def _verify_commande_payment(commande, candidate_id=None):
+    """Valide le paiement : transaction de CETTE commande, montant total exact."""
+    validated_id = verify_fedapay_payment(
+        stored_transaction_id=commande.fedapay_transaction_id,
+        candidate_transaction_id=candidate_id,
+        expected_amount=int(commande.montant_total),
+        expected_type='commande',
+        ref_key='commande_id',
+        expected_ref=commande.pk,
+    )
+    if validated_id and validated_id != commande.fedapay_transaction_id:
+        commande.fedapay_transaction_id = validated_id
+        commande.save(update_fields=['fedapay_transaction_id'])
+    return bool(validated_id)
 
 
-def _fetch_fedapay_transaction(transaction_id):
-    if not transaction_id:
-        return {}
-
-    api_key = settings.FEDAPAY_CONFIG.get('api_key', '')
-    environment = settings.FEDAPAY_CONFIG.get('environment', 'live')
-    timeout_seconds = int(getattr(settings, 'FEDAPAY_API_TIMEOUT', 30))
-    if not api_key:
-        logger.error("Missing FEDAPAY API key while checking commande transaction")
-        return {}
-
-    headers = {
-        'Authorization': f'Bearer {api_key}',
-        'Content-Type': 'application/json',
-    }
-    base_url = _fedapay_base_url(environment)
-    try:
-        response = requests.get(
-            f'{base_url}/transactions/{transaction_id}',
-            headers=headers,
-            timeout=timeout_seconds,
-        )
-    except requests.RequestException:
-        logger.exception("Network error while fetching FedaPay transaction %s", transaction_id)
-        return {}
-
-    if response.status_code != 200:
-        logger.warning(
-            "FedaPay transaction fetch failed id=%s status=%s body=%s",
-            transaction_id,
-            response.status_code,
-            response.text[:1200],
-        )
-        return {}
-
-    try:
-        payload = response.json()
-    except ValueError:
-        logger.warning("FedaPay transaction fetch returned non-JSON body id=%s", transaction_id)
-        return {}
-    return _extract_transaction_object(payload)
+def _remember_commande(request, commande):
+    """Memorise en session les commandes passees par un visiteur (non connecte)."""
+    ids = set(request.session.get(SESSION_COMMANDES_KEY, []))
+    ids.add(commande.pk)
+    request.session[SESSION_COMMANDES_KEY] = sorted(ids)
 
 
-def _is_fedapay_transaction_approved(transaction_id):
-    transaction_data = _fetch_fedapay_transaction(transaction_id)
-    return str(transaction_data.get('status', '')).strip().lower() == 'approved'
+def _check_commande_access(request, commande):
+    """Seul le proprietaire (compte ou session d'origine) ou le staff accede a la commande."""
+    user = request.user
+    if user.is_authenticated and (user.is_staff or commande.utilisateur_id == user.pk):
+        return
+    if commande.utilisateur_id is None and commande.pk in request.session.get(SESSION_COMMANDES_KEY, []):
+        return
+    raise PermissionDenied("Acces refuse a cette commande.")
 
 
 def _get_panier(request):
@@ -263,9 +234,11 @@ def ajouter_panier(request, slug):
     item.save()
     messages.success(request, f"✅ {produit.nom} ajouté au panier !")
     if request.htmx:
-        response = HttpResponse()
-        response['HX-Redirect'] = reverse('boutique:panier')
-        return response
+        return render(
+            request,
+            'boutique/partials/cart_badge.html',
+            {'cart_count': panier.nombre_articles()},
+        )
     return redirect('boutique:panier')
 
 
@@ -329,6 +302,7 @@ def checkout(request):
             commande.utilisateur = request.user
         commande.montant_total = panier.total()
         commande.save()
+        _remember_commande(request, commande)
         # Créer les items de commande
         for item in panier.items.select_related('produit').all():
             CommandeItem.objects.create(
@@ -351,6 +325,7 @@ def checkout(request):
 def paiement_commande(request, pk):
     """Initie le paiement de la commande via le service FedaPay."""
     commande = get_object_or_404(Commande, pk=pk)
+    _check_commande_access(request, commande)
     if commande.statut not in ['en_attente']:
         messages.info(request, "Cette commande a déjà été traitée.")
         return redirect('boutique:liste')
@@ -416,9 +391,7 @@ def paiement_commande(request, pk):
 def callback_commande(request, pk):
     commande = get_object_or_404(Commande, pk=pk)
     if request.method == 'GET':
-        status_hint = (request.GET.get('status') or '').strip().lower()
-        transaction_id = str(request.GET.get('id') or commande.fedapay_transaction_id or '').strip()
-        if status_hint == 'approved' and transaction_id and _is_fedapay_transaction_approved(transaction_id):
+        if commande.statut == 'en_attente' and _verify_commande_payment(commande, request.GET.get('id')):
             try:
                 _mark_commande_paid(commande)
             except Exception as e:
@@ -430,13 +403,10 @@ def callback_commande(request, pk):
             data = json.loads(request.body)
             event = data.get('name', '')
             transaction = data.get('data', {}).get('transaction', {})
-            transaction_id = str(transaction.get('id') or commande.fedapay_transaction_id or '').strip()
-            status_hint = str(transaction.get('status', '')).strip().lower()
             if (
                 event == 'transaction.approved'
-                and status_hint == 'approved'
-                and transaction_id
-                and _is_fedapay_transaction_approved(transaction_id)
+                and commande.statut == 'en_attente'
+                and _verify_commande_payment(commande, transaction.get('id'))
             ):
                 _mark_commande_paid(commande)
         except Exception as e:
@@ -446,9 +416,9 @@ def callback_commande(request, pk):
 
 def succes_commande(request, pk):
     commande = get_object_or_404(Commande, pk=pk)
+    _check_commande_access(request, commande)
     if commande.statut == 'en_attente':
-        transaction_id = str(request.GET.get('id') or commande.fedapay_transaction_id or '').strip()
-        if transaction_id and _is_fedapay_transaction_approved(transaction_id):
+        if _verify_commande_payment(commande, request.GET.get('id')):
             try:
                 _mark_commande_paid(commande, request=request)
             except Exception as e:
@@ -515,9 +485,7 @@ def facture_panier_pdf(request):
 
 def facture_commande_pdf(request, pk):
     commande = get_object_or_404(Commande.objects.prefetch_related('items'), pk=pk)
-
-    if commande.utilisateur_id and (not request.user.is_authenticated or (request.user != commande.utilisateur and not request.user.is_staff)):
-        return HttpResponseForbidden('Acces refuse a cette facture.')
+    _check_commande_access(request, commande)
 
     return _build_commande_invoice_response(commande)
 

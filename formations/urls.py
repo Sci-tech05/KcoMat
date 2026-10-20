@@ -15,4 +15,6 @@ urlpatterns = [
     path('inscription/<int:pk>/succes-formation/', views.succes_formation, name='succes_formation'),
     path('inscription/<int:pk>/facture-frais.pdf', views.facture_frais_pdf, name='facture_frais'),
     path('inscription/<int:pk>/facture-formation.pdf', views.facture_formation_pdf, name='facture_formation'),
+    path('inscription/<int:pk>/meet-room/', views.meet_room, name='meet_room'),
+    path('inscription/<int:pk>/meet/', views.lancer_meet_inscription, name='lancer_meet'),
 ]

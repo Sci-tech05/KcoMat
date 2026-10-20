@@ -1,0 +1,4 @@
+/* Source Tailwind — compilée vers static/css/app.css (npm run build:css). Ne pas lier directement. */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;

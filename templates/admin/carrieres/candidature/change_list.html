@@ -1,0 +1,62 @@
+{% extends "admin/change_list.html" %}
+{% load i18n %}
+
+{% block object-tools-items %}
+<a href="{{ export_pdf_url }}" class="btn btn-default mr-2" title="Rapport PDF des candidatures de la période">
+  <i class="fas fa-file-pdf text-danger mr-1"></i> Rapport du mois (PDF)
+</a>
+<a href="{{ export_zip_url }}" class="btn btn-success mr-2" title="CV et lettres des candidats retenus sur la période">
+  <i class="fas fa-file-archive mr-1"></i> Dossiers des retenus (ZIP)
+</a>
+{{ block.super }}
+{% endblock %}
+
+{% block date_hierarchy %}
+<div class="kx-month">
+  <div class="kx-month__head">
+    <div>
+      <span class="kx-month__eyebrow"><i class="fas fa-calendar-alt mr-1"></i> Synthèse · {{ mois_libelle }}</span>
+      <h3 class="kx-month__title">
+        {{ mois_stats.total }} candidature{{ mois_stats.total|pluralize }}
+        <small>· {{ mois_stats.a_traiter }} à traiter · {{ mois_stats.retenues }} retenue{{ mois_stats.retenues|pluralize }}</small>
+      </h3>
+    </div>
+    <div class="kx-month__metrics">
+      <div><span>Pré-score moyen</span><b>{% if mois_stats.score %}{{ mois_stats.score|floatformat:0 }}<small>/100</small>{% else %}—{% endif %}</b></div>
+      <div><span>Potentiel moyen</span><b>{% if mois_stats.note %}{{ mois_stats.note|floatformat:1 }}<small>/5</small>{% else %}—{% endif %}</b></div>
+      {% for label, n in mois_types %}<div><span>{{ label }}</span><b>{{ n }}</b></div>{% endfor %}
+    </div>
+  </div>
+
+  <div class="kx-month__pipeline">
+    {% for code, label, n, color in mois_statuts %}
+    <a href="?statut__exact={{ code }}" class="kx-stage" style="--stage:{{ color }}">
+      <span class="kx-stage__count">{{ n }}</span>
+      <span class="kx-stage__label">{{ label }}</span>
+    </a>
+    {% endfor %}
+  </div>
+
+  {% if mois_top %}
+  <div class="kx-month__top">
+    <span class="kx-month__top-title"><i class="fas fa-star text-warning mr-1"></i> Meilleurs potentiels de la période</span>
+    <div class="kx-month__top-list">
+      {% for c in mois_top %}
+      <a href="{% url 'admin:carrieres_candidature_change' c.pk %}" class="kx-top">
+        <span class="kx-avatar">{{ c.prenom|first|upper }}{{ c.nom|first|upper }}</span>
+        <span class="kx-top__body">
+          <b>{{ c.nom_complet }}</b>
+          <small>{{ c.offre.get_type_offre_display }} · {{ c.offre.titre|truncatechars:28 }}</small>
+        </span>
+        <span class="kx-top__score">{% if c.note %}{{ c.note }}<i class="fas fa-star"></i>{% else %}{{ c.score_auto }}<small>/100</small>{% endif %}</span>
+      </a>
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
+  <p class="kx-month__hint"><i class="fas fa-info-circle mr-1"></i>
+    Changez de mois avec la navigation par date ci-dessous : la synthèse et les exports suivent la période choisie.
+    Modifiez le statut et le potentiel directement dans la liste, puis cliquez sur « Enregistrer ».</p>
+</div>
+{{ block.super }}
+{% endblock %}

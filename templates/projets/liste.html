@@ -1,16 +1,11 @@
 {% extends 'base.html' %}
+{% load kcomat_tags %}
 
-{% block title %}Portfolio — Projets KcoMat{% endblock %}
+{% block title %}Projets réalisés{% endblock %}
+{% block meta_description %}Portfolio KcoMat : projets en électronique, IoT, drones et intelligence artificielle réalisés au Bénin.{% endblock %}
 
 {% block content %}
-<section class="page-hero">
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div class="max-w-3xl mx-auto text-center">
-            <h1 class="text-4xl md:text-5xl font-black text-white mb-4">Nos <span class="text-purple-400">réalisations</span></h1>
-            <p class="text-gray-300 text-lg">Découvrez les projets concrets réalisés par KcoMat pour des clients et apprenants au Bénin.</p>
-        </div>
-    </div>
-</section>
+{% include 'partials/page_hero.html' with crumb='Projets' eyebrow='Portfolio' icon='rocket' accent='purple' title='Nos' highlight='réalisations' subtitle='Découvrez les projets concrets réalisés par KcoMat pour des clients et des apprenants au Bénin.' chips='cpu|Électronique & IoT;bot|IA & vision;rocket|Drones' sats='cpu,bot,wifi,sparkles,zap,grid' %}
 
 <section class="py-16 bg-gray-50">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -31,7 +26,7 @@
                 <!-- Image -->
                 <div class="h-52 overflow-hidden bg-gradient-to-br from-purple-900 to-purple-700 relative">
                     {% if projet.image_principale %}
-                    <img src="{{ projet.image_principale.url }}" alt="{{ projet.titre }}"
+                    <img src="{{ projet.image_principale|webp:800 }}" loading="lazy" decoding="async" alt="{{ projet.titre }}"
                         class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
                     {% endif %}
                     <div class="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>

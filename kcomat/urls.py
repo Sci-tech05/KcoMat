@@ -15,19 +15,37 @@ Including another URLconf
     2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
 """
 from django.contrib import admin
-from django.urls import path, include
+from django.urls import path, include, re_path
+from django.contrib.staticfiles.urls import staticfiles_urlpatterns
+from django.contrib.staticfiles.views import serve as staticfiles_serve
 from django.conf import settings
 from django.conf.urls.static import static
+from django.views.static import serve
+from django.views.generic.base import RedirectView
+from django.contrib.sitemaps.views import sitemap
+from django.views.decorators.cache import cache_page
 from core.admin_security import verify_admin_2fa
+from core.sitemaps import SITEMAPS
+from core.views import robots_txt
+from notifications import views as notifications_views
+import sys
 
 admin.site.site_header = "KcoMat Administration"
 admin.site.site_title = "KcoMat Admin"
 admin.site.index_title = "Tableau de bord KcoMat"
 
 urlpatterns = [
+    path(
+        'favicon.ico',
+        RedirectView.as_view(url=f"{settings.STATIC_URL}img/favicon.svg", permanent=True),
+        name='favicon',
+    ),
+    path('robots.txt', robots_txt, name='robots_txt'),
+    path('sw.js', notifications_views.service_worker, name='service_worker'),
+    path('manifest.webmanifest', notifications_views.manifest, name='manifest'),
+    path('sitemap.xml', cache_page(60 * 60)(sitemap), {'sitemaps': SITEMAPS}, name='sitemap'),
     path(settings.ADMIN_2FA_PATH, verify_admin_2fa, name='admin_2fa_verify'),
     path(settings.ADMIN_URL, admin.site.urls),
-    path('api/', include('api.urls', namespace='api')),
     path('', include('core.urls', namespace='core')),
     path('formations/', include('formations.urls', namespace='formations')),
     path('boutique/', include('boutique.urls', namespace='boutique')),
@@ -36,8 +54,28 @@ urlpatterns = [
     path('carrieres/', include('carrieres.urls', namespace='carrieres')),
     path('partenariats/', include('partenariats.urls', namespace='partenariats')),
     path('accounts/', include('accounts.urls', namespace='accounts')),
-] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+    path('notifications/', include('notifications.urls', namespace='notifications')),
+] 
 
 if settings.DEBUG:
-    urlpatterns += static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
-
+    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+    urlpatterns += staticfiles_urlpatterns()
+elif 'runserver' in sys.argv:
+    # En local avec DEBUG=False, runserver ne sert pas MEDIA_URL par defaut.
+    media_prefix = settings.MEDIA_URL.lstrip('/').rstrip('/')
+    urlpatterns += [
+        re_path(
+            rf'^{media_prefix}/(?P<path>.*)$',
+            serve,
+            {'document_root': settings.MEDIA_ROOT},
+        )
+    ]
+    # En local avec DEBUG=False, servir aussi les statics sans collectstatic.
+    static_prefix = settings.STATIC_URL.lstrip('/').rstrip('/')
+    urlpatterns += [
+        re_path(
+            rf'^{static_prefix}/(?P<path>.*)$',
+            staticfiles_serve,
+            {'insecure': True},
+        )
+    ]

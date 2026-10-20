@@ -1,14 +1,18 @@
 {% extends 'base.html' %}
+{% load kcomat_tags %}
 
-{% block title %}{{ projet.titre }} — Portfolio KcoMat{% endblock %}
+{% block title %}{{ projet.titre }} — Projet réalisé{% endblock %}
+{% block meta_description %}{{ projet.description_courte }}{% endblock %}
+{% block og_image %}{% if projet.image_principale %}{{ SITE_URL }}{{ projet.image_principale.url }}{% else %}{{ block.super }}{% endif %}{% endblock %}
 
 {% block content %}
 
 <!-- ===== PAGE HERO ===== -->
-<section class="page-hero relative overflow-hidden">
+<section class="hx py-16 lg:py-20" style="--hx-a:#8B5CF6;--hx-b:#0A84FF;--hx-c:#C084FC">
+  {% include 'partials/hero_fx.html' %}
     <div class="absolute inset-0 opacity-10">
         {% if projet.image_principale %}
-        <img src="{{ projet.image_principale.url }}" alt="" class="w-full h-full object-cover blur-sm scale-110" />
+        <img src="{{ projet.image_principale|webp:480 }}" decoding="async" alt="" aria-hidden="true" class="w-full h-full object-cover blur-sm scale-110" />
         {% endif %}
     </div>
     <div class="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -59,7 +63,7 @@
                         allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                         allowfullscreen title="{{ projet.titre }}"></iframe>
                     {% elif projet.image_principale %}
-                    <img src="{{ projet.image_principale.url }}" alt="{{ projet.titre }}"
+                    <img src="{{ projet.image_principale|webp:1200 }}" loading="lazy" decoding="async" alt="{{ projet.titre }}"
                         class="w-full h-full object-cover" />
                     {% endif %}
                 </div>
@@ -72,7 +76,7 @@
                     <div class="grid grid-cols-2 sm:grid-cols-3 gap-3">
                         {% for img in projet.images.all %}
                         <div class="rounded-xl overflow-hidden shadow-sm h-36 bg-gray-100 group cursor-pointer">
-                            <img src="{{ img.image.url }}" alt="{{ img.legende }}"
+                            <img src="{{ img.image|webp:800 }}" loading="lazy" decoding="async" alt="{{ img.legende }}"
                                 class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
                         </div>
                         {% endfor %}

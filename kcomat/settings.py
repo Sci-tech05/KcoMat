@@ -2,6 +2,7 @@
 Django settings for KcoMat project — Lokossa, Bénin.
 """
 import os
+import sys
 from pathlib import Path
 from decouple import config
 from django.core.exceptions import ImproperlyConfigured
@@ -33,8 +34,22 @@ def required_env(name, *fallback_names):
 
     raise ImproperlyConfigured(f"Missing required environment variable: {name}")
 
-SECRET_KEY = config('SECRET_KEY', default='django-insecure-kcomat-changez-moi-en-production-xxx')
-DEBUG = config('DEBUG', default=False, cast=bool)
+SECRET_KEY = required_env('SECRET_KEY')
+
+
+def env_bool(name, default=False):
+    raw_value = env_value(name, default=str(default))
+    if isinstance(raw_value, bool):
+        return raw_value
+    value = str(raw_value).strip().lower()
+    if value in {'1', 'true', 'yes', 'on', 'y', 'dev', 'debug', 'development'}:
+        return True
+    if value in {'0', 'false', 'no', 'off', 'n', 'prod', 'production', 'release', ''}:
+        return False
+    return bool(default)
+
+
+DEBUG = env_bool('DEBUG', default=False)
 
 def env_list(name, default=''):
     raw_value = env_value(name, default=default)
@@ -55,12 +70,29 @@ DEFAULT_ALLOWED_HOSTS = [
 ALLOWED_HOSTS = env_list('ALLOWED_HOSTS', default=','.join(DEFAULT_ALLOWED_HOSTS)) or DEFAULT_ALLOWED_HOSTS
 DEFAULT_APP_URL = ''
 
+# Serveur de dev / tests : HTTP local, pas de collectstatic.
+IS_LOCAL_COMMAND = any(command in sys.argv for command in ('runserver', 'test'))
+
 # Sécurité
-SECURE_SSL_REDIRECT = False
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
-SECURE_BROWSER_XSS_FILTER = True
 SECURE_CONTENT_TYPE_NOSNIFF = True
+SECURE_REFERRER_POLICY = 'strict-origin-when-cross-origin'
 X_FRAME_OPTIONS = 'DENY'
+CSRF_TRUSTED_ORIGINS = env_list('CSRF_TRUSTED_ORIGINS', default='https://kcomat0.pythonanywhere.com')
+
+# HTTPS : actif par défaut en production, désactivé en local (runserver/test).
+# La redirection HTTP -> HTTPS est à activer de préférence via "Force HTTPS"
+# dans l'onglet Web de PythonAnywhere (ou SECURE_SSL_REDIRECT=True).
+_https_default = not DEBUG and not IS_LOCAL_COMMAND
+SECURE_SSL_REDIRECT = env_bool('SECURE_SSL_REDIRECT', default=False)
+SESSION_COOKIE_SECURE = env_bool('SESSION_COOKIE_SECURE', default=_https_default)
+CSRF_COOKIE_SECURE = env_bool('CSRF_COOKIE_SECURE', default=_https_default)
+SECURE_HSTS_SECONDS = config(
+    'SECURE_HSTS_SECONDS',
+    default=60 * 60 * 24 * 30 if _https_default else 0,  # 30 jours, à porter à 1 an une fois validé
+    cast=int,
+)
+SECURE_HSTS_INCLUDE_SUBDOMAINS = False
 
 DJANGO_APPS = [
     'jazzmin',
@@ -71,6 +103,7 @@ DJANGO_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'django.contrib.humanize',
+    'django.contrib.sitemaps',
 ]
 
 THIRD_PARTY_APPS = [
@@ -89,6 +122,7 @@ LOCAL_APPS = [
     'projets',
     'carrieres',
     'partenariats',
+    'notifications',
 ]
 
 INSTALLED_APPS = DJANGO_APPS + THIRD_PARTY_APPS + LOCAL_APPS
@@ -150,7 +184,21 @@ USE_TZ = True
 STATIC_URL = '/static/'
 STATICFILES_DIRS = [BASE_DIR / 'static']
 STATIC_ROOT = BASE_DIR / 'staticfiles'
-STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
+
+# Django 5.1 ignore STATICFILES_STORAGE : il faut passer par STORAGES.
+# En production, noms hashés + gzip/brotli (WhiteNoise sert alors les fichiers
+# avec un cache navigateur d'un an). En local, stockage simple sans collectstatic.
+_use_static_manifest = env_bool('STATIC_MANIFEST', default=not DEBUG and not IS_LOCAL_COMMAND)
+STORAGES = {
+    'default': {'BACKEND': 'django.core.files.storage.FileSystemStorage'},
+    'staticfiles': {
+        'BACKEND': (
+            'core.storage.KcomatStaticFilesStorage'
+            if _use_static_manifest
+            else 'django.contrib.staticfiles.storage.StaticFilesStorage'
+        ),
+    },
+}
 
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
@@ -194,11 +242,12 @@ JAZZMIN_SETTINGS = {
     # Texte du lien brand
     'site_brand': 'KcoMat',
     # Logo (chemin relatif depuis /static/)
-    # 'site_logo': 'images/logo.png',
+    'site_logo': 'img/logo.png',
+    'site_logo_classes': 'img-rounded',
     'login_logo': None,
     'login_logo_dark': None,
     # Favicon
-    # 'site_icon': 'images/favicon.ico',
+    'site_icon': 'img/logo.png',
     # Texte accueil
     'welcome_sign': 'Bienvenue sur le panneau d\'administration KcoMat',
     # Liens copyright footer
@@ -210,7 +259,7 @@ JAZZMIN_SETTINGS = {
     # Lien vers site
     'topmenu_links': [
         {'name': 'Voir le site', 'url': '/', 'new_window': True, 'icon': 'fas fa-globe'},
-        {'name': 'Dashboard', 'url': 'admin:index', 'permissions': ['auth.view_user']},
+        {'name': 'Tableau de bord', 'url': 'admin:index', 'permissions': ['auth.view_user']},
         {'model': 'auth.User'},
     ],
     # Sidebar
@@ -258,9 +307,9 @@ JAZZMIN_SETTINGS = {
     'default_icon_children': 'fas fa-circle',
     # Médias
     'related_modal_active': True,
-    'custom_css': None,
-    'custom_js': 'js/admin_tabs_hash.js',
-    'use_google_fonts_cdn': True,
+    'custom_css': 'css/admin_premium.css',
+    'custom_js': 'js/admin_premium.js',
+    'use_google_fonts_cdn': False,  # Inter est chargée par admin_premium.css
     # Boutons d\'action en haut
     'show_ui_builder': False,
     'changeform_format': 'horizontal_tabs',
@@ -278,7 +327,7 @@ JAZZMIN_UI_TWEAKS = {
     'body_small_text': False,
     'brand_small_text': False,
     # Couleur brand (navbar)
-    'brand_colour': 'navbar-primary',
+    'brand_colour': False,
     # Accent sidebar
     'accent': 'accent-primary',
     # style navbar: navbar-white | navbar-light | navbar-dark | navbar-primary etc.
@@ -325,6 +374,19 @@ PAYMENT_CONFIG = {
     'phone_prefix': config('PAYMENT_PHONE_PREFIX', default='+229'),
 }
 
+JITSI_BASE_URL = env_value('JITSI_BASE_URL', default='https://framatalk.org')
+if isinstance(JITSI_BASE_URL, str):
+    JITSI_BASE_URL = JITSI_BASE_URL.strip()
+if JITSI_BASE_URL and '://' not in JITSI_BASE_URL:
+    JITSI_BASE_URL = f"https://{JITSI_BASE_URL}"
+JITSI_BASE_URL = JITSI_BASE_URL.rstrip('/') if JITSI_BASE_URL else ''
+
+# Notifications push (Web Push / VAPID). Clés : python manage.py generer_cles_vapid
+VAPID_PUBLIC_KEY = env_value('VAPID_PUBLIC_KEY', default='')
+VAPID_PRIVATE_KEY = env_value('VAPID_PRIVATE_KEY', default='')
+VAPID_CLAIM_EMAIL = env_value('VAPID_CLAIM_EMAIL', default='kcomat0@gmail.com')
+PUSH_ASYNC = env_bool('PUSH_ASYNC', default=True)  # envoi en tâche de fond après publication
+
 FEDAPAY_SECRET_KEY = FEDAPAY_CONFIG['api_key']
 FEDAPAY_PUBLIC_KEY = FEDAPAY_CONFIG['public_key']
 FEDAPAY_SANDBOX = FEDAPAY_CONFIG['environment'].lower() == 'sandbox'
@@ -356,6 +418,42 @@ KCOMAT_INFO = {
     'youtube': 'https://youtube.com/@KcoMat',
     'tiktok': 'https://www.tiktok.com/@kcomat3',
     'facebook': 'https://www.facebook.com/profile.php?id=61581135667007',
+    'linkedin': 'https://www.linkedin.com/in/kcomat-ets-a7179640a',
     'frais_inscription': 2000,
     'maps_embed': 'https://maps.app.goo.gl/UXMLViYtf7Sjm6267',
+}
+
+# Journalisation : erreurs et événements de paiement visibles dans les logs
+# PythonAnywhere (stderr) ; les erreurs 500 sont envoyées par e-mail aux ADMINS.
+ADMINS = [('KcoMat', KCOMAT_INFO['email'])]
+SERVER_EMAIL = DEFAULT_FROM_EMAIL
+LOG_LEVEL = config('LOG_LEVEL', default='INFO')
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'filters': {
+        'require_debug_false': {'()': 'django.utils.log.RequireDebugFalse'},
+    },
+    'formatters': {
+        'standard': {'format': '[{asctime}] {levelname} {name}: {message}', 'style': '{'},
+    },
+    'handlers': {
+        'console': {'class': 'logging.StreamHandler', 'formatter': 'standard'},
+        'mail_admins': {
+            'class': 'django.utils.log.AdminEmailHandler',
+            'level': 'ERROR',
+            'filters': ['require_debug_false'],
+        },
+    },
+    'root': {'handlers': ['console'], 'level': 'WARNING'},
+    'loggers': {
+        'django': {'handlers': ['console'], 'level': 'WARNING', 'propagate': False},
+        'django.request': {'handlers': ['console', 'mail_admins'], 'level': 'ERROR', 'propagate': False},
+        'api': {'handlers': ['console', 'mail_admins'], 'level': LOG_LEVEL, 'propagate': False},
+        'formations': {'handlers': ['console', 'mail_admins'], 'level': LOG_LEVEL, 'propagate': False},
+        'boutique': {'handlers': ['console', 'mail_admins'], 'level': LOG_LEVEL, 'propagate': False},
+        'core': {'handlers': ['console', 'mail_admins'], 'level': LOG_LEVEL, 'propagate': False},
+        'carrieres': {'handlers': ['console', 'mail_admins'], 'level': LOG_LEVEL, 'propagate': False},
+        'notifications': {'handlers': ['console', 'mail_admins'], 'level': LOG_LEVEL, 'propagate': False},
+    },
 }

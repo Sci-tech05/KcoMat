@@ -1,4 +1,5 @@
-import random
+import logging
+import secrets
 import time
 import os  # ← Import indispensable pour os.environ
 
@@ -13,6 +14,8 @@ from django.http import HttpResponseForbidden, HttpResponseRedirect
 from django.shortcuts import redirect, render
 from django.utils.http import url_has_allowed_host_and_scheme
 
+
+logger = logging.getLogger(__name__)
 
 SESSION_VERIFIED_USER_ID = 'admin_2fa_verified_user_id'
 SESSION_CODE_HASH = 'admin_2fa_code_hash'
@@ -76,7 +79,8 @@ def _clear_2fa_state(request):
 
 
 def _send_admin_2fa_code(request):
-    code = f"{random.randint(0, 999999):06d}"
+    """Envoie un nouveau code. Retourne (adresse, None) si envoyé, sinon (None, message d'erreur)."""
+    code = f"{secrets.randbelow(1_000_000):06d}"
     ttl_seconds = max(60, int(getattr(settings, 'ADMIN_2FA_CODE_TTL_SECONDS', 300)))
     
     request.session[SESSION_CODE_HASH] = make_password(code)
@@ -88,7 +92,8 @@ def _send_admin_2fa_code(request):
     recipient_email = user_email or fallback_email
     
     if not recipient_email:
-        return None
+        return None, ("Aucune adresse e-mail de destination : renseignez l'e-mail de votre compte "
+                      "administrateur ou EMAIL_HOST_USER.")
 
     try:
         sent_count = send_mail(
@@ -104,11 +109,14 @@ def _send_admin_2fa_code(request):
             fail_silently=False,
         )
         if sent_count > 0:
-            return recipient_email
-    except Exception:
-        return None
-    
-    return None
+            return recipient_email, None
+    except Exception as exc:
+        logger.exception("Envoi du code 2FA admin impossible (utilisateur %s)", request.user.get_username())
+        detail = ' Identifiants SMTP refusés : vérifiez EMAIL_HOST_PASSWORD (mot de passe d’application Gmail).' \
+            if 'auth' in type(exc).__name__.lower() or 'disconnect' in type(exc).__name__.lower() else ''
+        return None, f"Le code n’a pas pu être envoyé par e-mail ({type(exc).__name__}).{detail}"
+
+    return None, "Le code n’a pas pu être envoyé par e-mail."
 
 
 class AdminSecurityMiddleware:
@@ -170,8 +178,8 @@ def verify_admin_2fa(request):
             code_hash = request.session.get(SESSION_CODE_HASH, '')
             
             if not code_hash or now_ts > expires_at:
-                messages.error(request, 'Code expiré. Un nouveau code a été envoyé.')
-                _send_admin_2fa_code(request)
+                sent_to, error = _send_admin_2fa_code(request)
+                messages.error(request, 'Code expiré. Un nouveau code a été envoyé.' if sent_to else f'Code expiré. {error}')
             elif submitted_code and check_password(submitted_code, code_hash):
                 request.session[SESSION_VERIFIED_USER_ID] = request.user.id
                 _clear_2fa_state(request)
@@ -188,17 +196,15 @@ def verify_admin_2fa(request):
 
     force_resend = request.GET.get('resend') == '1'
     if force_resend or not request.session.get(SESSION_CODE_HASH) or now_ts > expires_at:
-        sent_to = _send_admin_2fa_code(request)
+        sent_to, error = _send_admin_2fa_code(request)
         if sent_to:
             messages.info(request, f'Un code de vérification vient d’être envoyé à {sent_to}')
         else:
-            messages.error(
-                request,
-                'Aucun email de destination n’est configuré. Renseignez l’email du compte admin ou EMAIL_HOST_USER.'
-            )
+            messages.error(request, error)
 
     context = {
         'next_url': next_url,
         'admin_path': _admin_prefix(),
+        'code_ttl_minutes': max(60, int(getattr(settings, 'ADMIN_2FA_CODE_TTL_SECONDS', 300))) // 60,
     }
     return render(request, 'admin/admin_2fa_verify.html', context)

@@ -1,0 +1,128 @@
+{% extends "admin/index.html" %}
+{% load i18n humanize kcomat_admin %}
+
+{% block content_title %}{% if app_label %}{{ app_list.0.name|default:title }}{% else %}Tableau de bord{% endif %}{% endblock %}
+
+{% block content %}
+{% if app_label %}{{ block.super }}{% else %}
+{% admin_dashboard as kpi %}
+<div class="col-12">
+  <!-- ===== En-tête premium ===== -->
+  <div class="kx-hero">
+    <div class="kx-hero__grid" aria-hidden="true"></div>
+    <div class="kx-hero__glow" aria-hidden="true"></div>
+    <div class="kx-hero__body">
+      <div>
+        <span class="kx-pill"><span class="kx-dot"></span>Console KcoMat · {{ kpi.now|date:"l j F Y" }}</span>
+        <h2 class="kx-hero__title">Bonjour {{ user.first_name|default:user.username }}</h2>
+        <p class="kx-hero__lead">
+          {% if kpi.a_traiter_total %}<strong>{{ kpi.a_traiter_total }} demande{{ kpi.a_traiter_total|pluralize }}</strong> attend{{ kpi.a_traiter_total|pluralize:"ent" }} votre attention.
+          {% else %}Tout est à jour : aucune demande en attente.{% endif %}
+          {{ kpi.inscriptions.ce_mois }} inscription{{ kpi.inscriptions.ce_mois|pluralize }} ce mois-ci ·
+          <a href="{% url 'admin:notifications_abonnementpush_changelist' %}" style="color:#7DD3FC"><i class="fas fa-bell mr-1"></i>{{ kpi.abonnes_push }} abonné{{ kpi.abonnes_push|pluralize }} aux notifications</a>.
+        </p>
+      </div>
+      <div class="kx-hero__revenue">
+        <span class="kx-hero__revenue-label">Encaissé (formations + boutique)</span>
+        <span class="kx-hero__revenue-value">{{ kpi.revenus_total|intcomma }} <small>FCFA</small></span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== Indicateurs ===== -->
+  <div class="kx-kpis">
+    <a class="kx-kpi" href="{% url 'admin:formations_inscription_changelist' %}">
+      <span class="kx-kpi__icon kx-kpi__icon--blue"><i class="fas fa-user-graduate"></i></span>
+      <span class="kx-kpi__label">Inscriptions</span>
+      <span class="kx-kpi__value">{{ kpi.inscriptions.total|intcomma }}</span>
+      <span class="kx-kpi__meta">{{ kpi.inscriptions.completes }} complète{{ kpi.inscriptions.completes|pluralize }} · {{ kpi.inscriptions.en_ligne }} en ligne</span>
+    </a>
+    <a class="kx-kpi" href="{% url 'admin:formations_paiementformation_changelist' %}">
+      <span class="kx-kpi__icon kx-kpi__icon--green"><i class="fas fa-wallet"></i></span>
+      <span class="kx-kpi__label">Revenus formations</span>
+      <span class="kx-kpi__value">{{ kpi.revenus_formations|intcomma }} <small>FCFA</small></span>
+      <span class="kx-kpi__meta">{{ kpi.inscriptions.frais_payes }} frais d'inscription réglés</span>
+    </a>
+    <a class="kx-kpi" href="{% url 'admin:boutique_commande_changelist' %}">
+      <span class="kx-kpi__icon kx-kpi__icon--violet"><i class="fas fa-shopping-bag"></i></span>
+      <span class="kx-kpi__label">Boutique</span>
+      <span class="kx-kpi__value">{{ kpi.revenus_boutique|intcomma }} <small>FCFA</small></span>
+      <span class="kx-kpi__meta">{{ kpi.commandes.payees }} payée{{ kpi.commandes.payees|pluralize }} · {{ kpi.commandes.en_attente }} en attente</span>
+    </a>
+    <a class="kx-kpi" href="{% url 'admin:formations_inscription_changelist' %}?statut__exact=en_attente">
+      <span class="kx-kpi__icon kx-kpi__icon--amber"><i class="fas fa-hourglass-half"></i></span>
+      <span class="kx-kpi__label">Paiements en attente</span>
+      <span class="kx-kpi__value">{{ kpi.inscriptions.en_attente }}</span>
+      <span class="kx-kpi__meta">inscriptions sans frais réglés</span>
+    </a>
+  </div>
+
+  <div class="row">
+    <!-- ===== À traiter ===== -->
+    <div class="col-xl-4 col-lg-5">
+      <div class="card kx-card">
+        <div class="card-header"><h5 class="m-0"><i class="fas fa-inbox mr-2 text-primary"></i>À traiter</h5></div>
+        <div class="card-body p-2">
+          <a class="kx-todo" href="{% url 'admin:core_contactmessage_changelist' %}?lu__exact=0">
+            <span class="kx-todo__icon"><i class="fas fa-envelope"></i></span>Messages non lus
+            <span class="kx-badge {% if kpi.a_traiter.messages %}kx-badge--hot{% endif %}">{{ kpi.a_traiter.messages }}</span>
+          </a>
+          <a class="kx-todo" href="{% url 'admin:services_demandeservice_changelist' %}?traite__exact=0">
+            <span class="kx-todo__icon"><i class="fas fa-tools"></i></span>Demandes de service
+            <span class="kx-badge {% if kpi.a_traiter.services %}kx-badge--hot{% endif %}">{{ kpi.a_traiter.services }}</span>
+          </a>
+          <a class="kx-todo" href="{% url 'admin:carrieres_candidature_changelist' %}?statut__exact=nouvelle">
+            <span class="kx-todo__icon"><i class="fas fa-file-alt"></i></span>Candidatures
+            <span class="kx-badge {% if kpi.a_traiter.candidatures %}kx-badge--hot{% endif %}">{{ kpi.a_traiter.candidatures }}</span>
+          </a>
+          <a class="kx-todo" href="{% url 'admin:partenariats_demandepartenariat_changelist' %}?traite__exact=0">
+            <span class="kx-todo__icon"><i class="fas fa-handshake"></i></span>Partenariats
+            <span class="kx-badge {% if kpi.a_traiter.partenariats %}kx-badge--hot{% endif %}">{{ kpi.a_traiter.partenariats }}</span>
+          </a>
+        </div>
+      </div>
+      <div class="card kx-card">
+        <div class="card-header"><h5 class="m-0"><i class="fas fa-bolt mr-2 text-warning"></i>Actions rapides</h5></div>
+        <div class="card-body kx-actions">
+          <a href="{% url 'admin:formations_formation_add' %}"><i class="fas fa-plus"></i>Nouvelle formation</a>
+          <a href="{% url 'admin:boutique_produit_add' %}"><i class="fas fa-microchip"></i>Nouveau produit</a>
+          <a href="{% url 'admin:formations_paiementformation_changelist' %}"><i class="fas fa-receipt"></i>Paiements</a>
+          <a href="/" target="_blank" rel="noopener"><i class="fas fa-globe-africa"></i>Voir le site</a>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== Dernières inscriptions ===== -->
+    <div class="col-xl-8 col-lg-7">
+      <div class="card kx-card">
+        <div class="card-header d-flex align-items-center justify-content-between">
+          <h5 class="m-0"><i class="fas fa-stream mr-2 text-primary"></i>Dernières inscriptions</h5>
+          <a class="kx-link" href="{% url 'admin:formations_inscription_changelist' %}">Tout voir <i class="fas fa-arrow-right ml-1"></i></a>
+        </div>
+        <div class="card-body p-0">
+          <table class="table kx-table mb-0">
+            <thead><tr><th>Apprenant</th><th>Formation</th><th>Mode</th><th>Statut</th><th class="text-right">Date</th></tr></thead>
+            <tbody>
+            {% for insc in kpi.dernieres_inscriptions %}
+              <tr>
+                <td><a href="{% url 'admin:formations_inscription_change' insc.pk %}" class="kx-person"><span class="kx-avatar">{{ insc.prenom|first|upper }}{{ insc.nom|first|upper }}</span>{{ insc.prenom }} {{ insc.nom }}</a></td>
+                <td class="text-truncate" style="max-width:14rem">{{ insc.formation.titre }}</td>
+                <td>{% if insc.mode_preference == 'en_ligne' %}<span class="kx-tag kx-tag--cyan">En ligne</span>{% else %}<span class="kx-tag">Présentiel</span>{% endif %}</td>
+                <td><span class="kx-status kx-status--{{ insc.statut }}">{{ insc.get_statut_display }}</span></td>
+                <td class="text-right text-muted">{{ insc.created_at|date:"d/m/Y" }}</td>
+              </tr>
+            {% empty %}
+              <tr><td colspan="5" class="text-center text-muted py-4">Aucune inscription pour l'instant.</td></tr>
+            {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <h3 class="kx-section-title">Gestion du site</h3>
+</div>
+{{ block.super }}
+{% endif %}
+{% endblock %}
