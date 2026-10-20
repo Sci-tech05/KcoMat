@@ -12,11 +12,18 @@ from reportlab.lib.pagesizes import A4, landscape
 from reportlab.lib import colors
 from reportlab.pdfgen import canvas
 
+from django.contrib import messages
+from django.db.models import Q
+from django.shortcuts import redirect
+
+from notifications.push import notifier_publication
+from projets.admin import apercu_video
+
+from .catalogue import CATALOGUE, charger_catalogue
 from .models import (
     CategorieFormation,
     Formation,
     FormationSessionPassee,
-    FormationSessionMedia,
     Inscription,
     PaiementFormation,
 )
@@ -25,19 +32,14 @@ from .models import (
 class FormationSessionPasseeInline(admin.StackedInline):
     model = FormationSessionPassee
     extra = 0
-    fields = (
-        'titre',
-        'periode',
-        'date_debut',
-        'date_fin',
-        'resume',
-        'image_couverture',
-        'video_apercu_file',
-        'video_apercu_url',
-        'ordre',
-        'publiee',
-    )
-    show_change_link = True
+    fields = (('titre', 'periode'), ('date_debut', 'date_fin'), 'resume', 'lien_video', 'apercu', ('ordre', 'publiee'))
+    readonly_fields = ['apercu']
+    verbose_name = "Session passée (vidéo YouTube / TikTok)"
+    verbose_name_plural = "Sessions passées (vidéos)"
+
+    @admin.display(description='Aperçu')
+    def apercu(self, obj):
+        return apercu_video(obj.video, 260) if obj.pk else "Enregistrez pour voir l'aperçu."
 
 
 @admin.register(CategorieFormation)
@@ -48,21 +50,24 @@ class CategorieFormationAdmin(admin.ModelAdmin):
 
 @admin.register(Formation)
 class FormationAdmin(admin.ModelAdmin):
-    actions = [notifier_abonnes]
-    list_display = ['titre', 'categorie', 'prix', 'places_disponibles', 'actif', 'en_vedette', 'nouveau']
+    change_list_template = 'admin/formations/formation/change_list.html'
+    actions = ['publier', 'masquer', notifier_abonnes]
+    list_display = ['vignette', 'titre', 'categorie', 'prix', 'duree', 'places_disponibles', 'actif', 'en_vedette', 'nouveau']
+    list_display_links = ['titre']
     list_filter = ['actif', 'en_vedette', 'nouveau', 'categorie', 'niveau']
     list_editable = ['actif', 'en_vedette', 'nouveau']
     search_fields = ['titre', 'description']
     prepopulated_fields = {'slug': ('titre',)}
     fieldsets = (
         ('Informations principales', {
+            'description': "Une image est obligatoire pour publier la formation (format paysage conseillé, 1600 × 1000 px).",
             'fields': ('titre', 'slug', 'categorie', 'description_courte', 'description', 'image')
         }),
         ('Détails', {
             'fields': ('duree', 'niveau', 'prix', 'prix_avec_base', 'places_disponibles')
         }),
         ('Contenu pédagogique', {
-            'fields': ('objectifs', 'prerequis')
+            'fields': ('objectifs', 'programme', 'prerequis', 'public_cible', 'debouches', 'materiel_fourni')
         }),
         ('Statut et mise en avant', {
             'fields': ('actif', 'nouveau', 'en_vedette')
@@ -70,39 +75,55 @@ class FormationAdmin(admin.ModelAdmin):
     )
     inlines = [FormationSessionPasseeInline]
 
+    @admin.display(description='Image')
+    def vignette(self, obj):
+        if obj.image:
+            return format_html('<img src="{}" alt="" style="width:64px;height:40px;object-fit:cover;border-radius:8px">', obj.image.url)
+        return format_html('<span style="display:inline-block;padding:.15rem .5rem;border-radius:999px;background:#FFF6E5;'
+                           'color:#B45309;font-size:.72rem;font-weight:700">À ajouter</span>')
 
-class FormationSessionMediaInline(admin.TabularInline):
-    model = FormationSessionMedia
-    extra = 0
-    fields = ('type_media', 'image', 'video_file', 'video_url', 'legende', 'ordre', 'actif')
+    @admin.action(description="Publier les formations sélectionnées (image obligatoire)")
+    def publier(self, request, queryset):
+        sans_image = list(queryset.filter(Q(image='') | Q(image__isnull=True)).values_list('pk', flat=True))
+        nouvelles = list(queryset.exclude(pk__in=sans_image).filter(actif=False).values_list('pk', flat=True))
+        n = Formation.objects.filter(pk__in=nouvelles).update(actif=True)
+        for formation in Formation.objects.filter(pk__in=nouvelles):   # update() ne déclenche pas les signaux
+            notifier_publication(formation)
+        if n:
+            self.message_user(request, f"{n} formation(s) publiée(s) ; les abonnés ont été prévenus.", messages.SUCCESS)
+        if sans_image:
+            self.message_user(request, f"{len(sans_image)} formation(s) ignorée(s) : ajoutez d'abord une image.", messages.WARNING)
 
+    @admin.action(description="Masquer les formations sélectionnées")
+    def masquer(self, request, queryset):
+        n = queryset.update(actif=False)
+        self.message_user(request, f"{n} formation(s) masquée(s).", messages.SUCCESS)
 
-@admin.register(FormationSessionPassee)
-class FormationSessionPasseeAdmin(admin.ModelAdmin):
-    list_display = ['formation', 'titre', 'periode', 'date_debut', 'date_fin', 'publiee', 'ordre']
-    list_filter = ['publiee', 'formation']
-    search_fields = ['formation__titre', 'titre', 'periode', 'resume']
-    list_editable = ['publiee', 'ordre']
-    fieldsets = (
-        ('Informations session', {
-            'fields': ('formation', 'titre', 'periode', 'date_debut', 'date_fin', 'resume')
-        }),
-        ('Visuels et videos', {
-            'fields': ('image_couverture', 'video_apercu_file', 'video_apercu_url')
-        }),
-        ('Publication', {
-            'fields': ('ordre', 'publiee')
-        }),
-    )
-    inlines = [FormationSessionMediaInline]
+    def get_urls(self):
+        return [path('charger-catalogue/', self.admin_site.admin_view(self.charger_catalogue_view),
+                     name='formations_formation_charger_catalogue')] + super().get_urls()
 
+    def charger_catalogue_view(self, request):
+        if request.method != 'POST':
+            return redirect('admin:formations_formation_changelist')
+        crees, _, inchangees = charger_catalogue(force=False)
+        if crees:
+            self.message_user(request, f"{crees} formation(s) ajoutée(s), masquées : ajoutez une image puis publiez-les.",
+                              messages.SUCCESS)
+        else:
+            self.message_user(request, "Le catalogue est déjà complet : aucune formation ajoutée.", messages.INFO)
+        return redirect('admin:formations_formation_changelist')
 
-@admin.register(FormationSessionMedia)
-class FormationSessionMediaAdmin(admin.ModelAdmin):
-    list_display = ['session', 'type_media', 'legende', 'actif', 'ordre']
-    list_filter = ['type_media', 'actif', 'session__formation']
-    search_fields = ['session__formation__titre', 'session__titre', 'legende', 'video_url']
-    list_editable = ['actif', 'ordre']
+    def changelist_view(self, request, extra_context=None):
+        qs = Formation.objects.all()
+        extra_context = {
+            **(extra_context or {}),
+            'nb_publiees': qs.filter(actif=True).count(),
+            'nb_masquees': qs.filter(actif=False).count(),
+            'nb_sans_image': qs.filter(Q(image='') | Q(image__isnull=True)).count(),
+            'catalogue_total': len(CATALOGUE),
+        }
+        return super().changelist_view(request, extra_context=extra_context)
 
 
 @admin.register(Inscription)

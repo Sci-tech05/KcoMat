@@ -23,32 +23,43 @@
             {% for projet in projets %}
             <a href="{% url 'projets:detail' projet.slug %}"
                 class="card group hover:shadow-lg transition-all hover:-translate-y-1 overflow-hidden p-0">
-                <!-- Image -->
-                <div class="h-52 overflow-hidden bg-gradient-to-br from-purple-900 to-purple-700 relative">
-                    {% if projet.image_principale %}
-                    <img src="{{ projet.image_principale|webp:800 }}" loading="lazy" decoding="async" alt="{{ projet.titre }}"
-                        class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
+                <!-- Aperçu vidéo (miniature YouTube ou carte TikTok) -->
+                {% with v=projet.video %}
+                <div class="relative aspect-video overflow-hidden bg-slate-900">
+                    {% if v.miniature %}
+                    <img src="{{ v.miniature }}" loading="lazy" decoding="async" alt="" referrerpolicy="no-referrer"
+                        class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                    {% elif v %}
+                    <div class="vid__tiktok"></div>
+                    {% else %}
+                    <div class="car-card__fallback">{% include 'partials/icon.html' with name='rocket' class='w-12 h-12' stroke='1.25' %}</div>
                     {% endif %}
-                    <div class="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
+                    <div class="absolute inset-0 bg-gradient-to-t from-black/70 via-black/10 to-transparent"></div>
+                    {% if v %}
+                    <span class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 grid place-items-center w-14 h-14 rounded-full bg-blue-600/90 text-white shadow-[0_0_0_6px_rgba(10,132,255,.25)] transition-transform group-hover:scale-110">
+                        <svg viewBox="0 0 24 24" fill="currentColor" class="w-6 h-6 translate-x-0.5"><path d="M8 5.14v13.72a1 1 0 0 0 1.52.85l10.96-6.86a1 1 0 0 0 0-1.7L9.52 4.29A1 1 0 0 0 8 5.14z"/></svg>
+                    </span>
+                    <span class="absolute top-3 right-3 rounded-lg bg-white/90 px-2 py-0.5 text-[11px] font-bold text-slate-900">{{ v.nom_plateforme }}</span>
+                    {% endif %}
                     {% if projet.categorie %}
                     <div class="absolute top-3 left-3">
-                        <span class="bg-purple-600 text-white text-xs font-bold px-2.5 py-1 rounded-full">{{ projet.categorie.nom }}</span>
+                        <span class="bg-blue-600 text-white text-xs font-bold px-2.5 py-1 rounded-full">{{ projet.categorie.nom }}</span>
                     </div>
                     {% endif %}
-                    <!-- Technologies overlay -->
                     <div class="absolute bottom-3 left-3 flex flex-wrap gap-1">
                         {% for tech in projet.get_technologies_list|slice:":3" %}
                         <span class="bg-black/50 backdrop-blur-sm text-white text-xs px-2 py-0.5 rounded-full">{{ tech }}</span>
                         {% endfor %}
                     </div>
                 </div>
+                {% endwith %}
                 <!-- Info -->
                 <div class="p-5">
                     <h3 class="font-bold text-gray-900 mb-1">{{ projet.titre }}</h3>
                     <p class="text-sm text-gray-500 line-clamp-2">{{ projet.description_courte }}</p>
                     <div
                         class="mt-3 flex items-center text-blue-600 text-sm font-medium gap-1 group-hover:gap-2 transition-all">
-                        <span>Voir le projet</span>
+                        <span>Voir le projet en vidéo</span>
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
                         </svg>

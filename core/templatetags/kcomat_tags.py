@@ -170,3 +170,10 @@ def partenaires_actifs(limite=12):
     """Partenaires à afficher (footer, page Contact), gérés dans l'admin : Partenariats › Partenaires."""
     from partenariats.models import Partenaire
     return list(Partenaire.objects.filter(actif=True).order_by('ordre', 'nom')[:limite])
+
+
+@register.filter
+def video(url):
+    """Lien YouTube / TikTok -> objet Video (miniature, lecteur…), ou None. Usage : {% with v=projet.lien_video|video %}"""
+    from core.video import analyser
+    return analyser(url)

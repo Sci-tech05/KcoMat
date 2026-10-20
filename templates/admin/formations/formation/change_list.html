@@ -1,0 +1,23 @@
+{% extends "admin/change_list.html" %}
+
+{% block date_hierarchy %}
+<div class="kx-month">
+  <div class="kx-month__head">
+    <div>
+      <span class="kx-month__eyebrow"><i class="fas fa-graduation-cap mr-1"></i> Formations</span>
+      <h3 class="kx-month__title">{{ nb_publiees }} publiée{{ nb_publiees|pluralize }} <small>· {{ nb_masquees }} masquée{{ nb_masquees|pluralize }} · {{ nb_sans_image }} sans image</small></h3>
+    </div>
+    <form method="post" action="{% url 'admin:formations_formation_charger_catalogue' %}">
+      {% csrf_token %}
+      <button type="submit" class="btn btn-primary"><i class="fas fa-magic mr-1"></i> Charger le catalogue de formations ({{ catalogue_total }})</button>
+    </form>
+  </div>
+  <p class="kx-month__hint"><i class="fas fa-info-circle mr-1"></i>
+    Le catalogue ajoute <b>une formation prérédigée par catégorie</b> (description, objectifs, programme, public, débouchés, matériel),
+    <b>masquées</b> par défaut. Une formation déjà existante n'est jamais écrasée : seuls ses champs vides sont complétés.
+    Pour en publier une : ouvrez-la, <b>ajoutez une image</b>, <b>vérifiez le tarif</b> et la durée, puis cochez « Actif »
+    (ou utilisez l'action « Publier les formations sélectionnées »). Les vidéos des sessions passées se gèrent en bas de chaque formation.
+  </p>
+</div>
+{{ block.super }}
+{% endblock %}

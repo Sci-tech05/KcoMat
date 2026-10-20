@@ -127,8 +127,8 @@ def _contenu(instance):
     from django.urls import reverse
     from django.utils.text import Truncator
 
-    image = getattr(instance, 'image', None) or getattr(instance, 'image_principale', None)
-    image_url = image.url if image else ''
+    image = getattr(instance, 'image', None)
+    image_url = image.url if image else (getattr(instance, 'miniature', '') or '')   # projets : miniature YouTube
     if isinstance(instance, Offre):
         libelle = {'stage': 'Nouveau stage', 'emploi': "Nouvelle offre d'emploi",
                    'freelance': 'Nouvelle mission freelance'}.get(instance.type_offre, 'Nouvelle offre')
