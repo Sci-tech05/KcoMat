@@ -21,8 +21,8 @@ def detail_projet(request, slug):
     projet = get_object_or_404(Projet, slug=slug, actif=True)
     ctx = {
         'projet': projet,
-        'images': projet.images.all(),
-        'videos': projet.videos.all(),
+        'videos': [v for v in projet.videos.all() if v.video],
+        'autres_projets': Projet.objects.filter(actif=True).exclude(pk=projet.pk).select_related('categorie')[:3],
         'title': projet.titre,
     }
     return render(request, 'projets/detail.html', ctx)

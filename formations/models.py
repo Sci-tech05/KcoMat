@@ -3,6 +3,8 @@ from django.contrib.auth.models import User
 from django.utils.text import slugify
 from django.core.exceptions import ValidationError
 
+from core.video import analyser, normaliser_lien_video, valider_lien_video
+
 
 class CategorieFormation(models.Model):
     nom = models.CharField(max_length=100)
@@ -44,7 +46,12 @@ class Formation(models.Model):
     nouveau = models.BooleanField(default=False)
     en_vedette = models.BooleanField(default=False)
     objectifs = models.TextField(blank=True, help_text="Un objectif par ligne")
-    prerequis = models.TextField(blank=True)
+    prerequis = models.TextField(blank=True, help_text="Un prérequis par ligne")
+    programme = models.TextField(
+        blank=True, help_text="Un module par ligne, au format « Titre du module : contenu » (ex. « Les bases : tension, courant, loi d'Ohm »).")
+    public_cible = models.TextField("Pour qui ?", blank=True, help_text="Un profil par ligne.")
+    debouches = models.TextField("Débouchés", blank=True, help_text="Un métier ou une opportunité par ligne.")
+    materiel_fourni = models.TextField("Matériel fourni", blank=True, help_text="Un élément par ligne.")
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -68,29 +75,42 @@ class Formation(models.Model):
             return [p.strip() for p in self.prerequis.split('\n') if p.strip()]
         return []
 
+    @staticmethod
+    def _lignes(texte):
+        return [l.strip().lstrip('-•*–').strip() for l in (texte or '').splitlines() if l.strip().lstrip('-•*–').strip()]
+
+    def programme_list(self):
+        """[(titre, contenu)] à partir de « Titre : contenu » (une ligne par module)."""
+        modules = []
+        for ligne in self._lignes(self.programme):
+            titre, sep, contenu = ligne.partition(':')
+            modules.append((titre.strip(), contenu.strip()) if sep and len(titre) <= 60 else (ligne, ''))
+        return modules
+
+    def public_list(self):
+        return self._lignes(self.public_cible)
+
+    def debouches_list(self):
+        return self._lignes(self.debouches)
+
+    def materiel_list(self):
+        return self._lignes(self.materiel_fourni)
+
+    def clean(self):
+        if self.actif and not self.image:
+            raise ValidationError({'actif': "Ajoutez une image avant de publier la formation."})
+
 
 class FormationSessionPassee(models.Model):
     formation = models.ForeignKey(Formation, on_delete=models.CASCADE, related_name='sessions_passees')
-    titre = models.CharField(max_length=160, blank=True, help_text="Ex: Session Aout 2025")
-    periode = models.CharField(max_length=120, blank=True, help_text="Ex: 12 au 16 aout 2025")
+    titre = models.CharField(max_length=160, blank=True, help_text="Ex. « Session Avril 2025 »")
+    periode = models.CharField(max_length=120, blank=True, help_text="Ex. « 12 au 16 avril 2025 » (sinon calculée depuis les dates)")
     date_debut = models.DateField(blank=True, null=True)
     date_fin = models.DateField(blank=True, null=True)
-    resume = models.TextField(blank=True, help_text="Description breve de la session passee")
-    image_couverture = models.ImageField(
-        upload_to='formations/sessions/covers/',
-        blank=True,
-        null=True,
-        help_text="Image principale de la session passee.",
-    )
-    video_apercu_file = models.FileField(
-        upload_to='formations/sessions/covers/videos/',
-        blank=True,
-        null=True,
-        help_text="Video principale (fichier).",
-    )
-    video_apercu_url = models.URLField(
-        blank=True,
-        help_text="Lien YouTube/Vimeo de la video principale (optionnel).",
+    resume = models.TextField(blank=True, help_text="Quelques lignes : ce qui a été réalisé, nombre de participants…")
+    lien_video = models.URLField(
+        "Lien vidéo (YouTube ou TikTok)", max_length=500, blank=True,
+        help_text="Vidéo de la session (ex. https://youtu.be/…). L'aperçu s'affiche automatiquement sur la page de la formation.",
     )
     ordre = models.PositiveSmallIntegerField(default=0)
     publiee = models.BooleanField(default=True)
@@ -115,69 +135,15 @@ class FormationSessionPassee(models.Model):
             return f"{self.date_debut.strftime('%d/%m/%Y')} au {self.date_fin.strftime('%d/%m/%Y')}"
         if self.date_debut:
             return self.date_debut.strftime('%d/%m/%Y')
-        return "Periode non precisee"
-
-    def get_video_apercu_embed_url(self):
-        url = (self.video_apercu_url or '').strip()
-        if not url:
-            return ''
-        if 'youtube.com/watch?v=' in url:
-            video_id = url.split('watch?v=')[-1].split('&')[0]
-            return f'https://www.youtube.com/embed/{video_id}'
-        if 'youtu.be/' in url:
-            video_id = url.split('youtu.be/')[-1].split('?')[0]
-            return f'https://www.youtube.com/embed/{video_id}'
-        if 'vimeo.com/' in url:
-            video_id = url.rstrip('/').split('/')[-1]
-            return f'https://player.vimeo.com/video/{video_id}'
-        return url
-
-
-class FormationSessionMedia(models.Model):
-    TYPE_CHOICES = [
-        ('image', 'Image'),
-        ('video', 'Video'),
-    ]
-
-    session = models.ForeignKey(FormationSessionPassee, on_delete=models.CASCADE, related_name='medias')
-    type_media = models.CharField(max_length=10, choices=TYPE_CHOICES, default='image')
-    image = models.ImageField(upload_to='formations/sessions/images/', blank=True, null=True)
-    video_file = models.FileField(upload_to='formations/sessions/videos/', blank=True, null=True)
-    video_url = models.URLField(blank=True, help_text="Lien YouTube/Vimeo (optionnel)")
-    legende = models.CharField(max_length=180, blank=True)
-    ordre = models.PositiveSmallIntegerField(default=0)
-    actif = models.BooleanField(default=True)
-    created_at = models.DateTimeField(auto_now_add=True)
-
-    class Meta:
-        ordering = ['ordre', 'id']
-        verbose_name = "Média de session"
-        verbose_name_plural = "Médias de session"
-
-    def __str__(self):
-        label = self.legende or self.get_type_media_display()
-        return f"{self.session} - {label}"
+        return ""
 
     def clean(self):
-        if self.type_media == 'image' and not self.image:
-            raise ValidationError("Ajoutez une image pour un media de type image.")
-        if self.type_media == 'video' and not self.video_file and not self.video_url:
-            raise ValidationError("Ajoutez un fichier video ou une URL video pour un media de type video.")
+        self.lien_video = normaliser_lien_video(self.lien_video)
+        valider_lien_video(self.lien_video)
 
-    def get_video_embed_url(self):
-        url = (self.video_url or '').strip()
-        if not url:
-            return ''
-        if 'youtube.com/watch?v=' in url:
-            video_id = url.split('watch?v=')[-1].split('&')[0]
-            return f'https://www.youtube.com/embed/{video_id}'
-        if 'youtu.be/' in url:
-            video_id = url.split('youtu.be/')[-1].split('?')[0]
-            return f'https://www.youtube.com/embed/{video_id}'
-        if 'vimeo.com/' in url:
-            video_id = url.rstrip('/').split('/')[-1]
-            return f'https://player.vimeo.com/video/{video_id}'
-        return url
+    @property
+    def video(self):
+        return analyser(self.lien_video)
 
 
 class Inscription(models.Model):

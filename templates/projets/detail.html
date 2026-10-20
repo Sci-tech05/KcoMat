@@ -3,18 +3,18 @@
 
 {% block title %}{{ projet.titre }} — Projet réalisé{% endblock %}
 {% block meta_description %}{{ projet.description_courte }}{% endblock %}
-{% block og_image %}{% if projet.image_principale %}{{ SITE_URL }}{{ projet.image_principale.url }}{% else %}{{ block.super }}{% endif %}{% endblock %}
+{% block og_image %}{% if projet.miniature %}{{ projet.miniature }}{% else %}{{ block.super }}{% endif %}{% endblock %}
 
 {% block content %}
 
 <!-- ===== PAGE HERO ===== -->
 <section class="hx py-16 lg:py-20" style="--hx-a:#8B5CF6;--hx-b:#0A84FF;--hx-c:#C084FC">
   {% include 'partials/hero_fx.html' %}
-    <div class="absolute inset-0 opacity-10">
-        {% if projet.image_principale %}
-        <img src="{{ projet.image_principale|webp:480 }}" decoding="async" alt="" aria-hidden="true" class="w-full h-full object-cover blur-sm scale-110" />
-        {% endif %}
+    {% if projet.miniature %}
+    <div class="absolute inset-0 -z-10 opacity-[.12]" aria-hidden="true">
+        <img src="{{ projet.miniature }}" decoding="async" alt="" referrerpolicy="no-referrer" class="w-full h-full object-cover blur-md scale-110" />
     </div>
+    {% endif %}
     <div class="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <a href="{% url 'projets:liste' %}"
             class="inline-flex items-center gap-1.5 text-blue-300 hover:text-white text-sm mb-6 transition-colors group">
@@ -51,55 +51,21 @@
             <!-- LEFT: Médias + Description -->
             <div class="lg:col-span-2 space-y-8">
 
-                <!-- Média principal -->
-                {% if projet.image_principale or projet.video_principale or projet.video_url %}
-                <div class="rounded-2xl overflow-hidden shadow-lg bg-black aspect-video">
-                    {% if projet.video_principale %}
-                    <video controls class="w-full h-full object-cover" poster="{% if projet.image_principale %}{{ projet.image_principale.url }}{% endif %}">
-                        <source src="{{ projet.video_principale.url }}" type="video/mp4">
-                    </video>
-                    {% elif projet.video_url %}
-                    <iframe src="{{ projet.video_url }}" class="w-full h-full" frameborder="0"
-                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                        allowfullscreen title="{{ projet.titre }}"></iframe>
-                    {% elif projet.image_principale %}
-                    <img src="{{ projet.image_principale|webp:1200 }}" loading="lazy" decoding="async" alt="{{ projet.titre }}"
-                        class="w-full h-full object-cover" />
-                    {% endif %}
-                </div>
+                <!-- Vidéo principale -->
+                {% if projet.video %}
+                {% include 'partials/video.html' with v=projet.video titre=projet.titre priorite=True vertical_max='24rem' %}
                 {% endif %}
 
-                <!-- Galerie photos -->
-                {% if projet.images.all %}
+                <!-- Autres vidéos -->
+                {% if videos %}
                 <div>
-                    <h3 class="font-bold text-gray-700 text-sm uppercase tracking-wider mb-3">Galerie</h3>
-                    <div class="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                        {% for img in projet.images.all %}
-                        <div class="rounded-xl overflow-hidden shadow-sm h-36 bg-gray-100 group cursor-pointer">
-                            <img src="{{ img.image|webp:800 }}" loading="lazy" decoding="async" alt="{{ img.legende }}"
-                                class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
-                        </div>
-                        {% endfor %}
-                    </div>
-                </div>
-                {% endif %}
-
-                <!-- Galerie vidéos -->
-                {% if projet.videos.all %}
-                <div>
-                    <h3 class="font-bold text-gray-700 text-sm uppercase tracking-wider mb-3">Vidéos</h3>
-                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        {% for vid in projet.videos.all %}
-                        <div class="rounded-xl overflow-hidden shadow-sm bg-black aspect-video">
-                            {% if vid.fichier %}
-                            <video controls class="w-full h-full">
-                                <source src="{{ vid.fichier.url }}" type="video/mp4">
-                            </video>
-                            {% elif vid.url %}
-                            <iframe src="{{ vid.url }}" class="w-full h-full" frameborder="0" allowfullscreen title="{{ vid.legende }}"></iframe>
-                            {% endif %}
-                        </div>
-                        {% if vid.legende %}<p class="text-xs text-gray-500 mt-1 text-center">{{ vid.legende }}</p>{% endif %}
+                    <h3 class="font-bold text-gray-700 text-sm uppercase tracking-wider mb-3">Plus de vidéos du projet</h3>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                        {% for vid in videos %}
+                        <figure>
+                            {% include 'partials/video.html' with v=vid.video titre=vid.legende|default:projet.titre vertical_max='18rem' %}
+                            {% if vid.legende %}<figcaption class="mt-2 text-sm font-semibold text-gray-700 text-center">{{ vid.legende }}</figcaption>{% endif %}
+                        </figure>
                         {% endfor %}
                     </div>
                 </div>
@@ -202,7 +168,7 @@
 
                 <!-- CTA -->
                 <div class="bg-gradient-to-br from-blue-600 to-blue-800 rounded-2xl p-6 text-white text-center">
-                    <div class="text-3xl mb-3">🚀</div>
+                    <div class="mx-auto mb-3 grid h-12 w-12 place-items-center rounded-2xl bg-white/15">{% include 'partials/icon.html' with name='rocket' class='w-6 h-6' %}</div>
                     <h3 class="font-bold text-lg mb-2">Un projet similaire ?</h3>
                     <p class="text-blue-100 text-sm mb-4 leading-relaxed">Confiez-nous votre idée, nous la réalisons.</p>
                     <a href="{% url 'core:contact' %}"

@@ -1,4 +1,7 @@
+from django.core.exceptions import ValidationError
 from django.db import models
+
+from core.video import analyser, normaliser_lien_video, valider_lien_video
 
 
 class CategorieProjet(models.Model):
@@ -21,15 +24,10 @@ class Projet(models.Model):
     categorie = models.ForeignKey(CategorieProjet, on_delete=models.SET_NULL, null=True, related_name='projets')
     description_courte = models.CharField(max_length=300)
     description = models.TextField()
-    image_principale = models.ImageField(upload_to='projets/', blank=True, null=True)
-    video_principale = models.FileField(
-        upload_to='projets/videos/',
-        blank=True, null=True,
-        help_text="Vidéo de présentation du projet (MP4, WebM…)"
-    )
-    video_url = models.URLField(
-        blank=True,
-        help_text="Lien YouTube / Vimeo à intégrer (alternative à l'upload)"
+    lien_video = models.URLField(
+        "Lien vidéo (YouTube ou TikTok)", max_length=500, blank=True,
+        help_text="Obligatoire pour publier. Ex. https://www.youtube.com/watch?v=… ou https://www.tiktok.com/@kcomat3/video/… "
+                  "L'aperçu s'affiche automatiquement : aucune image ni vidéo à téléverser.",
     )
     client = models.CharField(max_length=200, blank=True)
     localite = models.CharField(max_length=200, blank=True)
@@ -55,35 +53,41 @@ class Projet(models.Model):
     def get_technologies_list(self):
         return [t.strip() for t in self.technologies.split(',') if t.strip()]
 
+    def clean(self):
+        self.lien_video = normaliser_lien_video(self.lien_video)
+        valider_lien_video(self.lien_video)
+        if self.actif and not self.lien_video:
+            raise ValidationError({'lien_video': "Ajoutez le lien YouTube ou TikTok de la vidéo du projet pour le publier."})
 
-class ImageProjet(models.Model):
-    projet = models.ForeignKey(Projet, on_delete=models.CASCADE, related_name='images')
-    image = models.ImageField(upload_to='projets/gallery/')
-    legende = models.CharField(max_length=200, blank=True)
-    ordre = models.PositiveSmallIntegerField(default=0)
+    @property
+    def video(self):
+        return analyser(self.lien_video)
 
-    class Meta:
-        ordering = ['ordre']
+    @property
+    def miniature(self):
+        video = self.video
+        return video.miniature if video else ''
 
 
 class VideoProjet(models.Model):
+    """Vidéos supplémentaires (galerie) : liens YouTube / TikTok uniquement."""
     projet = models.ForeignKey(Projet, on_delete=models.CASCADE, related_name='videos')
-    fichier = models.FileField(
-        upload_to='projets/videos/',
-        blank=True, null=True,
-        help_text="Fichier vidéo (MP4, WebM…)"
-    )
-    url = models.URLField(
-        blank=True,
-        help_text="Lien YouTube / Vimeo à intégrer"
-    )
-    legende = models.CharField(max_length=200, blank=True)
+    url = models.URLField("Lien vidéo (YouTube ou TikTok)", max_length=500)
+    legende = models.CharField("Légende", max_length=200, blank=True)
     ordre = models.PositiveSmallIntegerField(default=0)
 
     class Meta:
         ordering = ['ordre']
-        verbose_name = "Vidéo du projet"
-        verbose_name_plural = "Vidéos du projet"
+        verbose_name = "Vidéo supplémentaire"
+        verbose_name_plural = "Vidéos supplémentaires"
 
     def __str__(self):
         return self.legende or f"Vidéo #{self.pk}"
+
+    def clean(self):
+        self.url = normaliser_lien_video(self.url)
+        valider_lien_video(self.url)
+
+    @property
+    def video(self):
+        return analyser(self.url)
