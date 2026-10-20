@@ -155,6 +155,7 @@ class Inscription(models.Model):
         ('en_attente', 'En attente de paiement'),
         ('frais_payes', 'Frais d\'inscription payés'),
         ('complet', 'Paiement complet'),
+        ('termine', 'Formation terminée'),
         ('annule', 'Annulé'),
     ]
     formation = models.ForeignKey(Formation, on_delete=models.CASCADE, related_name='inscriptions')
@@ -188,6 +189,24 @@ class Inscription(models.Model):
 
     def __str__(self):
         return f"{self.prenom} {self.nom} — {self.formation.titre}"
+
+    # Inscription en cours : empêche une 2e inscription à la même formation
+    STATUTS_ACTIFS = ('en_attente', 'frais_payes', 'complet')
+    STATUTS_PAYES = ('complet', 'termine')
+
+    @classmethod
+    def inscription_en_cours(cls, formation, utilisateur=None, email=''):
+        """Inscription active (non terminée, non annulée) de cette personne à cette formation, ou None."""
+        from django.db.models import Q
+        critere = Q()
+        if utilisateur is not None and utilisateur.is_authenticated:
+            critere |= Q(utilisateur=utilisateur)
+        if email:
+            critere |= Q(email__iexact=email.strip())
+        if not critere:
+            return None
+        return (cls.objects.filter(critere, formation=formation, statut__in=cls.STATUTS_ACTIFS)
+                .order_by('-created_at').first())
 
     def montant_inscription(self):
         from django.conf import settings

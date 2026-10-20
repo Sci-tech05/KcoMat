@@ -33,6 +33,7 @@ class CandidatureForm(forms.ModelForm):
 
     def __init__(self, *args, offre=None, **kwargs):
         super().__init__(*args, **kwargs)
+        self.offre = offre
         formules = offre.formules.all() if offre is not None else None
         if formules:
             field = self.fields['formule']
@@ -44,3 +45,15 @@ class CandidatureForm(forms.ModelForm):
             field.error_messages['required'] = 'Choisissez une durée de stage.'
         else:
             del self.fields['formule']
+
+    def clean_email(self):
+        """Une seule candidature par personne (adresse e-mail) et par offre."""
+        email = (self.cleaned_data.get('email') or '').strip()
+        if self.offre is not None and email:
+            existante = (Candidature.objects.filter(offre=self.offre, email__iexact=email)
+                         .order_by('-created_at').first())
+            if existante:
+                raise forms.ValidationError(
+                    f"Vous avez déjà postulé à cette offre le {existante.created_at:%d/%m/%Y} avec cette adresse e-mail. "
+                    "Notre équipe étudie votre dossier : inutile de postuler à nouveau.")
+        return email

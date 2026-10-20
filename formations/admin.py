@@ -128,6 +128,16 @@ class FormationAdmin(admin.ModelAdmin):
 
 @admin.register(Inscription)
 class InscriptionAdmin(admin.ModelAdmin):
+    actions = ['marquer_terminee']
+
+    @admin.action(description="Marquer la formation comme terminée (permet une nouvelle inscription)")
+    def marquer_terminee(self, request, queryset):
+        n = queryset.filter(statut='complet').update(statut='termine')
+        ignores = queryset.exclude(statut__in=['complet', 'termine']).count()
+        self.message_user(request, f"{n} inscription(s) marquée(s) « Formation terminée »."
+                          + (f" {ignores} ignorée(s) : seule une formation entièrement payée peut être terminée." if ignores else ""),
+                          messages.SUCCESS if n else messages.WARNING)
+
     list_display = ['prenom', 'nom', 'email', 'formation', 'mode_preference', 'statut', 'lien_meet', 'created_at']
     list_filter = ['statut', 'mode_preference', 'formation']
     search_fields = ['nom', 'prenom', 'email', 'telephone']
@@ -199,7 +209,7 @@ class InscriptionAdmin(admin.ModelAdmin):
     def _paid_amount_for_inscription(self, inscription):
         frais = Decimal(settings.KCOMAT_INFO.get('frais_inscription', 2000))
         formation_price = Decimal(inscription.formation.prix or 0)
-        if inscription.statut == 'complet' or inscription.formation_payee_le is not None:
+        if inscription.statut in ('complet', 'termine') or inscription.formation_payee_le is not None:
             return frais + formation_price
         return frais
 
@@ -208,7 +218,7 @@ class InscriptionAdmin(admin.ModelAdmin):
         start_date, period_label = self._period_config(period)
 
         queryset = Inscription.objects.select_related('formation').filter(
-            statut__in=['frais_payes', 'complet'],
+            statut__in=['frais_payes', 'complet', 'termine'],
             created_at__gte=start_date,
         ).order_by('-created_at')
 
@@ -462,12 +472,12 @@ class PaiementFormationAdmin(admin.ModelAdmin):
 
     def get_queryset(self, request):
         qs = super().get_queryset(request)
-        return qs.filter(statut__in=['frais_payes', 'complet'])
+        return qs.filter(statut__in=['frais_payes', 'complet', 'termine'])
 
     @admin.display(description='Montant encaissé')
     def montant_encaisse(self, obj):
         frais = Decimal(settings.KCOMAT_INFO.get('frais_inscription', 2000))
-        if obj.statut == 'complet' or obj.formation_payee_le is not None:
+        if obj.statut in ('complet', 'termine') or obj.formation_payee_le is not None:
             montant = frais + Decimal(obj.formation.prix or 0)
         else:
             montant = frais
@@ -673,6 +683,6 @@ class PaiementFormationAdmin(admin.ModelAdmin):
 
     def montant_encaisse_value(self, obj):
         frais = Decimal(settings.KCOMAT_INFO.get('frais_inscription', 2000))
-        if obj.statut == 'complet' or obj.formation_payee_le is not None:
+        if obj.statut in ('complet', 'termine') or obj.formation_payee_le is not None:
             return frais + Decimal(obj.formation.prix or 0)
         return frais

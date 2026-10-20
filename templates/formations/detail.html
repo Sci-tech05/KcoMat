@@ -305,7 +305,7 @@
           <!-- En-tête prix horizontal -->
           <div class="bg-gradient-to-r from-blue-600 to-blue-700 px-5 py-4 flex items-center justify-between gap-4">
             <div>
-              <div class="text-xs text-blue-200 uppercase tracking-widest mb-0.5">Tarif</div>
+              <div class="text-xs text-blue-200 uppercase tracking-widest mb-0.5">Prix de la formation</div>
               {% if formation.prix_avec_base %}
               <div class="text-blue-300 text-sm line-through mb-0.5">{{ formation.prix_avec_base|intcomma }} FCFA</div>
               {% endif %}
@@ -315,16 +315,37 @@
               </div>
               
             </div>
-            <div class="flex-shrink-0 text-right">
-              <div class="inline-flex items-center gap-1.5 bg-amber-400/20 border border-amber-300/30 text-amber-100 text-xs font-semibold px-3 py-1.5 rounded-full">
-                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-                + 2 000 FCFA
-              </div>
-            </div>
           </div>
+          <!-- Principe de paiement en 2 étapes -->
+          <ol class="grid grid-cols-2 border-b border-gray-100 text-xs">
+            <li class="flex items-start gap-2 p-3.5 border-r border-gray-100">
+              <span class="grid h-6 w-6 flex-shrink-0 place-items-center rounded-full bg-blue-600 font-bold text-white">1</span>
+              <span><span class="block font-bold text-gray-900">Inscription</span><span class="text-gray-500">{{ frais|intcomma }} FCFA, aujourd'hui</span></span>
+            </li>
+            <li class="flex items-start gap-2 p-3.5">
+              <span class="grid h-6 w-6 flex-shrink-0 place-items-center rounded-full bg-emerald-500 font-bold text-white">2</span>
+              <span><span class="block font-bold text-gray-900">Formation</span><span class="text-gray-500">{{ formation.prix|intcomma }} FCFA, ensuite</span></span>
+            </li>
+          </ol>
 
           <div class="p-5">
-            {% if formation.places_disponibles > 0 %}
+            {% if inscription_existante %}
+            <!-- Déjà inscrit(e) : reprise de l'inscription en cours -->
+            <div class="rounded-2xl border border-blue-100 bg-blue-50/70 p-4">
+              <p class="flex items-center gap-2 text-sm font-extrabold text-gray-900">{% include 'partials/icon.html' with name='badge-check' class='w-5 h-5 text-blue-600' stroke='2' %}Vous êtes déjà inscrit(e)</p>
+              <p class="mt-1 text-sm text-gray-600">
+                {% if inscription_existante.statut == 'en_attente' %}Il reste à régler les frais d'inscription ({{ frais|intcomma }} FCFA).
+                {% elif inscription_existante.statut == 'frais_payes' %}Frais d'inscription réglés : il reste à régler la formation ({{ formation.prix|intcomma }} FCFA).
+                {% else %}Votre inscription est confirmée et la formation est réglée.{% endif %}
+              </p>
+              <a href="{{ etape_suivante }}" class="mt-3 flex w-full items-center justify-center gap-2 rounded-lg bg-blue-600 py-2.5 text-sm font-bold text-white transition-colors hover:bg-blue-700">
+                {% if inscription_existante.statut == 'en_attente' %}Continuer : payer l'inscription
+                {% elif inscription_existante.statut == 'frais_payes' %}Continuer : payer la formation
+                {% else %}Voir mes inscriptions{% endif %}
+                {% include 'partials/icon.html' with name='arrow-right' class='w-4 h-4' stroke='2.25' %}
+              </a>
+            </div>
+            {% elif formation.places_disponibles > 0 %}
 
             <!-- Messages flash -->
             {% if messages %}{% for msg in messages %}
@@ -364,8 +385,9 @@
 
               <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white font-bold py-2.5 rounded-lg transition-colors flex items-center justify-center gap-2 text-sm mt-1 shadow-sm shadow-blue-200">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"/></svg>
-                Procéder au paiement
+                Payer l'inscription ({{ frais|intcomma }} FCFA)
               </button>
+              <p class="text-[11px] leading-snug text-gray-400 text-center">Le montant de la formation ({{ formation.prix|intcomma }} FCFA) se règle ensuite, depuis votre espace.</p>
             </form>
 
             {% else %}

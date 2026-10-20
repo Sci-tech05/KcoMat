@@ -3,6 +3,7 @@ import logging
 import uuid
 from urllib.parse import urlparse
 from django.shortcuts import render, get_object_or_404, redirect
+from django.urls import reverse
 from django.contrib import messages
 from django.conf import settings
 from django.core.mail import EmailMessage
@@ -65,6 +66,25 @@ def _remember_inscription(request, inscription):
     request.session[SESSION_INSCRIPTIONS_KEY] = sorted(ids)
 
 
+def _peut_acceder(request, inscription):
+    try:
+        _check_inscription_access(request, inscription)
+        return True
+    except PermissionDenied:
+        return False
+
+
+def _etape_suivante(request, inscription):
+    """URL de la prochaine étape d'une inscription : frais (2 000 F), puis formation, puis espace personnel."""
+    if inscription.statut == 'en_attente':
+        return reverse('formations:paiement_frais', args=[inscription.pk])
+    if inscription.statut == 'frais_payes':
+        return reverse('formations:paiement_formation', args=[inscription.pk])
+    if request.user.is_authenticated:
+        return reverse('formations:mes_inscriptions')
+    return reverse('formations:succes_formation', args=[inscription.pk])
+
+
 def _check_inscription_access(request, inscription):
     """Seul le proprietaire (compte ou session d'origine) ou le staff accede a l'inscription."""
     user = request.user
@@ -110,7 +130,7 @@ def _build_formation_invoice_response(inscription):
         'subtotal': montant,
     }]
 
-    is_paid = inscription.formation_payee_le is not None or inscription.statut == 'complet'
+    is_paid = inscription.formation_payee_le is not None or inscription.statut in Inscription.STATUTS_PAYES
     status_label = 'Payee' if is_paid else 'Non payee'
 
     return build_invoice_response(
@@ -133,8 +153,8 @@ def _send_inscription_invoice_email(inscription):
     if not recipient:
         return
 
-    has_frais_paid = inscription.frais_payes_le is not None or inscription.statut in ['frais_payes', 'complet']
-    has_formation_paid = inscription.formation_payee_le is not None or inscription.statut == 'complet'
+    has_frais_paid = inscription.frais_payes_le is not None or inscription.statut in ('frais_payes', *Inscription.STATUTS_PAYES)
+    has_formation_paid = inscription.formation_payee_le is not None or inscription.statut in Inscription.STATUTS_PAYES
 
     if not has_frais_paid and not has_formation_paid:
         return
@@ -179,7 +199,7 @@ def _mark_inscription_frais_paid(inscription):
 
 
 def _mark_inscription_formation_paid(inscription):
-    if inscription.statut == 'complet':
+    if inscription.statut in Inscription.STATUTS_PAYES:
         return
     if inscription.statut == 'en_attente':
         return
@@ -282,6 +302,20 @@ def detail_formation(request, slug):
     else:
         form = InscriptionForm()
 
+    # Une même personne ne peut avoir qu'une inscription en cours par formation
+    # (une nouvelle inscription redevient possible une fois la formation terminée).
+    inscription_existante = None
+    if request.user.is_authenticated:
+        inscription_existante = Inscription.inscription_en_cours(formation, utilisateur=request.user)
+    if request.method == 'POST' and form.is_valid():
+        existante = inscription_existante or Inscription.inscription_en_cours(
+            formation, utilisateur=request.user, email=form.cleaned_data.get('email', ''))
+        if existante:
+            if _peut_acceder(request, existante):
+                messages.info(request, "Vous êtes déjà inscrit(e) à cette formation : poursuivez votre inscription.")
+                return redirect(_etape_suivante(request, existante))
+            form.add_error('email', "Une inscription à cette formation est déjà en cours pour cette adresse e-mail. "
+                                    "Connectez-vous à votre compte pour la poursuivre, ou contactez-nous.")
     if request.method == 'POST' and form.is_valid():
         inscription = form.save(commit=False)
         inscription.formation = formation
@@ -295,6 +329,8 @@ def detail_formation(request, slug):
         'formation': formation,
         'form': form,
         'frais': settings.KCOMAT_INFO['frais_inscription'],
+        'inscription_existante': inscription_existante,
+        'etape_suivante': _etape_suivante(request, inscription_existante) if inscription_existante else '',
         'title': formation.titre,
     }
     return render(request, 'formations/detail.html', ctx)
@@ -305,8 +341,8 @@ def paiement_frais(request, pk):
     inscription = get_object_or_404(Inscription.objects.select_related('formation'), pk=pk)
     _check_inscription_access(request, inscription)
     if inscription.statut != 'en_attente':
-        messages.warning(request, "Cette inscription a déjà été traitée.")
-        return redirect('formations:liste')
+        # Frais déjà réglés : on enchaîne directement sur l'étape suivante
+        return redirect(_etape_suivante(request, inscription))
 
     app_url = settings.FEDAPAY_APP_URL or request.build_absolute_uri('/').rstrip('/')
     callback_url = f"{app_url}/formations/inscription/{inscription.pk}/callback-frais/"
@@ -376,7 +412,7 @@ def paiement_formation(request, pk):
         messages.warning(request, "Veuillez d'abord payer les frais d'inscription.")
         return redirect('formations:paiement_frais', pk=inscription.pk)
 
-    if inscription.statut == 'complet':
+    if inscription.statut in Inscription.STATUTS_PAYES:
         messages.info(request, 'Cette formation est deja reglee.')
         return redirect('formations:mes_inscriptions')
 
@@ -518,7 +554,7 @@ def succes_formation(request, pk):
         messages.warning(request, "Veuillez d'abord payer les frais d'inscription.")
         return redirect('formations:paiement_frais', pk=inscription.pk)
 
-    if inscription.statut != 'complet':
+    if inscription.statut not in Inscription.STATUTS_PAYES:
         if _verify_formation_payment(inscription, request.GET.get('id')):
             try:
                 _mark_inscription_formation_paid(inscription)

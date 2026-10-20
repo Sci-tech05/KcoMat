@@ -378,7 +378,7 @@
       {% with v=projet.video %}
       <span class="real-slide__media">
         {% if v.miniature %}
-        <img src="{{ v.miniature }}" alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer">
+        <img src="{{ v.miniature_hd }}" data-thumb-fallback="{{ v.miniatures_repli }}" alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer">
         {% elif v %}
         <span class="vid__tiktok"></span>
         {% else %}
