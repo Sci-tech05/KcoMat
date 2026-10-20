@@ -10,18 +10,24 @@ from .forms import ContactForm
 from formations.models import Formation
 from services.models import Service
 from boutique.models import Produit
+from projets.models import Projet
 
 
 def accueil(request):
     formations_vedette = Formation.objects.filter(actif=True).order_by('-en_vedette', '-created_at')[:6]
     services = Service.objects.filter(actif=True)[:6]
-    produits_vedette = Produit.objects.filter(actif=True, en_vedette=True)[:8]
+    # composants mis en avant d'abord, puis les plus récents (la section n'est jamais vide)
+    produits_vedette = (Produit.objects.filter(actif=True).select_related('categorie')
+                        .order_by('-en_vedette', '-created_at')[:10])
+    projets_vedette = (Projet.objects.filter(actif=True).select_related('categorie')
+                       .order_by('-en_vedette', '-date_realisation', '-created_at')[:10])
     temoignages = Temoignage.objects.filter(actif=True)[:6]
     statistiques = Statistique.objects.all()[:6]
     ctx = {
         'formations_vedette': formations_vedette,
         'services': services,
         'produits_vedette': produits_vedette,
+        'projets_vedette': projets_vedette,
         'temoignages': temoignages,
         'statistiques': statistiques,
         'title': 'Accueil',

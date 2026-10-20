@@ -350,6 +350,63 @@
 
 
 <!-- ===================================================
+     NOS RÉALISATIONS (projets en vidéo, défilement)
+=================================================== -->
+{% if projets_vedette %}
+<section class="py-20 bg-slate-50 overflow-hidden" aria-labelledby="realisations-title">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div class="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-6 mb-10">
+      <div class="max-w-2xl">
+        <div class="section-tag">{% include 'partials/icon.html' with name='rocket' class='w-3.5 h-3.5' stroke='2' %} Nos réalisations</div>
+        <h2 id="realisations-title" class="section-title">Des projets concrets, <span class="text-gradient">en vidéo</span></h2>
+        <p class="section-subtitle mt-3">Objets connectés, intelligence artificielle, applications mobiles : découvrez ce que nous construisons avec nos clients et nos apprenants.</p>
+      </div>
+      <div class="flex items-center gap-3">
+        <button type="button" class="crl-nav" data-carrousel-dir="-1" aria-controls="projets-track" aria-label="Projets précédents">
+          {% include 'partials/icon.html' with name='chevron-right' class='w-5 h-5 rotate-180' stroke='2.25' %}
+        </button>
+        <button type="button" class="crl-nav" data-carrousel-dir="1" aria-controls="projets-track" aria-label="Projets suivants">
+          {% include 'partials/icon.html' with name='chevron-right' class='w-5 h-5' stroke='2.25' %}
+        </button>
+        <a href="{% url 'projets:liste' %}" class="crl-all">Tous nos projets {% include 'partials/icon.html' with name='arrow-right' class='w-4 h-4' stroke='2.25' %}</a>
+      </div>
+    </div>
+  </div>
+  <div id="projets-track" class="svc-track crl-light" data-carrousel data-vitesse="0.4" tabindex="0" role="region" aria-roledescription="carrousel" aria-label="Nos réalisations">
+    {% for pass in "123" %}{% for projet in projets_vedette %}
+    <a href="{% url 'projets:detail' projet.slug %}" class="real-slide group" {% if not forloop.parentloop.first %}data-clone hidden aria-hidden="true" tabindex="-1"{% endif %}>
+      {% with v=projet.video %}
+      <span class="real-slide__media">
+        {% if v.miniature %}
+        <img src="{{ v.miniature }}" alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer">
+        {% elif v %}
+        <span class="vid__tiktok"></span>
+        {% else %}
+        <span class="car-card__fallback">{% include 'partials/icon.html' with name='rocket' class='w-10 h-10' stroke='1.25' %}</span>
+        {% endif %}
+        <span class="real-slide__shade"></span>
+        {% if v %}
+        <span class="real-slide__play"><svg viewBox="0 0 24 24" fill="currentColor" class="w-6 h-6 translate-x-0.5"><path d="M8 5.14v13.72a1 1 0 0 0 1.52.85l10.96-6.86a1 1 0 0 0 0-1.7L9.52 4.29A1 1 0 0 0 8 5.14z"/></svg></span>
+        <span class="real-slide__badge">{{ v.nom_plateforme }}</span>
+        {% endif %}
+        {% if projet.categorie %}<span class="real-slide__cat">{{ projet.categorie.nom }}</span>{% endif %}
+      </span>
+      {% endwith %}
+      <span class="block p-5">
+        <span class="block font-extrabold text-slate-900 leading-snug group-hover:text-blue-700 transition-colors">{{ projet.titre }}</span>
+        <span class="mt-1.5 block text-sm text-slate-500 line-clamp-2">{{ projet.description_courte }}</span>
+        {% if projet.get_technologies_list %}
+        <span class="mt-3 flex flex-wrap gap-1.5">{% for tech in projet.get_technologies_list|slice:":3" %}<span class="rounded-full bg-blue-50 px-2 py-0.5 text-[11px] font-semibold text-blue-700">{{ tech }}</span>{% endfor %}</span>
+        {% endif %}
+      </span>
+    </a>
+    {% endfor %}{% endfor %}
+  </div>
+</section>
+{% endif %}
+
+
+<!-- ===================================================
      FORMATIONS PHARES
 =================================================== -->
 <section class="py-20 bg-white">
@@ -472,10 +529,10 @@
         <p class="hx-lead mt-4 text-base sm:text-lg">Installation, automatisation, développement et formation : une équipe locale pour concrétiser vos projets, partout au Bénin.</p>
       </div>
       <div class="flex items-center gap-3">
-        <button type="button" class="svc-nav" data-svc-dir="-1" aria-controls="svc-track" aria-label="Services précédents">
+        <button type="button" class="svc-nav" data-carrousel-dir="-1" aria-controls="svc-track" aria-label="Services précédents">
           {% include 'partials/icon.html' with name='chevron-right' class='w-5 h-5 rotate-180' stroke='2.25' %}
         </button>
-        <button type="button" class="svc-nav" data-svc-dir="1" aria-controls="svc-track" aria-label="Services suivants">
+        <button type="button" class="svc-nav" data-carrousel-dir="1" aria-controls="svc-track" aria-label="Services suivants">
           {% include 'partials/icon.html' with name='chevron-right' class='w-5 h-5' stroke='2.25' %}
         </button>
         <a href="{% url 'services:liste' %}" class="hx-btn hx-btn--glass !py-3 !px-5 text-sm ml-1">
@@ -488,11 +545,11 @@
 
   <!-- Carrousel : défilement continu, pause au survol / toucher / focus, glisser possible -->
   <div class="relative">
-    <div id="svc-track" class="svc-track" tabindex="0" role="region" aria-roledescription="carrousel" aria-label="Nos services">
+    <div id="svc-track" class="svc-track" data-carrousel tabindex="0" role="region" aria-roledescription="carrousel" aria-label="Nos services">
       {% for pass in "123" %}
       {% if services %}
         {% for service in services %}
-        <a href="{% url 'services:detail' service.slug %}" class="svc-slide group" {% if not forloop.parentloop.first %}aria-hidden="true" tabindex="-1"{% endif %}>
+        <a href="{% url 'services:detail' service.slug %}" class="svc-slide group" {% if not forloop.parentloop.first %}data-clone hidden aria-hidden="true" tabindex="-1"{% endif %}>
           <span class="svc-slide__num">{{ forloop.counter|stringformat:"02d" }}</span>
           <span class="svc-slide__icon">{% include 'partials/icon.html' with name=service.titre|service_icon class='w-7 h-7' stroke='1.75' %}</span>
           <h3 class="mt-6 text-lg font-bold text-white leading-snug">{{ service.titre }}</h3>
@@ -503,7 +560,7 @@
       {% else %}
         {% for item in "Installations électriques|zap,Automatisation intelligente|bot,Domotique|home,Solaire photovoltaïque|sun,Caméras de surveillance|camera,Dépannage électrique|wrench,Développement web|grid,Solutions sur mesure|sparkles"|split:"," %}
         {% with parts=item|split:"|" %}
-        <a href="{% url 'services:liste' %}" class="svc-slide group" {% if not forloop.parentloop.first %}aria-hidden="true" tabindex="-1"{% endif %}>
+        <a href="{% url 'services:liste' %}" class="svc-slide group" {% if not forloop.parentloop.first %}data-clone hidden aria-hidden="true" tabindex="-1"{% endif %}>
           <span class="svc-slide__num">{{ forloop.counter|stringformat:"02d" }}</span>
           <span class="svc-slide__icon">{% include 'partials/icon.html' with name=parts.1 class='w-7 h-7' stroke='1.75' %}</span>
           <h3 class="mt-6 text-lg font-bold text-white leading-snug">{{ parts.0 }}</h3>
@@ -517,98 +574,13 @@
     </div>
   </div>
 
-  <script>
-    (function () {
-      var track = document.getElementById('svc-track');
-      if (!track) return;
-      var reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-      var COPIES = 3, speed = 0.45;    // la liste est rendue 3 fois ; ~27 px/s
-      var paused = false, resumeTimer = null;
-
-      function setWidth() { return track.scrollWidth / COPIES; }
-      // Garde la position dans la copie du milieu : boucle infinie dans les deux sens.
-      function normalize(x) {
-        var w = setWidth();
-        while (x < w) x += w;
-        while (x >= 2 * w) x -= w;
-        return x;
-      }
-      var pos = 0;
-      function init() { pos = normalize(setWidth()); track.scrollLeft = pos; }
-      init();
-      window.addEventListener('resize', function () { pos = normalize(track.scrollLeft); track.scrollLeft = pos; });
-
-      function pause() { paused = true; clearTimeout(resumeTimer); }
-      function resumeLater(delay) {
-        clearTimeout(resumeTimer);
-        resumeTimer = setTimeout(function () {
-          pos = normalize(track.scrollLeft); track.scrollLeft = pos; paused = false;
-        }, delay || 1500);
-      }
-      function tick() {
-        if (!paused && !document.hidden) {
-          pos = normalize(pos + speed);
-          track.scrollLeft = pos;
-        }
-        requestAnimationFrame(tick);
-      }
-
-      track.addEventListener('mouseenter', pause);
-      track.addEventListener('mouseleave', function () { if (!dragging) resumeLater(400); });
-      track.addEventListener('focusin', pause);
-      track.addEventListener('focusout', function () { resumeLater(800); });
-      track.addEventListener('touchstart', pause, { passive: true });
-      track.addEventListener('touchend', function () { resumeLater(2500); }, { passive: true });
-      track.addEventListener('wheel', function () { pause(); resumeLater(2000); }, { passive: true });
-      track.addEventListener('dragstart', function (e) { e.preventDefault(); });
-
-      // Glisser à la souris (sans déclencher le lien en fin de glisser)
-      var dragging = false, moved = false, startX = 0, startLeft = 0;
-      track.addEventListener('pointerdown', function (e) {
-        if (e.pointerType !== 'mouse' || e.button !== 0) return;
-        dragging = true; moved = false; startX = e.clientX; startLeft = track.scrollLeft;
-        pause(); track.classList.add('is-dragging');
-      });
-      window.addEventListener('pointermove', function (e) {
-        if (!dragging) return;
-        if (Math.abs(e.clientX - startX) > 5) moved = true;
-        track.scrollLeft = startLeft - (e.clientX - startX);
-      });
-      window.addEventListener('pointerup', function () {
-        if (!dragging) return;
-        dragging = false; track.classList.remove('is-dragging');
-        pos = normalize(track.scrollLeft); track.scrollLeft = pos;
-        if (!track.matches(':hover')) resumeLater(1200);
-      });
-      track.addEventListener('click', function (e) { if (moved) { e.preventDefault(); moved = false; } }, true);
-
-      // Flèches (et touches ← → quand le carrousel a le focus)
-      function go(direction) {
-        var slide = track.querySelector('.svc-slide');
-        var step = slide ? slide.getBoundingClientRect().width + 20 : 320;
-        pause();
-        pos = normalize(track.scrollLeft); track.scrollLeft = pos;   // recentrage invisible
-        track.scrollTo({ left: pos + step * direction, behavior: reduce ? 'auto' : 'smooth' });
-        resumeLater(2600);
-      }
-      document.querySelectorAll('[data-svc-dir]').forEach(function (button) {
-        button.addEventListener('click', function () { go(Number(button.dataset.svcDir)); });
-      });
-      track.addEventListener('keydown', function (e) {
-        if (e.key === 'ArrowRight') { e.preventDefault(); go(1); }
-        if (e.key === 'ArrowLeft') { e.preventDefault(); go(-1); }
-      });
-
-      if (!reduce) requestAnimationFrame(tick);
-    })();
-  </script>
 </section>
 
 
 <!-- ===================================================
      COMPOSANTS POPULAIRES
 =================================================== -->
-<section class="py-20 bg-gray-50">
+<section class="py-20 bg-gray-50 overflow-hidden">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div class="text-center mb-12">
             <div class="section-tag mx-auto justify-center">
@@ -624,7 +596,33 @@
                 bien plus. Livraison partout au Bénin.</p>
         </div>
 
-        
+        {% if produits_vedette %}
+    </div>
+    <div id="produits-track" class="svc-track crl-light mt-2" data-carrousel data-vitesse="0.35" tabindex="0" role="region" aria-roledescription="carrousel" aria-label="Composants électroniques">
+      {% for pass in "123" %}{% for produit in produits_vedette %}
+      <a href="{% url 'boutique:detail' produit.slug %}" class="prod-slide group" {% if not forloop.parentloop.first %}data-clone hidden aria-hidden="true" tabindex="-1"{% endif %}>
+        <span class="prod-slide__media">
+          {% if produit.image %}
+          <img src="{{ produit.image|webp:480 }}" alt="{{ produit.nom }}" loading="lazy" decoding="async">
+          {% else %}
+          {% include 'partials/icon.html' with name='cpu' class='w-12 h-12 text-slate-300' stroke='1.25' %}
+          {% endif %}
+          {% if produit.stock == 0 %}<span class="prod-slide__stock bg-rose-500">Rupture</span>{% elif produit.en_vedette %}<span class="prod-slide__stock bg-blue-600">Populaire</span>{% endif %}
+        </span>
+        <span class="block p-4">
+          {% if produit.categorie %}<span class="block text-[11px] font-bold uppercase tracking-wider text-blue-600">{{ produit.categorie.nom }}</span>{% endif %}
+          <span class="mt-1 block font-bold text-slate-900 leading-snug line-clamp-2 group-hover:text-blue-700 transition-colors">{{ produit.nom }}</span>
+          <span class="mt-3 flex items-center justify-between gap-2">
+            <span class="text-lg font-black text-slate-900">{{ produit.prix|intcomma }} <span class="text-xs font-semibold text-slate-400">FCFA</span></span>
+            <span class="grid h-9 w-9 place-items-center rounded-xl bg-blue-50 text-blue-600 transition-colors group-hover:bg-blue-600 group-hover:text-white">{% include 'partials/icon.html' with name='arrow-right' class='w-4 h-4' stroke='2.25' %}</span>
+          </span>
+        </span>
+      </a>
+      {% endfor %}{% endfor %}
+    </div>
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        {% endif %}
+
         <div class="text-center mt-10">
             <a href="{% url 'boutique:liste' %}" class="btn-primary px-8 py-3.5">
                 Voir tous les composants
@@ -848,6 +846,7 @@
 {% endblock %}
 
 {% block extra_js %}
+<script defer src="{% static 'js/carrousel.js' %}"></script>
 <script>
 document.addEventListener('DOMContentLoaded', () => {
 

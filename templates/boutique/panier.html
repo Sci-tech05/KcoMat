@@ -1,6 +1,7 @@
 {% extends 'base.html' %}
 {% load kcomat_tags %}
 {% load humanize %}
+{% load static %}
 
 {% block title %}Mon panier{% endblock %}
 {% block robots %}noindex, nofollow{% endblock %}
@@ -26,9 +27,7 @@
             </div>
             <div>
                 <h1 class="text-3xl font-black">Mon panier</h1>
-                {% if panier and panier.items.all %}
-                <p class="text-gray-400 text-sm mt-0.5">{{ panier.nombre_articles }} article{{ panier.nombre_articles|pluralize }} sélectionné{{ panier.nombre_articles|pluralize }}</p>
-                {% endif %}
+                <p class="text-gray-400 text-sm mt-0.5" data-cart-count {% if not items %}hidden{% endif %}>{{ panier.nombre_articles }} article{{ panier.nombre_articles|pluralize }} sélectionné{{ panier.nombre_articles|pluralize }}</p>
             </div>
         </div>
     </div>
@@ -37,13 +36,12 @@
 <section class="py-10 bg-gray-50 min-h-screen">
     <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
 
-        {% if panier and panier.items.all %}
-        <div class="grid grid-cols-1 lg:grid-cols-5 gap-8">
+        <div class="grid grid-cols-1 lg:grid-cols-5 gap-8" data-cart-filled {% if not items %}hidden{% endif %}>
 
             <!-- ═══ LEFT: Articles (3/5) ═══ -->
             <div class="lg:col-span-3 space-y-4">
-                {% for item in panier.items.all %}
-                <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-5 flex items-center gap-4">
+                {% for item in items %}
+                <div class="cart-item bg-white rounded-2xl shadow-sm border border-gray-100 p-5 flex items-center gap-4" data-cart-item="{{ item.id }}">
 
                     <!-- Image -->
                     <div class="w-20 h-20 flex-shrink-0 bg-gray-50 rounded-xl overflow-hidden border border-gray-100">
@@ -69,17 +67,15 @@
                         {% endif %}
                         <p class="text-sm text-gray-400 mt-1">{{ item.produit.prix|intcomma }} FCFA / unité</p>
 
-                        <!-- Stepper quantité -->
-                        <form method="post" action="{% url 'boutique:modifier_item' item.id %}"
-                            class="flex items-center gap-2 mt-3" x-data="{ qty: {{ item.quantite }} }">
+                        <!-- Stepper quantité (mise à jour sans rechargement : static/js/panier.js) -->
+                        <form method="post" action="{% url 'boutique:modifier_item' item.id %}" class="flex items-center gap-2 mt-3" data-cart-qty>
                             {% csrf_token %}
                             <div class="flex items-center border border-gray-200 rounded-xl overflow-hidden">
-                                <button type="button" @click="qty = Math.max(1, qty - 1); $nextTick(() => $el.closest('form').submit())"
+                                <button type="button" data-step="-1" aria-label="Diminuer la quantité"
                                     class="w-8 h-8 flex items-center justify-center text-gray-500 hover:bg-gray-50 text-lg font-bold transition">−</button>
-                                <input type="number" name="quantite" x-model="qty" min="1" max="{{ item.produit.stock }}"
-                                    class="w-10 text-center text-sm font-bold border-none outline-none bg-transparent text-gray-900"
-                                    onchange="this.form.submit()" />
-                                <button type="button" @click="qty = Math.min({{ item.produit.stock }}, qty + 1); $nextTick(() => $el.closest('form').submit())"
+                                <input type="number" name="quantite" value="{{ item.quantite }}" min="1" max="{{ item.produit.stock }}" aria-label="Quantité"
+                                    class="w-10 text-center text-sm font-bold border-none outline-none bg-transparent text-gray-900" />
+                                <button type="button" data-step="1" aria-label="Augmenter la quantité"
                                     class="w-8 h-8 flex items-center justify-center text-gray-500 hover:bg-gray-50 text-lg font-bold transition">+</button>
                             </div>
                         </form>
@@ -87,9 +83,9 @@
 
                     <!-- Sous-total + supprimer -->
                     <div class="text-right flex-shrink-0">
-                        <p class="font-black text-green-600 text-lg">{{ item.sous_total|intcomma }}</p>
+                        <p class="font-black text-green-600 text-lg" data-cart-subtotal>{{ item.sous_total|intcomma }}</p>
                         <p class="text-xs text-gray-400 mb-2">FCFA</p>
-                        <form method="post" action="{% url 'boutique:supprimer_item' item.id %}">
+                        <form method="post" action="{% url 'boutique:supprimer_item' item.id %}" data-cart-remove>
                             {% csrf_token %}
                             <button type="submit"
                                 class="inline-flex items-center gap-1 text-xs text-red-400 hover:text-red-600 transition-colors">
@@ -124,13 +120,13 @@
 
                     <!-- Lines -->
                     <div class="p-6 space-y-3 border-b border-gray-50">
-                        {% for item in panier.items.all %}
-                        <div class="flex justify-between items-start gap-3">
+                        {% for item in items %}
+                        <div class="flex justify-between items-start gap-3" data-cart-line="{{ item.id }}">
                             <div class="flex-1 min-w-0">
                                 <p class="text-sm text-gray-700 font-medium truncate">{{ item.produit.nom }}</p>
-                                <p class="text-xs text-gray-400">× {{ item.quantite }}</p>
+                                <p class="text-xs text-gray-400">× <span data-cart-line-qty>{{ item.quantite }}</span></p>
                             </div>
-                            <span class="text-sm font-bold text-gray-800 flex-shrink-0">{{ item.sous_total|intcomma }} FCFA</span>
+                            <span class="text-sm font-bold text-gray-800 flex-shrink-0"><span data-cart-line-subtotal>{{ item.sous_total|intcomma }}</span> FCFA</span>
                         </div>
                         {% endfor %}
                     </div>
@@ -139,7 +135,7 @@
                     <div class="px-6 py-4 bg-gradient-to-r from-green-50 to-emerald-50">
                         <div class="flex justify-between items-center">
                             <span class="font-bold text-gray-700">Total</span>
-                            <span class="text-2xl font-black text-green-600">{{ panier.total|intcomma }} <span class="text-sm font-normal text-gray-400">FCFA</span></span>
+                            <span class="text-2xl font-black text-green-600"><span data-cart-total>{{ panier.total|intcomma }}</span> <span class="text-sm font-normal text-gray-400">FCFA</span></span>
                         </div>
                         <p class="text-xs text-gray-400 mt-1 flex items-center gap-1">
                             <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -179,9 +175,8 @@
             </div>
         </div>
 
-        {% else %}
-        <!-- Empty state -->
-        <div class="text-center py-24">
+        <!-- Empty state (affiché aussi après le retrait du dernier article, sans rechargement) -->
+        <div class="text-center py-24" data-cart-empty {% if items %}hidden{% endif %}>
             <div class="w-24 h-24 bg-gray-100 rounded-3xl flex items-center justify-center mx-auto mb-6">
                 <svg class="w-12 h-12 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
@@ -198,8 +193,11 @@
                 Voir la boutique
             </a>
         </div>
-        {% endif %}
 
     </div>
 </section>
+{% endblock %}
+
+{% block extra_js %}
+<script defer src="{% static 'js/panier.js' %}"></script>
 {% endblock %}

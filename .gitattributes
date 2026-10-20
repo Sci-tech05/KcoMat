@@ -1,0 +1,2 @@
+# Scripts shell exécutés sur le serveur Linux (PythonAnywhere) : toujours en fins de ligne LF
+*.sh text eol=lf
