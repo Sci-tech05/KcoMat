@@ -34,12 +34,17 @@ if [ -d "$SAUVEGARDE/media" ]; then
     cp -an "$SAUVEGARDE/media/." media/      # ne remplace rien d'existant
 fi
 
-echo "→ Dépendances, migrations, fichiers statiques"
 # shellcheck disable=SC1091
 source "$VENV/bin/activate"
+echo "→ Dépendances Python"
 pip install --quiet -r requirements.txt
+echo "→ Migrations de la base"
 python manage.py migrate --noinput
-python manage.py collectstatic --noinput --verbosity 0
+echo "→ Fichiers statiques : copie + compression gzip"
+echo "  (1 à 3 minutes la première fois ; ensuite seuls les fichiers modifiés sont retraités)"
+debut=$(date +%s)
+python manage.py collectstatic --noinput --verbosity 1
+echo "  Terminé en $(( $(date +%s) - debut )) s."
 
 echo "→ Nettoyage des caches Python (recréés automatiquement par Python au besoin)"
 find . -path ./node_modules -prune -o -type d -name __pycache__ -prune -exec rm -rf {} +
