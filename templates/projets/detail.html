@@ -56,21 +56,6 @@
                 {% include 'partials/video.html' with v=projet.video titre=projet.titre priorite=True vertical_max='24rem' %}
                 {% endif %}
 
-                <!-- Autres vidéos -->
-                {% if videos %}
-                <div>
-                    <h3 class="font-bold text-gray-700 text-sm uppercase tracking-wider mb-3">Plus de vidéos du projet</h3>
-                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
-                        {% for vid in videos %}
-                        <figure>
-                            {% include 'partials/video.html' with v=vid.video titre=vid.legende|default:projet.titre vertical_max='18rem' %}
-                            {% if vid.legende %}<figcaption class="mt-2 text-sm font-semibold text-gray-700 text-center">{{ vid.legende }}</figcaption>{% endif %}
-                        </figure>
-                        {% endfor %}
-                    </div>
-                </div>
-                {% endif %}
-
                 <!-- Description -->
                 <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-8">
                     <h2 class="font-black text-gray-900 text-2xl mb-5 flex items-center gap-2">
@@ -176,6 +161,26 @@
                         Nous contacter
                     </a>
                 </div>
+
+                <!-- Vidéos supplémentaires : empilées sous « Un projet similaire ? » -->
+                {% if videos %}
+                <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-5">
+                    <h3 class="flex items-center gap-2 font-bold text-gray-900 text-sm uppercase tracking-wider mb-4">
+                        <span class="grid h-7 w-7 place-items-center rounded-lg bg-rose-50 text-rose-600">
+                            <svg viewBox="0 0 24 24" fill="currentColor" class="w-3.5 h-3.5"><path d="M8 5.14v13.72a1 1 0 0 0 1.52.85l10.96-6.86a1 1 0 0 0 0-1.7L9.52 4.29A1 1 0 0 0 8 5.14z"/></svg>
+                        </span>
+                        Plus de vidéos <span class="ml-auto text-xs font-semibold normal-case tracking-normal text-gray-400">{{ videos|length }}</span>
+                    </h3>
+                    <div class="space-y-5">
+                        {% for vid in videos %}
+                        <figure>
+                            {% include 'partials/video.html' with v=vid.video titre=vid.legende|default:projet.titre vertical_max='15rem' %}
+                            {% if vid.legende %}<figcaption class="mt-2 text-sm font-semibold text-gray-700">{{ vid.legende }}</figcaption>{% endif %}
+                        </figure>
+                        {% endfor %}
+                    </div>
+                </div>
+                {% endif %}
             </div>
         </div>
     </div>
