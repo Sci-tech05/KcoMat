@@ -54,10 +54,11 @@ class ProjetAdmin(admin.ModelAdmin):
         ('Informations générales', {
             'fields': ('titre', 'slug', 'categorie', 'description_courte', 'description'),
         }),
-        ('Vidéo du projet', {
-            'description': "Collez simplement le lien d'une vidéo YouTube ou TikTok : l'aperçu et le lecteur s'affichent "
-                           "automatiquement sur le site. Aucune image ni fichier à téléverser.",
-            'fields': ('lien_video', 'apercu'),
+        ('Média principal', {
+            'description': "Choisissez SOIT le lien d'une vidéo YouTube / TikTok (l'aperçu s'affiche automatiquement), "
+                           "SOIT une image principale, mais pas les deux. Les vidéos supplémentaires s'ajoutent dans "
+                           "l'onglet « Vidéos supplémentaires » ; les images supplémentaires ne sont pas possibles.",
+            'fields': ('lien_video', 'image', 'apercu'),
         }),
         ('Détails', {
             'fields': ('client', 'localite', 'date_realisation', 'technologies'),
@@ -68,10 +69,16 @@ class ProjetAdmin(admin.ModelAdmin):
     )
     inlines = [VideoProjetInline]
 
-    @admin.display(description='Vidéo')
+    def _apercu(self, obj, largeur):
+        if obj.image:
+            return format_html('<img src="{}" alt="" style="width:{}px;aspect-ratio:16/9;object-fit:cover;'
+                               'border-radius:10px;border:1px solid #E5E9F2">', obj.image.url, largeur)
+        return apercu_video(obj.video, largeur)
+
+    @admin.display(description='Média')
     def miniature_liste(self, obj):
-        return apercu_video(obj.video, 120)
+        return self._apercu(obj, 120)
 
     @admin.display(description='Aperçu actuel')
     def apercu(self, obj):
-        return apercu_video(obj.video, 320) if obj.pk else "Enregistrez pour voir l'aperçu."
+        return self._apercu(obj, 320) if obj.pk else "Enregistrez pour voir l'aperçu."

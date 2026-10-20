@@ -3,7 +3,7 @@
 
 {% block title %}{{ projet.titre }} — Projet réalisé{% endblock %}
 {% block meta_description %}{{ projet.description_courte }}{% endblock %}
-{% block og_image %}{% if projet.video.miniature_sd %}{{ projet.video.miniature_sd }}{% else %}{{ block.super }}{% endif %}{% endblock %}
+{% block og_image %}{% if projet.image %}{{ SITE_URL }}{{ projet.image.url }}{% elif projet.video.miniature_sd %}{{ projet.video.miniature_sd }}{% else %}{{ block.super }}{% endif %}{% endblock %}
 
 {% block content %}
 
@@ -52,7 +52,11 @@
             <div class="lg:col-span-2 space-y-8">
 
                 <!-- Vidéo principale -->
-                {% if projet.video %}
+                {% if projet.image %}
+                <figure class="overflow-hidden rounded-2xl border border-slate-200 bg-slate-100 shadow-sm">
+                    <img src="{{ projet.image|webp:1400 }}" fetchpriority="high" decoding="async" alt="{{ projet.titre }}" class="w-full h-auto max-h-[36rem] object-cover" />
+                </figure>
+                {% elif projet.video %}
                 {% include 'partials/video.html' with v=projet.video titre=projet.titre priorite=True vertical_max='24rem' %}
                 {% endif %}
 

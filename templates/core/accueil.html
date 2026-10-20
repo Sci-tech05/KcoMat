@@ -79,7 +79,7 @@
     </script>
 
     <div class="relative flex-1 flex items-center">
-        <div class="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-14 sm:py-20 lg:py-16">
+        <div class="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 pb-10 sm:py-20 lg:py-16">
             <div class="grid lg:grid-cols-[1.08fr_1fr] gap-14 lg:gap-10 xl:gap-16 items-center">
 
                 <!-- ============ Texte ============ -->
@@ -91,18 +91,18 @@
                         </span>
                     </div>
 
-                    <h1 class="hx-title hx-in mt-7 text-5xl sm:text-6xl xl:text-[4.6rem]" style="--d:.15s">
+                    <h1 class="hx-title hx-in mt-5 sm:mt-7 text-[2.35rem] min-[380px]:text-[2.6rem] sm:text-6xl xl:text-[4.6rem]" style="--d:.15s">
                         Construisez
                         <span class="hx-gradient-text">l'Afrique de demain.</span>
                     </h1>
 
-                    <p class="hx-lead hx-in mt-6 text-lg sm:text-xl max-w-xl" style="--d:.28s">
+                    <p class="hx-lead hx-in mt-4 sm:mt-6 text-[0.98rem] sm:text-xl max-w-xl" style="--d:.28s">
                         <span class="text-white font-semibold">Maîtrisez les technologies d'aujourd'hui</span> :
                         formations 100&nbsp;% pratiques en électronique, IoT, IA et drones, composants livrés partout
                         au Bénin et solutions sur mesure, depuis Lokossa.
                     </p>
 
-                    <div class="hx-in mt-9 flex flex-col sm:flex-row gap-3.5" style="--d:.4s">
+                    <div class="hx-in mt-7 sm:mt-9 flex flex-col sm:flex-row gap-3" style="--d:.4s">
                         <a href="{% url 'formations:liste' %}" class="hx-btn hx-btn--primary">
                             {% include 'partials/icon.html' with name='graduation' class='w-5 h-5' %}
                             Explorer les formations
@@ -115,7 +115,7 @@
                     </div>
 
                     <!-- Preuve sociale -->
-                    <div class="hx-in mt-11 flex flex-wrap items-center gap-x-8 gap-y-5" style="--d:.52s">
+                    <div class="hx-in mt-8 sm:mt-11 flex flex-wrap items-center gap-x-8 gap-y-4" style="--d:.52s">
                         <div class="flex items-center gap-3.5">
                             <div class="flex -space-x-2.5" aria-hidden="true">
                                 <span class="w-9 h-9 rounded-full ring-2 ring-[#060A14] bg-gradient-to-br from-blue-500 to-cyan-400 grid place-items-center text-xs font-bold">KC</span>
@@ -139,7 +139,7 @@
 
                     {% with f=formations_vedette.0 %}
                     <a href="{% if f %}{% url 'formations:detail' f.slug %}{% else %}{% url 'formations:liste' %}{% endif %}"
-                       class="hx-in hx-glass md:hidden mt-10 flex items-center gap-4 p-4 !rounded-2xl" style="--d:.6s">
+                       class="hx-in hx-glass md:hidden mt-8 flex items-center gap-4 p-4 !rounded-2xl" style="--d:.6s">
                         <span class="grid place-items-center w-12 h-12 rounded-xl bg-gradient-to-br from-blue-500 to-cyan-400 text-white flex-shrink-0">
                             {% include 'partials/icon.html' with name='wifi' class='w-5 h-5' stroke='2' %}
                         </span>
@@ -377,7 +377,9 @@
     <a href="{% url 'projets:detail' projet.slug %}" class="real-slide group" {% if not forloop.parentloop.first %}data-clone hidden aria-hidden="true" tabindex="-1"{% endif %}>
       {% with v=projet.video %}
       <span class="real-slide__media">
-        {% if v.miniature %}
+        {% if projet.image %}
+        <img src="{{ projet.image|webp:800 }}" alt="" loading="lazy" decoding="async">
+        {% elif v.miniature %}
         <img src="{{ v.miniature_hd }}" data-thumb-fallback="{{ v.miniatures_repli }}" alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer">
         {% elif v %}
         <span class="vid__tiktok"></span>
@@ -409,7 +411,7 @@
 <!-- ===================================================
      FORMATIONS PHARES
 =================================================== -->
-<section class="py-20 bg-white">
+<section class="py-20 bg-white overflow-hidden">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <!-- Header -->
         <div class="text-center mb-12">
@@ -428,11 +430,12 @@
             </p>
         </div>
 
-        <!-- Formation Grid -->
+        <!-- Formations : carrousel (avance d'une carte toutes les 1,5 s) -->
         {% if formations_vedette %}
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {% for formation in formations_vedette %}
-            <a href="{% url 'formations:detail' formation.slug %}" class="formation-card block">
+    </div>
+    <div id="formations-track" class="svc-track crl-light mt-2" data-carrousel data-intervalle="1500" tabindex="0" role="region" aria-roledescription="carrousel" aria-label="Formations">
+            {% for pass in "123" %}{% for formation in formations_vedette %}
+            <a href="{% url 'formations:detail' formation.slug %}" class="formation-card form-slide group" {% if not forloop.parentloop.first %}data-clone hidden aria-hidden="true" tabindex="-1"{% endif %}>
                 <!-- Image -->
                 <div class="relative overflow-hidden h-48 bg-gradient-to-br from-blue-900 to-blue-700">
                     {% if formation.image %}
@@ -483,8 +486,9 @@
                     </div>
                 </div>
             </a>
-            {% endfor %}
-        </div>
+            {% endfor %}{% endfor %}
+    </div>
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {% else %}
         <div class="text-center py-16">
           <div class="w-16 h-16 bg-blue-50 rounded-2xl flex items-center justify-center mx-auto mb-4">

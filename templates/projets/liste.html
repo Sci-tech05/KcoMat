@@ -26,7 +26,10 @@
                 <!-- Aperçu vidéo (miniature YouTube ou carte TikTok) -->
                 {% with v=projet.video %}
                 <div class="relative aspect-video overflow-hidden bg-slate-900">
-                    {% if v.miniature %}
+                    {% if projet.image %}
+                    <img src="{{ projet.image|webp:800 }}" loading="lazy" decoding="async" alt=""
+                        class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                    {% elif v.miniature %}
                     <img src="{{ v.miniature_hd }}" data-thumb-fallback="{{ v.miniatures_repli }}" loading="lazy" decoding="async" alt="" referrerpolicy="no-referrer"
                         class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
                     {% elif v %}
