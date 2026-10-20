@@ -8,6 +8,10 @@
  *   </div>
  *   <button data-carrousel-dir="1" aria-controls="x">
  *
+ * Deux modes automatiques :
+ *   - data-vitesse="0.45"   défilement continu (pixels par image) ;
+ *   - data-intervalle="1500" avance d'une carte toutes les 1,5 s (pas à pas).
+ *
  * - Boucle infinie seulement si les éléments dépassent la largeur visible ; sinon affichage simple centré.
  * - Pause au survol, au toucher et au focus ; glisser à la souris ; flèches et touches ← →.
  * - Aucune animation automatique si l'utilisateur préfère réduire les animations.
@@ -37,9 +41,13 @@
 
     var COPIES = 3;
     var vitesse = parseFloat(track.dataset.vitesse || '0.45');
+    var intervalle = parseInt(track.dataset.intervalle || '0', 10);
     var enPause = false, minuteur = null, pos = 0;
 
-    function largeurJeu() { return track.scrollWidth / COPIES; }
+    // largeur exacte d'un jeu de cartes : écart entre la 1re carte et sa 1re copie
+    function largeurJeu() {
+      return clones.length ? clones[0].offsetLeft - originaux[0].offsetLeft : track.scrollWidth / COPIES;
+    }
     // garde la position dans la copie du milieu : boucle dans les deux sens
     function normaliser(x) {
       var w = largeurJeu();
@@ -100,12 +108,21 @@
     });
     track.addEventListener('click', function (e) { if (deplace) { e.preventDefault(); deplace = false; } }, true);
 
-    function aller(sens) {
+    function largeurPas() {
       var element = originaux[0];
-      var pas = element ? element.getBoundingClientRect().width + gap : 320;
-      pause();
+      return element ? element.getBoundingClientRect().width + gap : 320;
+    }
+    function glisserDe(sens) {
       pos = normaliser(track.scrollLeft); track.scrollLeft = pos;
-      track.scrollTo({ left: pos + pas * sens, behavior: reduce ? 'auto' : 'smooth' });
+      // s'aligne sur le début de la carte suivante (ou précédente)
+      var pas = largeurPas();
+      var cible = (Math.round(pos / pas) + sens) * pas;
+      pos = cible;
+      track.scrollTo({ left: cible, behavior: reduce ? 'auto' : 'smooth' });
+    }
+    function aller(sens) {
+      pause();
+      glisserDe(sens);
       reprendre(2600);
     }
     boutons(track).forEach(function (bouton) {
@@ -116,7 +133,12 @@
       if (e.key === 'ArrowLeft') { e.preventDefault(); aller(-1); }
     });
 
-    if (!reduce) requestAnimationFrame(boucle);
+    if (reduce) return;
+    if (intervalle > 0) {
+      setInterval(function () { if (!enPause && !document.hidden) glisserDe(1); }, intervalle);
+    } else {
+      requestAnimationFrame(boucle);
+    }
   }
 
   function demarrer() {

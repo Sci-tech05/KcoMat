@@ -37,11 +37,16 @@ class AnalyseLienVideoTests(TestCase):
 
 
 class ProjetVideoTests(TestCase):
-    def test_publication_exige_un_lien_video(self):
+    def test_publication_exige_une_video_ou_une_image(self):
         projet = Projet(titre='Serre connectée', description_courte='x', description='x', actif=True)
-        with self.assertRaises(ValidationError) as ctx:
+        with self.assertRaises(ValidationError):
             projet.full_clean(exclude=['categorie'])
-        self.assertIn('lien_video', ctx.exception.message_dict)
+        projet.image = 'projets/serre.jpg'
+        projet.full_clean(exclude=['categorie'])   # image seule : valide
+        projet.lien_video = 'https://youtu.be/dQw4w9WgXcQ'
+        with self.assertRaises(ValidationError):   # vidéo + image : refusé
+            projet.full_clean(exclude=['categorie'])
+        projet.image = None
         projet.lien_video = 'https://vimeo.com/1'
         with self.assertRaises(ValidationError):
             projet.full_clean(exclude=['categorie'])
