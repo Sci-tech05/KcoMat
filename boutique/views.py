@@ -1,5 +1,6 @@
 import json
 import logging
+from django.db.models import Count, Q
 from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib import messages
 from django.conf import settings
@@ -179,7 +180,7 @@ def _mark_commande_paid(commande, request=None):
 
 
 def liste_produits(request):
-    categories = CategorieProduit.objects.all()
+    categories = CategorieProduit.objects.annotate(n=Count('produits', filter=Q(produits__actif=True)))
     cat_slug = request.GET.get('categorie', '')
     search = request.GET.get('q', '')
     produits = Produit.objects.filter(actif=True)
@@ -189,6 +190,7 @@ def liste_produits(request):
         produits = produits.filter(nom__icontains=search)
     ctx = {
         'produits': produits,
+        'total': Produit.objects.filter(actif=True).count(),
         'categories': categories,
         'cat_active': cat_slug,
         'search': search,

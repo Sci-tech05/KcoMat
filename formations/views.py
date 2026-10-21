@@ -13,7 +13,7 @@ from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST
 from django.contrib.auth.decorators import login_required
 from django.utils import timezone
-from django.db.models import Prefetch
+from django.db.models import Count, Prefetch, Q
 from django.utils.text import slugify
 from .models import Formation, FormationSessionPassee, Inscription, CategorieFormation
 from core.avis import resume as resume_avis
@@ -264,13 +264,15 @@ def _jitsi_embed_payload(inscription, user):
 
 
 def liste_formations(request):
-    categories = CategorieFormation.objects.all()
+    # nombre de formations publiées par catégorie (affiché dans les filtres)
+    categories = CategorieFormation.objects.annotate(n=Count('formations', filter=Q(formations__actif=True)))
     cat_slug = request.GET.get('categorie', '')
-    formations = Formation.objects.filter(actif=True)
-    if cat_slug:
-        formations = formations.filter(categorie__slug=cat_slug)
+    # ordre choisi dans l'admin (colonne « Ordre »), puis alphabétique
+    toutes = Formation.objects.filter(actif=True).order_by('ordre', 'titre')
+    formations = toutes.filter(categorie__slug=cat_slug) if cat_slug else toutes
     ctx = {
         'formations': formations,
+        'total': toutes.count(),
         'categories': categories,
         'cat_active': cat_slug,
         'title': 'Nos Formations',

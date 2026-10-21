@@ -204,3 +204,12 @@ class InscriptionUniqueTests(TestCase):
         self.assertIn(reverse('formations:paiement_formation', args=[insc.pk]), page)
         self.assertIn(reverse('boutique:paiement', args=[commande.pk]), page)
         self.assertIn('Continuer le paiement', page)
+
+
+class OrdreAffichageTests(TestCase):
+    def test_page_formations_suit_la_colonne_ordre(self):
+        for titre, ordre in (('Zèbre', 10), ('Alpha', 30), ('Milieu', 20)):
+            Formation.objects.create(titre=titre, description_courte='x', description='x', prix=1000, ordre=ordre)
+        html = self.client.get(reverse('formations:liste')).content.decode()
+        positions = [html.index(f'>{t}<') if f'>{t}<' in html else html.index(t) for t in ('Zèbre', 'Milieu', 'Alpha')]
+        self.assertEqual(positions, sorted(positions))

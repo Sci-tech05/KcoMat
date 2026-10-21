@@ -1265,3 +1265,14 @@ body {
 .pay-cta:hover { filter: brightness(1.08); color: #fff; }
 @keyframes pay-pulse { 0%, 100% { box-shadow: 0 6px 14px -8px rgba(234, 88, 12, .9); } 50% { box-shadow: 0 0 0 4px rgba(245, 158, 11, .25), 0 6px 14px -8px rgba(234, 88, 12, .9); } }
 @media (prefers-reduced-motion: reduce) { .pay-cta { animation: none; } }
+
+/* Filtres par catégorie (Formations, Boutique, Projets — templates/partials/filtres.html) */
+.car-tab { white-space: nowrap; flex-shrink: 0; }
+.flt-rail { scrollbar-width: none; scroll-snap-type: x proximity; -webkit-overflow-scrolling: touch; }
+.flt-rail::-webkit-scrollbar { display: none; }
+.flt-rail > * { scroll-snap-align: start; }
+@media (max-width: 639px) {
+    /* fondu à droite : on devine qu'il y a d'autres catégories en faisant glisser */
+    .flt-rail { -webkit-mask-image: linear-gradient(90deg, #000 85%, transparent); mask-image: linear-gradient(90deg, #000 85%, transparent); scroll-padding-inline: 1rem; }
+    .flt-rail > :last-child { margin-right: 1.5rem; }
+}
