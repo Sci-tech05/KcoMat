@@ -1,0 +1,23 @@
+{% extends 'accounts/_carte.html' %}
+
+{% block title %}Nouveau mot de passe{% endblock %}
+{% block carte_titre %}{% if validlink %}Choisissez un nouveau mot de passe{% else %}Lien expiré ou déjà utilisé{% endif %}{% endblock %}
+{% block carte_icone_fond %}{% if validlink %}bg-blue-50 text-blue-600{% else %}bg-rose-50 text-rose-600{% endif %}{% endblock %}
+{% block carte_texte %}{% if validlink %}Au moins 8 caractères, pas uniquement des chiffres.{% else %}Ce lien n'est plus valable. Demandez-en un nouveau : cela ne prend qu'une minute.{% endif %}{% endblock %}
+
+{% block carte_corps %}
+{% if validlink %}
+<form method="post" class="space-y-5" novalidate>
+    {% csrf_token %}
+    {% include 'accounts/_champ.html' with field=form.new_password1 icone='lock' autocomplete='new-password' %}
+    {% include 'accounts/_champ.html' with field=form.new_password2 icone='lock' autocomplete='new-password' %}
+    <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-full transition-colors">
+        Enregistrer le mot de passe
+    </button>
+</form>
+{% else %}
+<a href="{% url 'accounts:mdp_oublie' %}" class="flex w-full items-center justify-center rounded-full bg-blue-600 py-3 text-sm font-bold text-white transition hover:bg-blue-700">
+    Demander un nouveau lien
+</a>
+{% endif %}
+{% endblock %}

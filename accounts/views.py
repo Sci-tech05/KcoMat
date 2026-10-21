@@ -1,38 +1,85 @@
+import hashlib
+
 from django.shortcuts import render, redirect
 from django.http import JsonResponse
 from django.contrib.auth import authenticate, login, logout, update_session_auth_hash
-from django.contrib.auth.forms import UserCreationForm, AuthenticationForm
+from django.contrib.auth.forms import AuthenticationForm
 from django.contrib.auth.decorators import login_required
+from django.contrib.auth.models import User
 from django.contrib import messages
+from django.core.cache import cache
+from django.utils.http import url_has_allowed_host_and_scheme
+from core.admin_security import _get_client_ip
+
+# Anti-essais en série : au-delà de 5 échecs pour un même identifiant, pause de 15 minutes
+ESSAIS_MAX = 5
+PAUSE_SECONDES = 15 * 60
 from formations.models import Inscription
 from boutique.models import Commande
 from .models import ProfilUtilisateur
-from .forms import UserUpdateForm, ProfilUtilisateurForm, KcomatPasswordChangeForm
+from .forms import InscriptionForm, UserUpdateForm, ProfilUtilisateurForm, KcomatPasswordChangeForm
+
+
+def _page_suivante(request, defaut='accounts:dashboard'):
+    """Adresse « next » seulement si elle reste sur ce site (évite les redirections vers un site pirate)."""
+    suivante = request.POST.get('next') or request.GET.get('next')
+    if suivante and url_has_allowed_host_and_scheme(
+        suivante, allowed_hosts={request.get_host()}, require_https=request.is_secure(),
+    ):
+        return suivante
+    return defaut
 
 
 def connexion(request):
     if request.user.is_authenticated:
         return redirect('accounts:dashboard')
-    form = AuthenticationForm(request, data=request.POST or None)
-    if request.method == 'POST' and form.is_valid():
+    donnees = None
+    if request.method == 'POST':
+        donnees = request.POST.copy()
+        identifiant = donnees.get('username', '').strip()
+        # Connexion possible avec l'adresse e-mail à la place du nom d'utilisateur
+        if '@' in identifiant:
+            compte = User.objects.filter(email__iexact=identifiant).order_by('-last_login').first()
+            if compte:
+                donnees['username'] = compte.get_username()
+    form = AuthenticationForm(request, data=donnees)
+    bloque = False
+    if request.method == 'POST':
+        empreinte = hashlib.sha256(('%s|%s' % (_get_client_ip(request), donnees.get('username', '').strip().lower())).encode()).hexdigest()
+        cle = 'kx-connexion:' + empreinte
+        essais = cache.get(cle, 0)
+        if essais >= ESSAIS_MAX:
+            bloque = True
+        elif form.is_valid():
+            cache.delete(cle)
+        else:
+            cache.set(cle, essais + 1, PAUSE_SECONDES)
+    if bloque:
+        form = AuthenticationForm(request)
+        messages.error(request, "Trop de tentatives de connexion. Réessayez dans 15 minutes ou utilisez « Mot de passe oublié ».")
+    elif request.method == 'POST' and form.is_valid():
         user = form.get_user()
         login(request, user)
         messages.success(request, f"Bienvenue, {user.first_name or user.username} !")
-        return redirect(request.GET.get('next', 'accounts:dashboard'))
-    return render(request, 'accounts/connexion.html', {'form': form, 'title': 'Connexion'})
+        return redirect(_page_suivante(request))
+    return render(request, 'accounts/connexion.html', {
+        'form': form, 'title': 'Connexion', 'next': _page_suivante(request, ''),
+    })
 
 
 def inscription(request):
     if request.user.is_authenticated:
         return redirect('accounts:dashboard')
-    form = UserCreationForm(request.POST or None)
+    form = InscriptionForm(request.POST or None)
     if request.method == 'POST' and form.is_valid():
         user = form.save()
-        login(request, user)
+        login(request, user, backend='django.contrib.auth.backends.ModelBackend')
         request.session['proposer_notifications'] = True  # propose l'abonnement aux notifications
         messages.success(request, "✅ Compte créé avec succès ! Bienvenue chez KcoMat.")
-        return redirect('accounts:dashboard')
-    return render(request, 'accounts/inscription.html', {'form': form, 'title': 'Créer un compte'})
+        return redirect(_page_suivante(request))
+    return render(request, 'accounts/inscription.html', {
+        'form': form, 'title': 'Créer un compte', 'next': _page_suivante(request, ''),
+    })
 
 
 def deconnexion(request):

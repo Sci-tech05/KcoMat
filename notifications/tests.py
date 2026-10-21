@@ -177,7 +177,8 @@ class PublicationTests(TestCase):
 class InscriptionEtPartenairesTests(TestCase):
     def test_creation_de_compte_propose_les_notifications(self):
         response = self.client.post(reverse('accounts:inscription'), {
-            'username': 'nouveau', 'password1': 'Kcomat-Test-2026!', 'password2': 'Kcomat-Test-2026!'}, follow=True)
+            'username': 'nouveau', 'email': 'nouveau@example.com',
+            'password1': 'Kcomat-Test-2026!', 'password2': 'Kcomat-Test-2026!'}, follow=True)
         self.assertContains(response, 'data-auto-open="1"')
         # proposé une seule fois
         self.assertContains(self.client.get(reverse('accounts:dashboard')), 'data-auto-open="0"')

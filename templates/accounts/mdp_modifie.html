@@ -1,0 +1,13 @@
+{% extends 'accounts/_carte.html' %}
+
+{% block title %}Mot de passe modifié{% endblock %}
+{% block carte_icone_fond %}bg-emerald-50 text-emerald-600{% endblock %}
+{% block carte_icone %}M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z{% endblock %}
+{% block carte_titre %}Mot de passe modifié{% endblock %}
+{% block carte_texte %}Votre nouveau mot de passe est enregistré. Vous pouvez vous connecter.{% endblock %}
+
+{% block carte_corps %}
+<a href="{% url 'accounts:connexion' %}" class="flex w-full items-center justify-center rounded-full bg-blue-600 py-3 text-sm font-bold text-white transition hover:bg-blue-700">
+    Se connecter
+</a>
+{% endblock %}
