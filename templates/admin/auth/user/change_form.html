@@ -1,0 +1,46 @@
+{% extends "admin/change_form.html" %}
+{% load i18n %}
+
+{% comment %}
+  Fiche d'un utilisateur dans l'admin : en-tête « profil » (identité, rôles, dates)
+  au-dessus des onglets du formulaire.
+{% endcomment %}
+
+{% block form_top %}
+{% if original %}
+{% with u=original %}
+<section class="kx-profile" aria-label="Profil de {{ u.get_username }}">
+    <div class="kx-profile__body">
+        <div class="kx-profile__avatar" aria-hidden="true">
+            {% if u.first_name or u.last_name %}{{ u.first_name|first|upper }}{{ u.last_name|first|upper }}{% else %}{{ u.username|first|upper }}{% endif %}
+        </div>
+        <div class="kx-profile__id">
+            <h2 class="kx-profile__name">{{ u.get_full_name|default:u.username }}</h2>
+            <p class="kx-profile__handle">@{{ u.username }}{% if u.email %} · {{ u.email }}{% endif %}</p>
+            <div class="kx-profile__badges">
+                {% if u.is_superuser %}<span class="kx-profile__badge kx-profile__badge--gold"><i class="fas fa-crown"></i> Superutilisateur</span>{% endif %}
+                {% if u.is_staff %}<span class="kx-profile__badge kx-profile__badge--blue"><i class="fas fa-shield-alt"></i> Accès admin</span>{% endif %}
+                {% if u.is_active %}<span class="kx-profile__badge kx-profile__badge--green"><i class="fas fa-check-circle"></i> Compte actif</span>
+                {% else %}<span class="kx-profile__badge kx-profile__badge--red"><i class="fas fa-ban"></i> Compte désactivé</span>{% endif %}
+                {% if u.id == request.user.id %}<span class="kx-profile__badge"><i class="fas fa-user"></i> C'est vous</span>{% endif %}
+            </div>
+        </div>
+        <div class="kx-profile__actions">
+            {% if u.id == request.user.id %}
+            <a class="kx-profile__btn" href="{% url 'admin:password_change' %}"><i class="fas fa-key"></i> Changer mon mot de passe</a>
+            {% else %}
+            <a class="kx-profile__btn" href="{% url 'admin:auth_user_password_change' u.pk %}"><i class="fas fa-key"></i> Définir le mot de passe</a>
+            {% endif %}
+            {% if u.email %}<a class="kx-profile__btn--ghost" href="mailto:{{ u.email }}"><i class="fas fa-envelope"></i> Écrire</a>{% endif %}
+        </div>
+    </div>
+    <div class="kx-profile__stats">
+        <div class="kx-profile__stat"><span>Membre depuis</span><b>{{ u.date_joined|date:"j F Y" }}</b></div>
+        <div class="kx-profile__stat"><span>Dernière connexion</span><b>{% if u.last_login %}{{ u.last_login|date:"j M Y · H:i" }}{% else %}Jamais{% endif %}</b></div>
+        <div class="kx-profile__stat"><span>Groupes</span><b>{% for g in u.groups.all %}{{ g.name }}{% if not forloop.last %}, {% endif %}{% empty %}Aucun{% endfor %}</b></div>
+        <div class="kx-profile__stat"><span>Permissions</span><b>{% if u.is_superuser %}Toutes{% else %}{{ u.user_permissions.count }} directe{{ u.user_permissions.count|pluralize }}{% endif %}</b></div>
+    </div>
+</section>
+{% endwith %}
+{% endif %}
+{% endblock %}
