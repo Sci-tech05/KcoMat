@@ -80,7 +80,7 @@
 
     <div class="relative flex-1 flex items-center">
         <div class="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8 pb-10 sm:py-20 lg:py-16">
-            <div class="grid lg:grid-cols-[1.08fr_1fr] gap-14 lg:gap-10 xl:gap-16 items-center">
+            <div class="grid grid-cols-1 lg:grid-cols-[1.08fr_1fr] gap-14 lg:gap-10 xl:gap-16 items-center">
 
                 <!-- ============ Texte ============ -->
                 <div>
@@ -139,7 +139,7 @@
 
                     {% with f=formations_vedette.0 %}
                     <a href="{% if f %}{% url 'formations:detail' f.slug %}{% else %}{% url 'formations:liste' %}{% endif %}"
-                       class="hx-in hx-glass md:hidden mt-8 flex items-center gap-4 p-4 !rounded-2xl" style="--d:.6s">
+                       class="hx-in hx-glass lg:hidden mt-8 flex items-center gap-4 p-4 !rounded-2xl" style="--d:.6s">
                         <span class="grid place-items-center w-12 h-12 rounded-xl bg-gradient-to-br from-blue-500 to-cyan-400 text-white flex-shrink-0">
                             {% include 'partials/icon.html' with name='wifi' class='w-5 h-5' stroke='2' %}
                         </span>
@@ -156,7 +156,7 @@
                 </div>
 
                 <!-- ============ Composition « labo » ============ -->
-                <div class="relative hx-in hidden md:block" style="--d:.3s">
+                <div class="relative hx-in hidden lg:block" style="--d:.3s">
                     <div class="hx-float" style="--d:-1s">
                         <div id="hero-lab" class="hx-glass relative p-5 sm:p-6 transition-transform duration-300 ease-out will-change-transform">
                             <!-- Barre de fenêtre -->

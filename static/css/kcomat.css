@@ -1276,3 +1276,34 @@ body {
     .flt-rail { -webkit-mask-image: linear-gradient(90deg, #000 85%, transparent); mask-image: linear-gradient(90deg, #000 85%, transparent); scroll-padding-inline: 1rem; }
     .flt-rail > :last-child { margin-right: 1.5rem; }
 }
+
+/* =====================================================================
+   PARTAGE — templates/partials/partage.html
+   ===================================================================== */
+.kx-share { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem; }
+.kx-share__label { margin-right: .25rem; font-size: .75rem; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: #64748B; }
+.kx-share__btn { display: inline-flex; align-items: center; gap: .45rem; height: 2.5rem; padding: 0 .9rem; border-radius: .8rem;
+    font-size: .8125rem; font-weight: 700; color: #334155; background: #fff; border: 1px solid #E2E8F0; cursor: pointer;
+    transition: transform .2s, background-color .2s, border-color .2s, color .2s; }
+.kx-share__btn svg { width: 1rem; height: 1rem; flex-shrink: 0; }
+.kx-share__btn:hover { transform: translateY(-1px); }
+.kx-share__btn:focus-visible { outline: 2px solid #60A5FA; outline-offset: 2px; }
+.kx-share__btn--natif { color: #fff; background: linear-gradient(135deg, #0A84FF, #2563EB); border-color: transparent; }
+.kx-share__btn--wa:hover { color: #fff; background: #16A34A; border-color: #16A34A; }
+.kx-share__btn--fb:hover { color: #fff; background: #1877F2; border-color: #1877F2; }
+.kx-share__btn--in:hover { color: #fff; background: #0A66C2; border-color: #0A66C2; }
+.kx-share__btn--lien:hover, .kx-share__btn--lien.is-ok { color: #047857; background: #ECFDF5; border-color: #A7F3D0; }
+.kx-share__btn--wa svg { color: #16A34A; } .kx-share__btn--fb svg { color: #1877F2; } .kx-share__btn--in svg { color: #0A66C2; }
+.kx-share__btn--wa:hover svg, .kx-share__btn--fb:hover svg, .kx-share__btn--in:hover svg { color: #fff; }
+/* sur un hero foncé : boutons « verre » */
+.kx-share--sombre .kx-share__label { color: #94A3B8; }
+.kx-share--sombre .kx-share__btn:not(.kx-share__btn--natif) { color: #E2E8F0; background: rgba(255, 255, 255, .06); border-color: rgba(255, 255, 255, .14);
+    -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); }
+.kx-share--sombre .kx-share__btn--wa svg { color: #4ADE80; } .kx-share--sombre .kx-share__btn--fb svg { color: #60A5FA; } .kx-share--sombre .kx-share__btn--in svg { color: #7DD3FC; }
+/* téléphone : icônes seules pour tenir sur une ligne (sauf « Partager » natif) */
+@media (max-width: 479px) {
+    .kx-share__label { flex-basis: 100%; }
+    .kx-share__btn:not(.kx-share__btn--natif) { width: 2.75rem; height: 2.75rem; padding: 0; justify-content: center; }
+    .kx-share__btn:not(.kx-share__btn--natif) span { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+    .kx-share__btn--natif { height: 2.75rem; }
+}

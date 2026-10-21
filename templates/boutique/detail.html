@@ -4,7 +4,7 @@
 
 {% block title %}{{ produit.nom }} — Boutique{% endblock %}
 {% block meta_description %}{{ produit.description_courte }}{% endblock %}
-{% block og_image %}{% if produit.image %}{{ SITE_URL }}{{ produit.image.url }}{% else %}{{ block.super }}{% endif %}{% endblock %}
+{% block og_image %}{% if produit.image %}{{ SITE_URL }}{{ produit.image|og_image }}{% else %}{{ block.super }}{% endif %}{% endblock %}
 {% block structured_data %}
 <script type="application/ld+json">
 {
@@ -13,7 +13,7 @@
   "name": "{{ produit.nom|escapejs }}",
   "description": "{{ produit.description_courte|escapejs }}",
   "url": "{{ CANONICAL_URL }}",
-  {% if produit.image %}"image": "{{ SITE_URL }}{{ produit.image.url }}",{% endif %}
+  {% if produit.image %}"image": "{{ SITE_URL }}{{ produit.image|og_image }}",{% endif %}
   {% if produit.categorie %}"category": "{{ produit.categorie.nom|escapejs }}",{% endif %}
   "brand": {"@type": "Brand", "name": "KcoMat"},
   {% include 'partials/avis_jsonld.html' %}

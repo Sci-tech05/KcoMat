@@ -67,3 +67,32 @@ class AvisTests(TestCase):
     def test_type_inconnu(self):
         self.client.force_login(self.client_kc)
         self.assertEqual(self.client.post(reverse('core:donner_avis', args=['projet', 1]), {'note': 5}).status_code, 404)
+
+
+class PartageTests(TestCase):
+    def test_image_apercu_1200x630_jpeg(self):
+        import shutil, tempfile
+        from io import BytesIO
+        from PIL import Image
+        from django.core.files.uploadedfile import SimpleUploadedFile
+        from django.test import override_settings
+        from core.templatetags.kcomat_tags import og_image
+        dossier = tempfile.mkdtemp()
+        try:
+            with override_settings(MEDIA_ROOT=dossier):
+                tampon = BytesIO()
+                Image.new('RGBA', (900, 900), (10, 132, 255, 128)).save(tampon, 'PNG')
+                f = Formation.objects.create(titre='Drone', description_courte='Vol', description='x', prix=1000,
+                                             image=SimpleUploadedFile('drone.png', tampon.getvalue(), 'image/png'))
+                url = og_image(f.image)
+                self.assertTrue(url.endswith('/cache/og/formations/drone.jpg'), url)
+                with Image.open(f'{dossier}/cache/og/formations/drone.jpg') as img:
+                    self.assertEqual((img.format, img.size), ('JPEG', (1200, 630)))
+        finally:
+            shutil.rmtree(dossier, ignore_errors=True)
+
+    def test_boutons_de_partage_sur_formation(self):
+        f = Formation.objects.create(titre='Domotique', description_courte='Maison connectée', description='x', prix=1000)
+        html = self.client.get(reverse('formations:detail', args=[f.slug])).content.decode()
+        for attendu in ('wa.me/?text=Domotique', 'facebook.com/sharer/sharer.php', 'linkedin.com/sharing', 'data-partage-copier'):
+            self.assertIn(attendu, html)
