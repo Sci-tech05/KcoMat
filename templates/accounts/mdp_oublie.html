@@ -1,0 +1,24 @@
+{% extends 'accounts/_carte.html' %}
+
+{% block title %}Mot de passe oublié{% endblock %}
+{% block carte_titre %}Mot de passe oublié ?{% endblock %}
+{% block carte_texte %}Indiquez l'adresse e-mail de votre compte : nous vous envoyons un lien pour choisir un nouveau mot de passe.{% endblock %}
+
+{% block carte_corps %}
+<form method="post" class="space-y-5" novalidate>
+    {% csrf_token %}
+    {% include 'accounts/_champ.html' with field=form.email icone='email' autocomplete='email' %}
+    <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-full transition-colors">
+        Recevoir le lien
+    </button>
+</form>
+<hr class="my-6 border-gray-100" />
+<p class="text-center text-sm text-gray-500">
+    Vous vous en souvenez ?
+    <a href="{% url 'accounts:connexion' %}" class="text-blue-600 font-semibold hover:underline">Se connecter</a>
+</p>
+<p class="mt-3 text-center text-xs text-gray-400">
+    Pas d'adresse e-mail sur votre compte ?
+    <a href="https://wa.me/{{ KCOMAT.whatsapp }}?text={{ 'Bonjour, j’ai oublié le mot de passe de mon compte KcoMat.'|urlencode }}" target="_blank" rel="noopener" class="font-semibold text-emerald-600 hover:underline">Écrivez-nous sur WhatsApp</a>
+</p>
+{% endblock %}

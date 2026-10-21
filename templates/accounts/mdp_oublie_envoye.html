@@ -1,0 +1,17 @@
+{% extends 'accounts/_carte.html' %}
+
+{% block title %}Vérifiez vos e-mails{% endblock %}
+{% block carte_icone_fond %}bg-emerald-50 text-emerald-600{% endblock %}
+{% block carte_icone %}M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z{% endblock %}
+{% block carte_titre %}Vérifiez votre boîte e-mail{% endblock %}
+{% block carte_texte %}Si un compte correspond à cette adresse, vous allez recevoir un lien pour choisir un nouveau mot de passe. Il est valable 3 jours.{% endblock %}
+
+{% block carte_corps %}
+<ul class="space-y-2 rounded-2xl bg-gray-50 p-4 text-sm text-gray-600">
+    <li>• Pensez à regarder dans les <strong>spams</strong> ou « Promotions ».</li>
+    <li>• Le message vient de <strong>{{ KCOMAT.email|default:"KcoMat" }}</strong>.</li>
+</ul>
+<a href="{% url 'accounts:connexion' %}" class="mt-6 flex w-full items-center justify-center rounded-full border border-gray-200 py-3 text-sm font-bold text-gray-700 transition hover:bg-gray-50">
+    Retour à la connexion
+</a>
+{% endblock %}

@@ -118,30 +118,30 @@
                         {% csrf_token %}
                         <div class="grid sm:grid-cols-2 gap-4">
                             <div>
-                                <label class="form-label">{{ form.nom.label }}</label>
+                                <label class="form-label" for="{{ form.nom.id_for_label }}">{{ form.nom.label }}</label>
                                 {{ form.nom }}
                                 {% if form.nom.errors %}<p class="form-error">{{ form.nom.errors.0 }}</p>{% endif %}
                             </div>
                             <div>
-                                <label class="form-label">{{ form.email.label }}</label>
+                                <label class="form-label" for="{{ form.email.id_for_label }}">{{ form.email.label }}</label>
                                 {{ form.email }}
                                 {% if form.email.errors %}<p class="form-error">{{ form.email.errors.0 }}</p>{% endif %}
                             </div>
                         </div>
                         <div class="grid sm:grid-cols-2 gap-4">
                             <div>
-                                <label class="form-label">{{ form.telephone.label }} <span
+                                <label class="form-label" for="{{ form.telephone.id_for_label }}">{{ form.telephone.label }} <span
                                         class="text-gray-400 font-normal">(optionnel)</span></label>
                                 {{ form.telephone }}
                             </div>
                             <div>
-                                <label class="form-label">{{ form.sujet.label }}</label>
+                                <label class="form-label" for="{{ form.sujet.id_for_label }}">{{ form.sujet.label }}</label>
                                 {{ form.sujet }}
                                 {% if form.sujet.errors %}<p class="form-error">{{ form.sujet.errors.0 }}</p>{% endif %}
                             </div>
                         </div>
                         <div>
-                            <label class="form-label">{{ form.message.label }}</label>
+                            <label class="form-label" for="{{ form.message.id_for_label }}">{{ form.message.label }}</label>
                             {{ form.message }}
                             {% if form.message.errors %}<p class="form-error">{{ form.message.errors.0 }}</p>{% endif %}
                         </div>

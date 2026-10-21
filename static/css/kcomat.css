@@ -180,6 +180,12 @@ body {
     color: #ffffff;
 }
 
+/* Téléphone : liens du pied de page assez hauts pour le doigt (≥ 32 px) */
+@media (max-width: 767px) {
+    .footer-link { min-height: 2rem; }
+    footer ul.space-y-2 > li + li { margin-top: .25rem; }
+}
+
 .footer-link::before {
     content: '→';
     color: #3b82f6;

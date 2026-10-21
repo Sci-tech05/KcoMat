@@ -1,0 +1,12 @@
+{% autoescape off %}Bonjour {{ user.first_name|default:user.get_username }},
+
+Vous avez demandé à changer le mot de passe de votre compte KcoMat ({{ user.get_username }}).
+
+Cliquez sur ce lien pour en choisir un nouveau (valable 3 jours, utilisable une seule fois) :
+{{ protocol }}://{{ domain }}{% url 'accounts:mdp_nouveau' uidb64=uid token=token %}
+
+Si vous n'êtes pas à l'origine de cette demande, ignorez simplement ce message : votre mot de passe actuel reste valable.
+
+L'équipe KcoMat — Lokossa, Bénin
+WhatsApp : +229 01 96 78 00 99
+{% endautoescape %}
