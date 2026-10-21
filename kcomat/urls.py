@@ -54,6 +54,12 @@ urlpatterns = [
     path('carrieres/', include('carrieres.urls', namespace='carrieres')),
     path('partenariats/', include('partenariats.urls', namespace='partenariats')),
     path('accounts/', include('accounts.urls', namespace='accounts')),
+    # Connexion avec Google (django-allauth). Ses pages de compte renvoient vers celles du site.
+    path('auth/login/', RedirectView.as_view(pattern_name='accounts:connexion', query_string=True)),
+    path('auth/signup/', RedirectView.as_view(pattern_name='accounts:inscription', query_string=True)),
+    path('auth/logout/', RedirectView.as_view(pattern_name='accounts:deconnexion')),
+    path('auth/password/reset/', RedirectView.as_view(pattern_name='accounts:mdp_oublie')),
+    path('auth/', include('allauth.urls')),
     path('notifications/', include('notifications.urls', namespace='notifications')),
 ] 
 

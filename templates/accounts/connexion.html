@@ -21,6 +21,8 @@
 
             {% if messages %}{% for msg in messages %}<div class="alert-{{ msg.tags }} mb-5">{{ msg }}</div>{% endfor %}{% endif %}
 
+            {% include 'accounts/_bouton_google.html' %}
+
             <form method="post" autocomplete="on" class="space-y-5">
                 {% csrf_token %}
 
