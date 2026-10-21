@@ -36,7 +36,7 @@
 <section class="py-10 bg-gray-50 min-h-screen">
     <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
 
-        <div class="grid grid-cols-1 lg:grid-cols-5 gap-8" data-cart-filled {% if not items %}hidden{% endif %}>
+        <div class="grid grid-cols-1 lg:grid-cols-5 gap-8 items-start" data-colonnes data-cart-filled {% if not items %}hidden{% endif %}>
 
             <!-- ═══ LEFT: Articles (3/5) ═══ -->
             <div class="lg:col-span-3 space-y-4">
@@ -112,7 +112,7 @@
             <!-- ═══ RIGHT: Résumé (2/5) ═══ -->
             <div class="lg:col-span-2 space-y-4">
                 <!-- Résumé card -->
-                <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden sticky top-24">
+                <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
                     <!-- Header -->
                     <div class="bg-gradient-to-r from-gray-900 to-gray-800 px-6 py-4">
                         <h2 class="font-bold text-white text-lg">Résumé de la commande</h2>
