@@ -14,7 +14,7 @@ from projets.models import Projet
 
 
 def accueil(request):
-    formations_vedette = Formation.objects.filter(actif=True).order_by('-en_vedette', '-created_at')[:10]
+    formations_vedette = Formation.objects.filter(actif=True).order_by('ordre', 'titre')[:10]
     services = Service.objects.filter(actif=True)[:6]
     # composants mis en avant d'abord, puis les plus récents (la section n'est jamais vide)
     produits_vedette = (Produit.objects.filter(actif=True).select_related('categorie')

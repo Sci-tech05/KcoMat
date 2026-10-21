@@ -45,6 +45,10 @@ class Formation(models.Model):
     actif = models.BooleanField(default=True)
     nouveau = models.BooleanField(default=False)
     en_vedette = models.BooleanField(default=False)
+    ordre = models.PositiveSmallIntegerField(
+        "Ordre", default=0, db_index=True,
+        help_text="Ordre d'affichage sur le site : le plus petit nombre apparaît en premier (10, 20, 30… pour pouvoir intercaler).",
+    )
     objectifs = models.TextField(blank=True, help_text="Un objectif par ligne")
     prerequis = models.TextField(blank=True, help_text="Un prérequis par ligne")
     programme = models.TextField(
@@ -56,7 +60,7 @@ class Formation(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
-        ordering = ['titre']
+        ordering = ['ordre', 'titre']
         verbose_name = "Formation"
 
     def save(self, *args, **kwargs):
