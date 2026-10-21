@@ -15,6 +15,7 @@ from django.views.decorators.http import require_POST
 from django.utils import timezone
 from .models import Produit, CategorieProduit, Panier, PanierItem, Commande, CommandeItem
 from core.avis import resume as resume_avis
+from core.notifications_admin import notifier_admin
 from .forms import CommandeForm
 from core.pdf_invoices import build_invoice_response
 from api.fedapay_service import create_fedapay_transaction, verify_fedapay_payment
@@ -171,6 +172,25 @@ def _send_commande_invoice_email(commande):
     message.send(fail_silently=False)
 
 
+def _notifier_admin_commande(commande, request=None):
+    """E-mail à l'admin : commande payée, à préparer."""
+    articles = '\n'.join(
+        f"{item.quantite} × {item.nom_produit} — {item.sous_total():,} FCFA".replace(',', ' ')
+        for item in commande.items.all()
+    )
+    notifier_admin(
+        type_evenement='commande', sujet=f"Commande payée #{commande.pk} — {commande.prenom} {commande.nom}",
+        titre=f'Nouvelle commande payée #{commande.pk}',
+        intro=f"{commande.prenom} {commande.nom} a payé sa commande : elle est à préparer et à expédier.",
+        details=[
+            ('Montant', f"{commande.montant_total:,} FCFA".replace(',', ' ')), ('Articles', articles),
+            ('Client', f"{commande.prenom} {commande.nom}"), ('E-mail', commande.email), ('Téléphone', commande.telephone),
+            ('Livraison', f"{commande.adresse_livraison}\n{commande.ville}"), ('Transaction FedaPay', commande.fedapay_transaction_id),
+        ],
+        message=commande.notes, objet=commande, repondre_a=commande.email, request=request,
+    )
+
+
 def _mark_commande_paid(commande, request=None):
     if commande.statut == 'payee':
         return
@@ -178,6 +198,7 @@ def _mark_commande_paid(commande, request=None):
     commande.payee_le = timezone.now()
     commande.save(update_fields=['statut', 'payee_le'])
     _finalize_paid_commande(commande, request=request)
+    _notifier_admin_commande(commande, request=request)
     _send_commande_invoice_email(commande)
 
 

@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="fr">
+<body style="margin:0;padding:0;background:#F3F5FA;font-family:Segoe UI,Roboto,Helvetica,Arial,sans-serif;color:#0F172A;">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#F3F5FA;padding:28px 12px;">
+    <tr><td align="center">
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:600px;background:#ffffff;border-radius:18px;overflow:hidden;border:1px solid #E5E9F2;">
+        <tr><td style="background:#0B1220;padding:18px 28px;">
+          <span style="color:#ffffff;font-size:18px;font-weight:800;">KcoMat</span>
+          <span style="color:#94A3B8;font-size:12px;float:right;line-height:24px;">{{ date|date:"j M Y · H:i" }}</span>
+        </td></tr>
+        <tr><td style="height:4px;background:{{ couleur }};line-height:4px;font-size:0;">&nbsp;</td></tr>
+        <tr><td style="padding:26px 28px 8px;">
+          <p style="margin:0 0 6px;font-size:28px;line-height:1;">{{ picto }}</p>
+          <p style="margin:0 0 6px;font-size:21px;font-weight:800;color:#0F172A;">{{ titre }}</p>
+          <p style="margin:0;font-size:15px;line-height:1.55;color:#475569;">{{ intro }}</p>
+        </td></tr>
+        <tr><td style="padding:18px 28px 6px;">
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border:1px solid #EEF2F7;border-radius:12px;border-collapse:separate;">
+            {% for libelle, valeur in details %}
+            <tr>
+              <td style="padding:10px 14px;width:38%;font-size:13px;color:#64748B;vertical-align:top;{% if not forloop.last %}border-bottom:1px solid #EEF2F7;{% endif %}">{{ libelle }}</td>
+              <td style="padding:10px 14px;font-size:14px;font-weight:600;color:#0F172A;vertical-align:top;{% if not forloop.last %}border-bottom:1px solid #EEF2F7;{% endif %}">{{ valeur|linebreaksbr }}</td>
+            </tr>
+            {% endfor %}
+          </table>
+        </td></tr>
+        {% if message %}
+        <tr><td style="padding:14px 28px 4px;">
+          <p style="margin:0 0 6px;font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#64748B;">Message</p>
+          <p style="margin:0;padding:14px 16px;border-left:4px solid {{ couleur }};background:#F8FAFC;border-radius:8px;font-size:14px;line-height:1.6;color:#334155;">{{ message|linebreaksbr }}</p>
+        </td></tr>
+        {% endif %}
+        <tr><td style="padding:22px 28px 26px;">
+          {% if lien_admin %}<a href="{{ lien_admin }}" style="display:inline-block;background:{{ couleur }};color:#ffffff;text-decoration:none;font-weight:700;font-size:14px;padding:12px 22px;border-radius:999px;">Ouvrir dans l'administration</a>{% endif %}
+          {% if repondre_a %}<p style="margin:14px 0 0;font-size:13px;color:#64748B;">Cliquez sur « Répondre » pour écrire directement à <strong>{{ repondre_a }}</strong>.</p>{% endif %}
+        </td></tr>
+        <tr><td style="padding:14px 28px;border-top:1px solid #EEF2F7;font-size:12px;color:#94A3B8;">Notification automatique du site KcoMat — Lokossa, Bénin</td></tr>
+      </table>
+    </td></tr>
+  </table>
+</body>
+</html>
