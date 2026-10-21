@@ -1,0 +1,18 @@
+{% extends 'accounts/_carte.html' %}
+{% comment %}Complément d'inscription après Google (rare : pseudo déjà pris ou e-mail absent).{% endcomment %}
+
+{% block title %}Finaliser votre compte{% endblock %}
+{% block carte_icone %}M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z{% endblock %}
+{% block carte_titre %}Dernière étape{% endblock %}
+{% block carte_texte %}Vous vous connectez avec Google. Vérifiez votre pseudo et votre adresse e-mail pour créer votre compte KcoMat.{% endblock %}
+
+{% block carte_corps %}
+<form method="post" action="{% url 'socialaccount_signup' %}" class="space-y-5" novalidate>
+    {% csrf_token %}
+    {% if form.non_field_errors %}<p class="rounded-2xl bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700">{{ form.non_field_errors.0 }}</p>{% endif %}
+    {% if form.username %}{% include 'accounts/_champ.html' with field=form.username icone='user' autocomplete='username' %}{% endif %}
+    {% if form.email %}{% include 'accounts/_champ.html' with field=form.email icone='email' autocomplete='email' %}{% endif %}
+    {{ redirect_field }}
+    <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-full transition-colors">Créer mon compte</button>
+</form>
+{% endblock %}

@@ -110,6 +110,11 @@ THIRD_PARTY_APPS = [
     'crispy_forms',
     'crispy_tailwind',
     'django_htmx',
+    # Connexion avec Google (django-allauth) — uniquement Google, pas d'autre fournisseur
+    'allauth',
+    'allauth.account',
+    'allauth.socialaccount',
+    'allauth.socialaccount.providers.google',
 ]
 
 LOCAL_APPS = [
@@ -138,6 +143,7 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'django_htmx.middleware.HtmxMiddleware',
+    'allauth.account.middleware.AccountMiddleware',
 ]
 
 ROOT_URLCONF = 'kcomat.urls'
@@ -208,6 +214,43 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 LOGIN_URL = '/accounts/connexion/'
 LOGIN_REDIRECT_URL = '/accounts/dashboard/'
 LOGOUT_REDIRECT_URL = '/'
+
+# ============================================================
+# CONNEXION AVEC GOOGLE (django-allauth)
+# ============================================================
+# Les pages Connexion / Inscription / Mot de passe restent celles du site (app accounts) ;
+# allauth ne sert qu'au bouton « Continuer avec Google » (adresses sous /auth/).
+# Identifiants à créer sur https://console.cloud.google.com (ID client OAuth « Application Web »),
+# URI de redirection : https://<votre-domaine>/auth/google/login/callback/
+AUTHENTICATION_BACKENDS = [
+    'django.contrib.auth.backends.ModelBackend',
+    'allauth.account.auth_backends.AuthenticationBackend',
+]
+GOOGLE_CLIENT_ID = env_value('GOOGLE_CLIENT_ID', default='')
+GOOGLE_CLIENT_SECRET = env_value('GOOGLE_CLIENT_SECRET', default='')
+# Le bouton Google n'apparaît que si les identifiants sont renseignés dans le .env
+GOOGLE_LOGIN_ACTIVE = bool(GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET)
+SOCIALACCOUNT_PROVIDERS = {
+    'google': {
+        'APPS': [{'client_id': GOOGLE_CLIENT_ID, 'secret': GOOGLE_CLIENT_SECRET, 'key': ''}],
+        'SCOPE': ['profile', 'email'],
+        'AUTH_PARAMS': {'access_type': 'online', 'prompt': 'select_account'},
+        'OAUTH_PKCE_ENABLED': True,
+    },
+}
+SOCIALACCOUNT_LOGIN_ON_GET = False             # connexion seulement par bouton (POST + CSRF)
+SOCIALACCOUNT_AUTO_SIGNUP = True               # 1re connexion Google = compte créé directement
+SOCIALACCOUNT_EMAIL_AUTHENTICATION = True      # e-mail Google déjà connu → même compte KcoMat
+SOCIALACCOUNT_EMAIL_AUTHENTICATION_AUTO_CONNECT = True
+SOCIALACCOUNT_STORE_TOKENS = False             # aucun jeton Google conservé
+SOCIALACCOUNT_ADAPTER = 'accounts.adapters.AdaptateurGoogle'
+ACCOUNT_ADAPTER = 'accounts.adapters.AdaptateurCompte'
+ACCOUNT_AUTHENTICATION_METHOD = 'username_email'
+ACCOUNT_EMAIL_REQUIRED = True
+ACCOUNT_UNIQUE_EMAIL = True
+ACCOUNT_USERNAME_REQUIRED = True               # pseudo créé automatiquement à partir du nom Google
+ACCOUNT_EMAIL_VERIFICATION = 'none'            # Google a déjà vérifié l'adresse
+ACCOUNT_LOGOUT_ON_GET = False
 
 # Admin security
 _admin_url_raw = env_value('ADMIN_URL', default='admin/')

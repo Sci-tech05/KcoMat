@@ -12,6 +12,7 @@ def site_context(request):
         'SITE_URL': site_url,
         'CANONICAL_URL': f"{site_url}{request.path}",
         'VAPID_PUBLIC_KEY': settings.VAPID_PUBLIC_KEY,
+        'GOOGLE_LOGIN_ACTIVE': settings.GOOGLE_LOGIN_ACTIVE,
         # Après création de compte : ouvre automatiquement la proposition de notifications
         'PROPOSER_NOTIFICATIONS': request.session.pop('proposer_notifications', False) if hasattr(request, 'session') else False,
     }
