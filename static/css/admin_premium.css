@@ -661,3 +661,6 @@ fieldset.module.aligned label.control-label { padding-top: .7rem; }
 .layout-fixed #jazzy-sidebar .sidebar { padding-bottom: 1.5rem; }
 /* pas d'animation de la barre pendant le chargement (classe retirée par admin_premium.js) */
 .kx-preload .main-sidebar, .kx-preload .main-sidebar *, .kx-preload .content-wrapper, .kx-preload .main-header { transition: none !important; }
+
+/* Formations : champ « Ordre » compact dans la liste */
+.model-formation #result_list td.field-ordre input { width: 5.5rem; min-width: 0; text-align: center; font-weight: 700; }

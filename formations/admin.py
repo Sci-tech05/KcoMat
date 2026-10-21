@@ -52,10 +52,11 @@ class CategorieFormationAdmin(admin.ModelAdmin):
 class FormationAdmin(admin.ModelAdmin):
     change_list_template = 'admin/formations/formation/change_list.html'
     actions = ['publier', 'masquer', notifier_abonnes]
-    list_display = ['vignette', 'titre', 'categorie', 'prix', 'duree', 'places_disponibles', 'actif', 'en_vedette', 'nouveau']
+    list_display = ['vignette', 'titre', 'categorie', 'prix', 'duree', 'places_disponibles', 'actif', 'en_vedette', 'ordre']
     list_display_links = ['titre']
     list_filter = ['actif', 'en_vedette', 'nouveau', 'categorie', 'niveau']
-    list_editable = ['actif', 'en_vedette', 'nouveau']
+    list_editable = ['actif', 'en_vedette', 'ordre']
+    ordering = ['ordre', 'titre']
     search_fields = ['titre', 'description']
     prepopulated_fields = {'slug': ('titre',)}
     fieldsets = (
@@ -70,7 +71,7 @@ class FormationAdmin(admin.ModelAdmin):
             'fields': ('objectifs', 'programme', 'prerequis', 'public_cible', 'debouches', 'materiel_fourni')
         }),
         ('Statut et mise en avant', {
-            'fields': ('actif', 'nouveau', 'en_vedette')
+            'fields': ('actif', 'ordre', 'en_vedette', 'nouveau')
         }),
     )
     inlines = [FormationSessionPasseeInline]
