@@ -4,7 +4,7 @@
 
 {% block title %}{{ formation.titre }} — Formation{% endblock %}
 {% block meta_description %}{{ formation.description_courte }}{% endblock %}
-{% block og_image %}{% if formation.image %}{{ SITE_URL }}{{ formation.image.url }}{% else %}{{ block.super }}{% endif %}{% endblock %}
+{% block og_image %}{% if formation.image %}{{ SITE_URL }}{{ formation.image|og_image }}{% else %}{{ block.super }}{% endif %}{% endblock %}
 {% block structured_data %}
 <script type="application/ld+json">
 {
@@ -13,7 +13,7 @@
   "name": "{{ formation.titre|escapejs }}",
   "description": "{{ formation.description_courte|escapejs }}",
   "url": "{{ CANONICAL_URL }}",
-  {% if formation.image %}"image": "{{ SITE_URL }}{{ formation.image.url }}",{% endif %}
+  {% if formation.image %}"image": "{{ SITE_URL }}{{ formation.image|og_image }}",{% endif %}
   "inLanguage": "fr",
   "educationalLevel": "{{ formation.get_niveau_display|escapejs }}",
   "provider": {"@id": "{{ SITE_URL }}/#organisation", "@type": "Organization", "name": "KcoMat", "url": "{{ SITE_URL }}/"},
@@ -109,6 +109,11 @@
               <div class="font-semibold text-white">Officielle KcoMat</div>
             </div>
           </div>
+        </div>
+
+        <div class="mt-8">
+          {% capture as image_partage %}{% if formation.image %}{{ SITE_URL }}{{ formation.image|og_image }}{% endif %}{% endcapture %}
+          {% include 'partials/partage.html' with titre=formation.titre texte=formation.description_courte image=image_partage style='sombre' %}
         </div>
       </div>
 

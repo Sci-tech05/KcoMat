@@ -53,6 +53,46 @@ def webp(image, width=800):
         return original_url
 
 
+OG_CACHE_DIR = 'cache/og'
+OG_TAILLE = (1200, 630)
+
+
+@register.filter
+def og_image(image):
+    """
+    URL d'une image d'aperçu de partage (WhatsApp, Facebook, LinkedIn) : JPEG 1200 × 630
+    recadré au centre, léger (< 300 Ko), générée une fois. Renvoie '' en cas de souci.
+    Usage : <meta property="og:image" content="{{ SITE_URL }}{{ formation.image|og_image }}">
+    """
+    if not image:
+        return ''
+    try:
+        source = Path(image.path)
+        relative = Path(OG_CACHE_DIR, image.name).with_suffix('.jpg')
+        target = Path(settings.MEDIA_ROOT, relative)
+        if not target.exists() or target.stat().st_mtime < source.stat().st_mtime:
+            target.parent.mkdir(parents=True, exist_ok=True)
+            with Image.open(source) as img:
+                img = ImageOps.exif_transpose(img)
+                if img.mode in ('RGBA', 'LA', 'P'):
+                    # transparence -> fond blanc (le JPEG n'a pas de canal alpha)
+                    img = img.convert('RGBA')
+                    fond = Image.new('RGB', img.size, (255, 255, 255))
+                    fond.paste(img, mask=img.split()[-1])
+                    img = fond
+                img = ImageOps.fit(img.convert('RGB'), OG_TAILLE, Image.LANCZOS)
+                temp = target.with_name(target.name + '.tmp')
+                img.save(temp, 'JPEG', quality=82, optimize=True, progressive=True)
+            os.replace(temp, target)
+        return settings.MEDIA_URL + filepath_to_uri(relative.as_posix())
+    except Exception:
+        logger.warning("Image de partage impossible pour %s", getattr(image, 'name', image), exc_info=True)
+        try:
+            return image.url
+        except ValueError:
+            return ''
+
+
 @register.filter
 def split(value, delimiter=','):
     """Split a string by delimiter and return a list. Usage: {{ value|split:"," }}"""

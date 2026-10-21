@@ -3,7 +3,7 @@
 
 {% block title %}{{ service.titre }} — Services{% endblock %}
 {% block meta_description %}{{ service.description_courte }}{% endblock %}
-{% block og_image %}{% if service.image %}{{ SITE_URL }}{{ service.image.url }}{% else %}{{ block.super }}{% endif %}{% endblock %}
+{% block og_image %}{% if service.image %}{{ SITE_URL }}{{ service.image|og_image }}{% else %}{{ block.super }}{% endif %}{% endblock %}
 
 {% block content %}
 
