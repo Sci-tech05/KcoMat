@@ -1,6 +1,8 @@
 import json
+from urllib.parse import urlencode
 import logging
 from django.db.models import Count, Q
+from django.utils.cache import patch_vary_headers
 from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib import messages
 from django.conf import settings
@@ -181,22 +183,38 @@ def _mark_commande_paid(commande, request=None):
 
 def liste_produits(request):
     categories = CategorieProduit.objects.annotate(n=Count('produits', filter=Q(produits__actif=True)))
-    cat_slug = request.GET.get('categorie', '')
-    search = request.GET.get('q', '')
-    produits = Produit.objects.filter(actif=True)
+    cat_slug = request.GET.get('categorie', '').strip()
+    search = request.GET.get('q', '').strip()[:80]
+    produits = Produit.objects.filter(actif=True).select_related('categorie')
     if cat_slug:
         produits = produits.filter(categorie__slug=cat_slug)
     if search:
-        produits = produits.filter(nom__icontains=search)
+        # chaque mot doit apparaître dans le nom, la référence, la description courte ou la catégorie
+        for mot in search.split():
+            produits = produits.filter(
+                Q(nom__icontains=mot) | Q(reference__icontains=mot)
+                | Q(description_courte__icontains=mot) | Q(categorie__nom__icontains=mot)
+            )
     ctx = {
         'produits': produits,
         'total': Produit.objects.filter(actif=True).count(),
         'categories': categories,
         'cat_active': cat_slug,
         'search': search,
+        'url_tous': reverse('boutique:liste'),
         'title': 'Boutique — Composants Électroniques',
     }
-    return render(request, 'boutique/liste.html', ctx)
+    # Recherche / filtre sans rechargement : seulement les résultats, les pastilles et le compteur
+    # (sauf restauration d'historique par htmx, qui attend la page complète)
+    if request.htmx and not request.htmx.history_restore_request:
+        reponse = render(request, 'boutique/_resultats_htmx.html', ctx)
+        # adresse propre dans la barre du navigateur (sans « ?q=&categorie= » vides), partageable
+        params = urlencode([(k, v) for k, v in (('categorie', cat_slug), ('q', search)) if v])
+        reponse['HX-Push-Url'] = ctx['url_tous'] + (f'?{params}' if params else '')
+    else:
+        reponse = render(request, 'boutique/liste.html', ctx)
+    patch_vary_headers(reponse, ['HX-Request'])
+    return reponse
 
 
 def detail_produit(request, slug):

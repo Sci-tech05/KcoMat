@@ -12,15 +12,21 @@
     nb            nombre d'éléments affichés
     mot           nom au singulier pour le compteur (« formation », « composant »…)
     recherche     (facultatif) texte d'aide du champ de recherche ; affiche la recherche si présent
+    live          (facultatif) True : recherche et catégories sans rechargement (htmx) ;
+                  la page doit contenir un bloc #resultats, et la vue renvoyer les résultats
+                  + les pastilles et le compteur (partials/_filtres_nav.html, _filtres_compte.html avec oob=True)
 {% endcomment %}
 <div class="mb-8 rounded-3xl border border-slate-200/80 bg-white p-4 sm:p-5 shadow-[0_8px_30px_-16px_rgba(15,23,42,.18)]">
     {% if recherche %}
-    <form method="get" role="search" class="mb-4 flex">
-        {% if cat_active %}<input type="hidden" name="categorie" value="{{ cat_active }}">{% endif %}
+    <form method="get" action="{{ url_tous }}" role="search" class="mb-4 flex"
+          {% if live %}hx-get="{{ url_tous }}" hx-trigger="input changed delay:300ms from:find input[name=q], search from:find input[name=q], submit"
+          hx-target="#resultats" hx-push-url="true" hx-include="#flt-nav [name=categorie]" hx-indicator="#resultats"{% endif %}>
+        {% if not live and cat_active %}<input type="hidden" name="categorie" value="{{ cat_active }}">{% endif %}
         <label class="relative flex-1">
             <span class="sr-only">{{ recherche }}</span>
             <svg class="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
-            <input type="search" name="q" value="{{ request.GET.q|default:'' }}" placeholder="{{ recherche }}"
+            <input type="search" name="q" value="{{ request.GET.q|default:'' }}" placeholder="{{ recherche }}" autocomplete="off"
+                   {% if live %}aria-controls="resultats"{% endif %}
                    class="w-full rounded-l-xl border border-r-0 border-slate-200 bg-slate-50 py-2.5 pl-10 pr-3 text-sm text-slate-900 outline-none transition focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-500/20">
         </label>
         <button type="submit" class="flex items-center rounded-r-xl bg-blue-600 px-4 text-sm font-bold text-white transition hover:bg-blue-700 sm:px-5" aria-label="Rechercher">
@@ -32,21 +38,9 @@
 
     <div class="mb-3 flex items-center justify-between gap-3">
         <p class="font-mono text-[11px] font-bold uppercase tracking-[0.16em] text-slate-400">Catégories</p>
-        <p class="text-sm text-slate-500">
-            <span class="font-bold text-slate-900">{{ nb }}</span> {{ mot }}{{ nb|pluralize }}
-            {% if cat_active or request.GET.q %}· <a href="{{ url_tous }}" class="font-semibold text-blue-600 hover:text-blue-700">Réinitialiser</a>{% endif %}
-        </p>
+        {% include 'partials/_filtres_compte.html' %}
     </div>
-    <nav class="flt-rail -mx-4 flex gap-2 overflow-x-auto px-4 pb-1 sm:mx-0 sm:flex-wrap sm:overflow-visible sm:px-0 sm:pb-0" aria-label="Filtrer par catégorie" data-flt-rail>
-        <a href="{{ url_tous }}" class="car-tab {% if not cat_active %}is-active{% endif %}" {% if not cat_active %}aria-current="page"{% endif %}>
-            {{ libelle_tous }} <span class="car-tab__count">{{ total }}</span>
-        </a>
-        {% for cat in categories %}{% if cat.n or cat_active == cat.slug %}
-        <a href="{{ url_tous }}?categorie={{ cat.slug }}" class="car-tab {% if cat_active == cat.slug %}is-active{% endif %}" {% if cat_active == cat.slug %}aria-current="page"{% endif %}>
-            {{ cat.nom }} <span class="car-tab__count">{{ cat.n }}</span>
-        </a>
-        {% endif %}{% endfor %}
-    </nav>
+    {% include 'partials/_filtres_nav.html' %}
 </div>
 <script>
   // Téléphone : ramène la catégorie active dans la ligne visible

@@ -1,0 +1,15 @@
+{% comment %}Pastilles de catégories de partials/filtres.html. oob=True : remplacées par htmx sans rechargement.{% endcomment %}
+<nav id="flt-nav" class="flt-rail -mx-4 flex gap-2 overflow-x-auto px-4 pb-1 sm:mx-0 sm:flex-wrap sm:overflow-visible sm:px-0 sm:pb-0"
+     aria-label="Filtrer par catégorie" data-flt-rail {% if oob %}hx-swap-oob="true"{% endif %}>
+    {% if live %}<input type="hidden" name="categorie" value="{{ cat_active }}">{% endif %}
+    <a href="{{ url_tous }}" class="car-tab {% if not cat_active %}is-active{% endif %}" {% if not cat_active %}aria-current="page"{% endif %}
+       {% if live %}hx-get="{{ url_tous }}" hx-target="#resultats" hx-push-url="true" hx-include="[name=q]"{% endif %}>
+        {{ libelle_tous }} <span class="car-tab__count">{{ total }}</span>
+    </a>
+    {% for cat in categories %}{% if cat.n or cat_active == cat.slug %}
+    <a href="{{ url_tous }}?categorie={{ cat.slug }}" class="car-tab {% if cat_active == cat.slug %}is-active{% endif %}" {% if cat_active == cat.slug %}aria-current="page"{% endif %}
+       {% if live %}hx-get="{{ url_tous }}?categorie={{ cat.slug }}" hx-target="#resultats" hx-push-url="true" hx-include="[name=q]"{% endif %}>
+        {{ cat.nom }} <span class="car-tab__count">{{ cat.n }}</span>
+    </a>
+    {% endif %}{% endfor %}
+</nav>

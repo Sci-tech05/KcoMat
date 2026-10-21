@@ -5,7 +5,7 @@ from django.core import mail
 from django.test import TestCase, override_settings
 from django.urls import reverse
 
-from boutique.models import Commande
+from boutique.models import Commande, Produit
 
 FETCH = 'api.fedapay_service.fetch_fedapay_transaction'
 
@@ -189,3 +189,35 @@ class EchecEmailSuiviTests(TestCase):
         self.commande.refresh_from_db()
         self.assertEqual(self.commande.statut, 'expediee')          # le statut est quand même enregistré
         self.assertContains(reponse, 'mot de passe d&#x27;application')
+
+
+class RechercheBoutiqueTests(TestCase):
+    def setUp(self):
+        from boutique.models import CategorieProduit
+        capteurs = CategorieProduit.objects.create(nom='Capteurs', slug='capteurs')
+        Produit.objects.create(nom='ESP32 DevKit', slug='esp32-r', description_courte='Wi-Fi', description='x', prix=1, stock=1)
+        Produit.objects.create(nom='DHT22', slug='dht22-r', description_courte='Température et humidité', description='x', prix=1, stock=1, categorie=capteurs)
+
+    def test_recherche_sans_rechargement_renvoie_seulement_les_resultats(self):
+        reponse = self.client.get(reverse('boutique:liste'), {'q': 'humidité'}, HTTP_HX_REQUEST='true')
+        html = reponse.content.decode()
+        self.assertIn('DHT22', html)
+        self.assertNotIn('ESP32 DevKit', html)
+        self.assertNotIn('<html', html)                       # pas la page complète
+        self.assertIn('id="flt-compte"', html)                # compteur mis à jour hors du bloc
+        self.assertIn('hx-swap-oob="true"', html)
+        self.assertIn('HX-Request', reponse['Vary'])
+
+    def test_recherche_par_categorie_et_page_complete_sans_htmx(self):
+        reponse = self.client.get(reverse('boutique:liste'), {'q': 'capteurs'})
+        self.assertContains(reponse, 'DHT22')
+        self.assertContains(reponse, '<html')
+
+    def test_aucun_resultat_propose_whatsapp(self):
+        reponse = self.client.get(reverse('boutique:liste'), {'q': 'lidar'}, HTTP_HX_REQUEST='true')
+        self.assertContains(reponse, 'Aucun composant trouvé')
+        self.assertContains(reponse, 'Demander sur WhatsApp')
+
+    def test_adresse_propre_dans_le_navigateur(self):
+        reponse = self.client.get(reverse('boutique:liste'), {'q': 'esp', 'categorie': ''}, HTTP_HX_REQUEST='true')
+        self.assertEqual(reponse['HX-Push-Url'], '/boutique/?q=esp')
