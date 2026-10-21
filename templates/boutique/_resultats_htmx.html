@@ -1,0 +1,4 @@
+{% comment %}Réponse htmx de la boutique : résultats + pastilles et compteur mis à jour (hors bloc ciblé).{% endcomment %}
+{% include 'boutique/_resultats.html' %}
+{% include 'partials/_filtres_nav.html' with oob=True live=True libelle_tous='Tous' %}
+{% include 'partials/_filtres_compte.html' with oob=True live=True nb=produits|length mot='composant' %}

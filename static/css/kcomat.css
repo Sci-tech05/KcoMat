@@ -1307,3 +1307,7 @@ body {
     .kx-share__btn:not(.kx-share__btn--natif) span { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
     .kx-share__btn--natif { height: 2.75rem; }
 }
+
+/* Boutique : résultats mis à jour sans rechargement (htmx) */
+.kx-resultats { transition: opacity .2s ease; }
+.kx-resultats.htmx-request { opacity: .45; pointer-events: none; }

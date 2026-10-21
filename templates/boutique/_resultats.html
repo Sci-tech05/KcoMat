@@ -1,0 +1,87 @@
+{% load kcomat_tags humanize %}{% comment %}
+  Résultats de la boutique : grille + messages « aucun résultat ».
+  Rendu dans la page, et seul (avec les pastilles et le compteur en oob) lors d'une recherche htmx.
+{% endcomment %}
+<div id="resultats" class="kx-resultats" aria-live="polite" aria-busy="false">
+        {% if produits %}
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
+            {% for produit in produits %}
+            <div class="product-card group">
+                <!-- Image -->
+                <a href="{% url 'boutique:detail' produit.slug %}" class="relative h-44 bg-white rounded-t-2xl block cursor-pointer flex items-center justify-center overflow-hidden">
+                    {% if produit.image %}
+                    <img src="{{ produit.image|webp:600 }}" loading="lazy" decoding="async" alt="{{ produit.nom }}"
+                        class="w-full h-full object-contain group-hover:scale-105 transition-transform duration-300 p-2" />
+                    {% elif produit.images.first %}
+                    <img src="{{ produit.images.first.image|webp:600 }}" loading="lazy" decoding="async" alt="{{ produit.nom }}"
+                        class="w-full h-full object-contain group-hover:scale-105 transition-transform duration-300 p-2" />
+                    {% else %}
+                    <div class="w-full h-full flex items-center justify-center text-gray-300">
+                        <svg class="w-12 h-12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1"
+                                d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+                        </svg>
+                    </div>
+                    {% endif %}
+                    {% if not produit.en_stock %}<div
+                        class="absolute inset-0 bg-black/50 flex items-center justify-center"><span
+                            class="text-white font-bold text-sm">Rupture</span></div>{% endif %}
+                    {% if produit.nouveau %}<div class="absolute top-2 left-2"><span
+                            class="badge-nouveau">Nouveau</span></div>{% endif %}
+                </a>
+                <!-- Info -->
+                <div class="p-4">
+                    {% if produit.categorie %}<span class="text-xs text-gray-400">{{ produit.categorie.nom }}</span>{% endif %}
+                    <h3 class="font-semibold text-gray-900 text-sm mt-0.5 mb-1 line-clamp-2">{{ produit.nom }}</h3>
+                    <p class="text-xs text-gray-400 line-clamp-1 mb-3">{{ produit.description_courte }}</p>
+                    <div class="flex items-center justify-between">
+                        <div class="font-black text-green-600 text-base">{{ produit.prix|intcomma }} <span
+                                class="text-xs font-normal text-gray-400">FCFA</span></div>
+                    </div>
+                    <!-- Boutons -->
+                    <div class="mt-3 flex gap-2">
+                        {% if produit.en_stock %}
+                        <form method="post" action="{% url 'boutique:ajouter' produit.slug %}" class="flex-1"
+                            hx-post="{% url 'boutique:ajouter' produit.slug %}" hx-target="#cart-badge"
+                            hx-swap="outerHTML">
+                            {% csrf_token %}
+                            <input type="hidden" name="quantite" value="1" />
+                            <button type="submit" class="w-full py-2 text-xs font-bold rounded-xl bg-blue-600 hover:bg-blue-700 text-white transition-colors">+ Panier</button>
+                        </form>
+                        {% else %}
+                        <button disabled
+                            class="flex-1 bg-gray-100 text-gray-400 py-2 text-xs rounded-xl cursor-not-allowed">Indisponible</button>
+                        {% endif %}
+                        <a href="{% url 'boutique:detail' produit.slug %}" aria-label="Voir {{ produit.nom }}"
+                            class="btn-secondary py-2 px-3 text-xs">🔍</a>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% elif request.GET.q or cat_active %}
+        <!-- Aucun résultat pour cette recherche / catégorie -->
+        <div class="rounded-3xl border border-dashed border-slate-300 bg-white px-6 py-14 text-center">
+            <div class="mx-auto mb-4 grid h-16 w-16 place-items-center rounded-2xl bg-slate-100 text-slate-400">
+                <svg class="h-8 w-8" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+            </div>
+            <h3 class="text-lg font-bold text-slate-900">Aucun composant trouvé{% if request.GET.q %} pour « {{ request.GET.q|truncatechars:40 }} »{% endif %}</h3>
+            <p class="mx-auto mt-1 max-w-md text-sm text-slate-500">Essayez un autre mot (ex. « ESP32 », « relais », « capteur ») ou demandez-nous : nous pouvons le commander pour vous.</p>
+            <a href="https://wa.me/{{ KCOMAT.whatsapp }}?text={{ 'Bonjour KcoMat, je cherche le composant : '|urlencode }}{{ request.GET.q|urlencode }}" target="_blank" rel="noopener"
+               class="mt-5 inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-5 py-2.5 text-sm font-bold text-white transition hover:bg-emerald-700">Demander sur WhatsApp</a>
+        </div>
+        {% else %}
+        <div class="text-center py-20">
+            <div class="w-20 h-20 bg-green-50 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                <svg class="w-10 h-10 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+                </svg>
+            </div>
+            <h3 class="text-xl font-bold text-gray-900 mb-2">Boutique en cours de remplissage</h3>
+            <p class="text-gray-500 mb-4">Nos produits arrivent bientôt. Contactez-nous pour pré-commander.</p>
+            <a href="https://wa.me/{{ KCOMAT.whatsapp }}" target="_blank" class="btn-green px-6 py-3">Commander sur
+                WhatsApp</a>
+        </div>
+        {% endif %}
+</div>

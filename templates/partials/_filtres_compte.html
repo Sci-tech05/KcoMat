@@ -1,0 +1,7 @@
+{% comment %}Compteur de résultats de partials/filtres.html. oob=True : remplacé par htmx sans rechargement.{% endcomment %}
+<p id="flt-compte" class="text-sm text-slate-500" aria-live="polite" {% if oob %}hx-swap-oob="true"{% endif %}>
+    <span class="font-bold text-slate-900">{{ nb }}</span> {{ mot }}{% if nb > 1 %}s{% endif %}
+    {% if request.GET.q %}pour « <span class="font-semibold text-slate-700">{{ request.GET.q|truncatechars:30 }}</span> »{% endif %}
+    {% if cat_active or request.GET.q %}· <a href="{{ url_tous }}" class="font-semibold text-blue-600 hover:text-blue-700"
+        {% if live %}hx-get="{{ url_tous }}" hx-target="#resultats" hx-push-url="true" hx-on::before-request="var q = document.querySelector('input[name=q]'); if (q) q.value = '';"{% endif %}>Réinitialiser</a>{% endif %}
+</p>
