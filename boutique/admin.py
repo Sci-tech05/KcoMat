@@ -1,3 +1,5 @@
+import logging
+
 from django.contrib import admin, messages
 from django.db.models import Sum
 from django.http import HttpResponse
@@ -10,7 +12,9 @@ from reportlab.lib import colors
 from reportlab.pdfgen import canvas
 
 from .models import CategorieProduit, Produit, ImageProduit, Commande, CommandeItem
-from .suivi import envoyer_email_suivi
+from .suivi import envoyer_email_suivi, raison_echec_email
+
+logger = logging.getLogger(__name__)
 
 
 @admin.register(CategorieProduit)
@@ -66,8 +70,14 @@ class CommandeAdmin(admin.ModelAdmin):
         try:
             if envoyer_email_suivi(commande, request):
                 self.message_user(request, f"Commande #{commande.pk} : le client a été prévenu par e-mail.")
-        except Exception:
-            self.message_user(request, f"Commande #{commande.pk} : statut enregistré, mais l'e-mail au client n'a pas pu partir.", messages.WARNING)
+        except Exception as erreur:
+            # avertissement (pas une erreur) : inutile de prévenir les admins… par un e-mail qui ne partirait pas
+            logger.warning("E-mail de suivi impossible pour la commande #%s", commande.pk, exc_info=True)
+            self.message_user(
+                request,
+                f"Commande #{commande.pk} : statut enregistré, mais l'e-mail au client n'a pas pu partir — {raison_echec_email(erreur)}",
+                messages.WARNING,
+            )
 
     def save_model(self, request, obj, form, change):
         statut_change = change and 'statut' in form.changed_data

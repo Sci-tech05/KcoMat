@@ -167,3 +167,25 @@ class SuiviCommandeTests(TestCase):
         self.commande.refresh_from_db()
         self.assertEqual(self.commande.statut, 'en_attente')
         self.assertEqual(len(mail.outbox), 0)
+
+
+class EchecEmailSuiviTests(TestCase):
+    def setUp(self):
+        self.admin = User.objects.create_superuser('chef2', 'chef2@example.com', 'pw-chef-12345')
+        self.client.force_login(self.admin)
+        session = self.client.session
+        session['admin_2fa_verified_user_id'] = self.admin.id
+        session.save()
+        self.commande = Commande.objects.create(
+            utilisateur=self.admin, nom='K', prenom='A', email='a@example.com', telephone='1',
+            adresse_livraison='r', ville='Lokossa', montant_total=1000, statut='payee',
+        )
+
+    def test_mot_de_passe_gmail_refuse_explique_dans_admin(self):
+        import smtplib
+        with patch('boutique.suivi.EmailMultiAlternatives.send', side_effect=smtplib.SMTPServerDisconnected('Connection unexpectedly closed')):
+            reponse = self.client.post(reverse('admin:boutique_commande_changelist'),
+                                       {'action': 'marquer_expediee', '_selected_action': [self.commande.pk]}, follow=True)
+        self.commande.refresh_from_db()
+        self.assertEqual(self.commande.statut, 'expediee')          # le statut est quand même enregistré
+        self.assertContains(reponse, 'mot de passe d&#x27;application')
