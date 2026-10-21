@@ -9,14 +9,8 @@
 
 <section class="py-16 bg-gray-50">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        {% if categories %}
-        <div class="flex flex-wrap gap-3 mb-8">
-            <a href="{% url 'projets:liste' %}" class="filter-tab {% if not cat_active %}active{% endif %}">Tous</a>
-            {% for cat in categories %}
-            <a href="?categorie={{ cat.slug }}" class="filter-tab {% if cat_active == cat.slug %}active{% endif %}">{{ cat.nom }}</a>
-            {% endfor %}
-        </div>
-        {% endif %}
+        {% url 'projets:liste' as url_tous %}
+        {% include 'partials/filtres.html' with libelle_tous='Tous' nb=projets|length mot='projet' %}
 
         {% if projets %}
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">

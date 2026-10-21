@@ -1,15 +1,16 @@
+from django.db.models import Count, Q
 from django.shortcuts import render, get_object_or_404
 from .models import Projet, CategorieProjet
 
 
 def liste_projets(request):
-    categories = CategorieProjet.objects.all()
+    categories = CategorieProjet.objects.annotate(n=Count('projets', filter=Q(projets__actif=True)))
     cat_slug = request.GET.get('categorie', '')
-    projets = Projet.objects.filter(actif=True)
-    if cat_slug:
-        projets = projets.filter(categorie__slug=cat_slug)
+    tous = Projet.objects.filter(actif=True)
+    projets = tous.filter(categorie__slug=cat_slug) if cat_slug else tous
     ctx = {
         'projets': projets,
+        'total': tous.count(),
         'categories': categories,
         'cat_active': cat_slug,
         'title': 'Nos Projets Réalisés',
