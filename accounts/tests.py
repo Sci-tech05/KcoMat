@@ -114,3 +114,19 @@ class AntiEssaisTests(TestCase):
         self.assertEqual(reponse.status_code, 200)
         self.assertContains(reponse, 'Trop de tentatives')
         self.assertNotIn('_auth_user_id', self.client.session)
+
+
+class DeconnexionTests(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user('esi', 'esi@example.com', MOT_DE_PASSE)
+        self.client.force_login(self.user)
+
+    def test_un_simple_lien_ne_deconnecte_pas(self):
+        reponse = self.client.get(reverse('accounts:deconnexion'))
+        self.assertContains(reponse, 'Se déconnecter ?')
+        self.assertIn('_auth_user_id', self.client.session)
+
+    def test_formulaire_deconnecte(self):
+        reponse = self.client.post(reverse('accounts:deconnexion'))
+        self.assertRedirects(reponse, reverse('core:accueil'), fetch_redirect_response=False)
+        self.assertNotIn('_auth_user_id', self.client.session)

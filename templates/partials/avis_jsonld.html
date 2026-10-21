@@ -1,0 +1,6 @@
+{% comment %}Note moyenne + derniers avis au format schema.org (étoiles dans les résultats Google). À inclure dans un objet JSON-LD, avant sa dernière propriété.{% endcomment %}{% if avis.nombre %}
+  "aggregateRating": {"@type": "AggregateRating", "ratingValue": "{{ avis.moyenne|stringformat:'.1f' }}", "reviewCount": "{{ avis.nombre }}", "bestRating": "5", "worstRating": "1"},
+  "review": [{% for a in avis.liste|slice:":5" %}
+    {"@type": "Review", "author": {"@type": "Person", "name": "{{ a.auteur|escapejs }}"}, "datePublished": "{{ a.cree_le|date:'Y-m-d' }}",
+     "reviewRating": {"@type": "Rating", "ratingValue": "{{ a.note }}", "bestRating": "5"}{% if a.commentaire %}, "reviewBody": "{{ a.commentaire|truncatechars:500|escapejs }}"{% endif %}}{% if not forloop.last %},{% endif %}{% endfor %}
+  ],{% endif %}

@@ -1,0 +1,12 @@
+{% autoescape off %}Bonjour {{ commande.prenom }},
+
+{{ titre }} (commande #{{ commande.pk }}).
+{% if commande.message_suivi %}
+Message de l'équipe : {{ commande.message_suivi }}
+{% endif %}
+Suivez votre commande ici : {{ lien }}
+
+Une question ? WhatsApp : +{{ KCOMAT.whatsapp }}
+
+L'équipe KcoMat — Lokossa, Bénin
+{% endautoescape %}

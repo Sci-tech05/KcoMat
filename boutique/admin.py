@@ -1,4 +1,4 @@
-from django.contrib import admin
+from django.contrib import admin, messages
 from django.db.models import Sum
 from django.http import HttpResponse
 from django.urls import path
@@ -10,6 +10,7 @@ from reportlab.lib import colors
 from reportlab.pdfgen import canvas
 
 from .models import CategorieProduit, Produit, ImageProduit, Commande, CommandeItem
+from .suivi import envoyer_email_suivi
 
 
 @admin.register(CategorieProduit)
@@ -46,10 +47,55 @@ class CommandeAdmin(admin.ModelAdmin):
     list_display = ['id', 'nom', 'prenom', 'montant_total', 'statut', 'created_at']
     list_filter = ['statut']
     search_fields = ['nom', 'prenom', 'email', 'telephone']
-    readonly_fields = ['created_at', 'payee_le', 'fedapay_transaction_id']
+    readonly_fields = ['created_at', 'payee_le', 'preparee_le', 'expediee_le', 'livree_le', 'annulee_le', 'fedapay_transaction_id']
     inlines = [CommandeItemInline]
     date_hierarchy = 'created_at'
     change_list_template = 'admin/boutique/commande/change_list.html'
+    actions = ['marquer_en_preparation', 'marquer_expediee', 'marquer_livree']
+    fieldsets = [
+        ('Suivi (visible par le client)', {
+            'fields': ['statut', 'message_suivi', 'payee_le', 'preparee_le', 'expediee_le', 'livree_le', 'annulee_le'],
+            'description': "Changer le statut prévient le client par e-mail et met à jour sa page de suivi.",
+        }),
+        ('Client', {'fields': ['utilisateur', 'prenom', 'nom', 'email', 'telephone']}),
+        ('Livraison', {'fields': ['adresse_livraison', 'ville', 'notes']}),
+        ('Paiement', {'fields': ['montant_total', 'fedapay_transaction_id', 'created_at']}),
+    ]
+
+    def _prevenir_client(self, request, commande):
+        try:
+            if envoyer_email_suivi(commande, request):
+                self.message_user(request, f"Commande #{commande.pk} : le client a été prévenu par e-mail.")
+        except Exception:
+            self.message_user(request, f"Commande #{commande.pk} : statut enregistré, mais l'e-mail au client n'a pas pu partir.", messages.WARNING)
+
+    def save_model(self, request, obj, form, change):
+        statut_change = change and 'statut' in form.changed_data
+        super().save_model(request, obj, form, change)
+        if statut_change:
+            self._prevenir_client(request, obj)
+
+    def _changer_statut(self, request, queryset, statut):
+        faites = 0
+        # seulement les commandes payées : on ne fait pas avancer une commande impayée ou annulée
+        for commande in queryset.exclude(statut__in=['en_attente', 'annulee', statut]):
+            commande.statut = statut
+            commande.save()
+            self._prevenir_client(request, commande)
+            faites += 1
+        self.message_user(request, f"{faites} commande(s) mise(s) à jour.")
+
+    @admin.action(description='Marquer « En préparation » (prévient le client)')
+    def marquer_en_preparation(self, request, queryset):
+        self._changer_statut(request, queryset, 'en_preparation')
+
+    @admin.action(description='Marquer « Expédiée » (prévient le client)')
+    def marquer_expediee(self, request, queryset):
+        self._changer_statut(request, queryset, 'expediee')
+
+    @admin.action(description='Marquer « Livrée » (prévient le client)')
+    def marquer_livree(self, request, queryset):
+        self._changer_statut(request, queryset, 'livree')
 
     def get_urls(self):
         urls = super().get_urls()

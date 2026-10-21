@@ -1,0 +1,94 @@
+{% comment %}
+  Avis clients d'un composant ou d'une formation.
+  Contexte : avis (dict fourni par core.avis.resume), titre (facultatif).
+{% endcomment %}
+{% load humanize %}
+<section id="avis" class="scroll-mt-24 rounded-3xl border border-slate-200/80 bg-white p-6 sm:p-8 shadow-sm" aria-labelledby="avis-titre">
+    <div class="flex flex-wrap items-end justify-between gap-3">
+        <div>
+            <p class="font-mono text-[11px] font-bold uppercase tracking-[0.18em] text-blue-600">Avis clients</p>
+            <h2 id="avis-titre" class="mt-1 text-xl font-black text-slate-900">{{ titre|default:"Ce qu'en pensent nos clients" }}</h2>
+        </div>
+        {% if avis.nombre %}<p class="text-sm text-slate-500">{{ avis.nombre }} avis</p>{% endif %}
+    </div>
+
+    <div class="mt-6 grid gap-8 md:grid-cols-[13rem_1fr]">
+        <!-- Résumé -->
+        <div class="self-start rounded-2xl bg-slate-50 p-5 ring-1 ring-inset ring-slate-100">
+            {% if avis.nombre %}
+            <p class="text-4xl font-black text-slate-900">{{ avis.moyenne|floatformat:1 }}<span class="text-base font-semibold text-slate-400"> / 5</span></p>
+            {% include 'partials/etoiles.html' with note=avis.moyenne taille='w-5 h-5' %}
+            <ul class="mt-4 space-y-1.5" aria-label="Répartition des notes">
+                {% for ligne in avis.repartition %}
+                <li class="flex items-center gap-2 text-xs text-slate-500">
+                    <span class="w-3 text-right font-semibold">{{ ligne.note }}</span>
+                    <svg class="h-3 w-3 text-amber-400" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path d="M9.05 2.93c.3-.92 1.6-.92 1.9 0l1.28 3.93a1 1 0 00.95.69h4.13c.97 0 1.37 1.24.59 1.81l-3.34 2.43a1 1 0 00-.36 1.12l1.27 3.93c.3.92-.75 1.69-1.54 1.12l-3.34-2.43a1 1 0 00-1.17 0l-3.34 2.43c-.78.57-1.84-.2-1.54-1.12l1.28-3.93a1 1 0 00-.37-1.12L1.1 9.36c-.78-.57-.38-1.81.59-1.81h4.13a1 1 0 00.95-.69l1.28-3.93z"/></svg>
+                    <span class="h-1.5 flex-1 overflow-hidden rounded-full bg-slate-200"><span class="block h-full rounded-full bg-amber-400" style="width: {{ ligne.pourcent }}%"></span></span>
+                    <span class="w-6 text-right">{{ ligne.nombre }}</span>
+                </li>
+                {% endfor %}
+            </ul>
+            {% else %}
+            <p class="text-sm font-semibold text-slate-700">Pas encore d'avis</p>
+            <p class="mt-1 text-sm text-slate-500">Soyez le premier à partager votre expérience.</p>
+            {% endif %}
+        </div>
+
+        <div class="min-w-0 space-y-6">
+            <!-- Formulaire -->
+            {% if user.is_authenticated %}
+            <form method="post" action="{% url 'core:donner_avis' avis.type avis.objet.pk %}"
+                  class="rounded-2xl border border-slate-200 p-5"
+                  x-data="{ note: {{ avis.mon_avis.note|default:0 }}, survol: 0 }">
+                {% csrf_token %}
+                <p class="text-sm font-bold text-slate-900">{% if avis.mon_avis %}Modifier votre avis{% else %}Donner votre avis{% endif %}</p>
+                <fieldset class="mt-3">
+                    <legend class="sr-only">Votre note</legend>
+                    <div class="flex items-center gap-1" @mouseleave="survol = 0">
+                        {% for n in "12345" %}
+                        <label class="cursor-pointer rounded-md p-0.5 focus-within:ring-2 focus-within:ring-blue-500" @mouseenter="survol = {{ n }}">
+                            <input type="radio" name="note" value="{{ n }}" class="sr-only" x-model.number="note" {% if avis.mon_avis.note|stringformat:"s" == n %}checked{% endif %} required>
+                            <svg class="h-8 w-8 transition" :class="(survol || note) >= {{ n }} ? 'text-amber-400 scale-110' : 'text-slate-200'" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path d="M9.05 2.93c.3-.92 1.6-.92 1.9 0l1.28 3.93a1 1 0 00.95.69h4.13c.97 0 1.37 1.24.59 1.81l-3.34 2.43a1 1 0 00-.36 1.12l1.27 3.93c.3.92-.75 1.69-1.54 1.12l-3.34-2.43a1 1 0 00-1.17 0l-3.34 2.43c-.78.57-1.84-.2-1.54-1.12l1.28-3.93a1 1 0 00-.37-1.12L1.1 9.36c-.78-.57-.38-1.81.59-1.81h4.13a1 1 0 00.95-.69l1.28-3.93z"/></svg>
+                            <span class="sr-only">{{ n }} étoile{{ n|pluralize }}</span>
+                        </label>
+                        {% endfor %}
+                        <span class="ml-2 text-sm font-semibold text-slate-500" x-text="['', 'Décevant', 'Moyen', 'Bien', 'Très bien', 'Excellent'][survol || note]"></span>
+                    </div>
+                </fieldset>
+                <label for="avis-commentaire-{{ avis.type }}" class="mt-4 block text-sm font-semibold text-slate-700">Votre commentaire <span class="font-normal text-slate-400">(facultatif)</span></label>
+                <textarea id="avis-commentaire-{{ avis.type }}" name="commentaire" rows="3" maxlength="1500"
+                          class="mt-1.5 w-full rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2.5 text-sm text-slate-900 outline-none transition focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-500/20"
+                          placeholder="Qualité, livraison, contenu, accompagnement…">{{ avis.mon_avis.commentaire|default:'' }}</textarea>
+                <button type="submit" class="mt-3 inline-flex items-center gap-2 rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-bold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50" :disabled="!note">
+                    {% if avis.mon_avis %}Mettre à jour{% else %}Publier mon avis{% endif %}
+                </button>
+            </form>
+            {% else %}
+            <div class="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-dashed border-slate-300 p-5">
+                <p class="text-sm text-slate-600">Connectez-vous pour donner votre avis.</p>
+                <a href="{% url 'accounts:connexion' %}?next={{ request.path|urlencode }}%23avis" class="rounded-xl bg-blue-600 px-4 py-2 text-sm font-bold text-white transition hover:bg-blue-700">Se connecter</a>
+            </div>
+            {% endif %}
+
+            <!-- Liste -->
+            {% if avis.liste %}
+            <ul class="divide-y divide-slate-100">
+                {% for a in avis.liste %}
+                <li class="py-4 first:pt-0">
+                    <div class="flex flex-wrap items-center gap-x-3 gap-y-1">
+                        <span class="grid h-9 w-9 flex-shrink-0 place-items-center rounded-full bg-gradient-to-br from-blue-600 to-cyan-500 text-xs font-bold text-white" aria-hidden="true">{{ a.auteur|first|upper }}</span>
+                        <span class="font-bold text-slate-900">{{ a.auteur }}</span>
+                        {% if a.achat_verifie %}<span class="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-[11px] font-bold text-emerald-700 ring-1 ring-inset ring-emerald-100">✓ {% if avis.type == 'formation' %}Participant vérifié{% else %}Achat vérifié{% endif %}</span>{% endif %}
+                        <span class="ml-auto text-xs text-slate-400">{{ a.modifie_le|naturaltime }}</span>
+                    </div>
+                    <div class="mt-1.5 pl-12">
+                        {% include 'partials/etoiles.html' with note=a.note taille='w-4 h-4' %}
+                        {% if a.commentaire %}<p class="mt-1.5 text-sm leading-relaxed text-slate-600">{{ a.commentaire|linebreaksbr }}</p>{% endif %}
+                    </div>
+                </li>
+                {% endfor %}
+            </ul>
+            {% endif %}
+        </div>
+    </div>
+</section>

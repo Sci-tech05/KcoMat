@@ -16,6 +16,7 @@ from django.utils import timezone
 from django.db.models import Prefetch
 from django.utils.text import slugify
 from .models import Formation, FormationSessionPassee, Inscription, CategorieFormation
+from core.avis import resume as resume_avis
 from .forms import InscriptionForm
 from core.pdf_invoices import build_invoice_response
 from api.fedapay_service import create_fedapay_transaction, verify_fedapay_payment
@@ -331,6 +332,7 @@ def detail_formation(request, slug):
         'frais': settings.KCOMAT_INFO['frais_inscription'],
         'inscription_existante': inscription_existante,
         'etape_suivante': _etape_suivante(request, inscription_existante) if inscription_existante else '',
+        'avis': resume_avis(formation, request.user),
         'title': formation.titre,
     }
     return render(request, 'formations/detail.html', ctx)

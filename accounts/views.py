@@ -83,9 +83,15 @@ def inscription(request):
 
 
 def deconnexion(request):
-    logout(request)
-    messages.info(request, "Vous avez été déconnecté.")
-    return redirect('core:accueil')
+    """Déconnexion uniquement par formulaire (POST + jeton CSRF) : un simple lien ou une
+    image piégée sur un autre site ne peut plus déconnecter le client à son insu."""
+    if request.method == 'POST':
+        logout(request)
+        messages.info(request, "Vous avez été déconnecté.")
+        return redirect('core:accueil')
+    if not request.user.is_authenticated:
+        return redirect('core:accueil')
+    return render(request, 'accounts/deconnexion.html', {'title': 'Déconnexion'})
 
 
 @login_required

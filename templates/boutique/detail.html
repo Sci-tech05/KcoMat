@@ -16,6 +16,7 @@
   {% if produit.image %}"image": "{{ SITE_URL }}{{ produit.image.url }}",{% endif %}
   {% if produit.categorie %}"category": "{{ produit.categorie.nom|escapejs }}",{% endif %}
   "brand": {"@type": "Brand", "name": "KcoMat"},
+  {% include 'partials/avis_jsonld.html' %}
   "offers": {
     "@type": "Offer",
     "price": "{{ produit.prix }}",
@@ -136,6 +137,8 @@
                     <div class="mt-5 text-[15px] leading-7 text-slate-600">{{ produit.description|linebreaksbr }}</div>
                 </article>
                 {% endif %}
+
+                {% include 'partials/avis.html' with titre="Avis sur ce composant" %}
             </div>
 
             <!-- ═══ DROITE : achat ═══ -->
@@ -146,6 +149,7 @@
                         <p class="font-mono text-[11px] font-bold uppercase tracking-[0.18em] text-blue-600">{% if produit.categorie %}{{ produit.categorie.nom }}{% else %}Composant{% endif %}</p>
                         <h2 class="mt-2 text-2xl font-black leading-tight text-slate-900">{{ produit.nom }}</h2>
                         {% if produit.reference %}<p class="mt-1 font-mono text-xs text-slate-400">Réf. {{ produit.reference }}</p>{% endif %}
+                        {% if avis.nombre %}<a href="#avis" class="mt-2 inline-flex items-center gap-2 text-sm text-slate-500 hover:text-blue-600">{% include 'partials/etoiles.html' with note=avis.moyenne taille='w-4 h-4' %}<span class="font-semibold">{{ avis.moyenne|floatformat:1 }}</span> · {{ avis.nombre }} avis</a>{% endif %}
                         <p class="mt-4 text-sm leading-relaxed text-slate-500 line-clamp-4">{{ produit.description_courte }}</p>
                     </div>
 
