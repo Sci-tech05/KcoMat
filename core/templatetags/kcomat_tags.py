@@ -92,6 +92,16 @@ class CaptureNode(template.Node):
         return ''
 
 
+@register.filter
+def remplissage_etoiles(note):
+    """Note (ex. 4.3) -> remplissage des 5 étoiles en % : [100, 100, 100, 100, 50] (arrondi à la demi-étoile)."""
+    try:
+        demis = round(float(note or 0) * 2)
+    except (TypeError, ValueError):
+        demis = 0
+    return [100 if demis >= 2 * n else 50 if demis == 2 * n - 1 else 0 for n in range(1, 6)]
+
+
 @register.tag
 def capture(parser, token):
     """

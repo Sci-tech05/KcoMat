@@ -15,5 +15,6 @@ urlpatterns = [
     path('commande/<int:pk>/callback/', views.callback_commande, name='callback'),
     path('commande/<int:pk>/succes/', views.succes_commande, name='succes_commande'),
     path('commande/<int:pk>/facture.pdf', views.facture_commande_pdf, name='facture_commande'),
+    path('commande/<int:pk>/suivi/', views.suivi_commande, name='suivi_commande'),
     path('<slug:slug>/', views.detail_produit, name='detail'),
 ]

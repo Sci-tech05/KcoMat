@@ -1,0 +1,14 @@
+{% extends 'accounts/_carte.html' %}
+
+{% block title %}Déconnexion{% endblock %}
+{% block carte_icone %}M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1{% endblock %}
+{% block carte_titre %}Se déconnecter ?{% endblock %}
+{% block carte_texte %}Vous êtes connecté en tant que <strong>{{ user.get_username }}</strong>.{% endblock %}
+
+{% block carte_corps %}
+<form method="post" class="space-y-3">
+    {% csrf_token %}
+    <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-full transition-colors">Me déconnecter</button>
+    <a href="{% url 'accounts:dashboard' %}" class="flex w-full items-center justify-center rounded-full border border-gray-200 py-3 text-sm font-bold text-gray-700 transition hover:bg-gray-50">Rester connecté</a>
+</form>
+{% endblock %}

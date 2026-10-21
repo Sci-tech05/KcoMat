@@ -11,6 +11,7 @@ from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST
 from django.utils import timezone
 from .models import Produit, CategorieProduit, Panier, PanierItem, Commande, CommandeItem
+from core.avis import resume as resume_avis
 from .forms import CommandeForm
 from core.pdf_invoices import build_invoice_response
 from api.fedapay_service import create_fedapay_transaction, verify_fedapay_payment
@@ -204,6 +205,7 @@ def detail_produit(request, slug):
     ctx = {
         'produit': produit,
         'produits_similaires': produits_similaires,
+        'avis': resume_avis(produit, request.user),
         'title': produit.nom,
     }
     return render(request, 'boutique/detail.html', ctx)
@@ -507,6 +509,17 @@ def facture_panier_pdf(request):
         total_amount=panier.total(),
         note='Cette facture est une estimation avant validation definitive de la commande.',
     )
+
+
+def suivi_commande(request, pk):
+    """Page de suivi : frise des étapes, articles, adresse et message de l'équipe."""
+    commande = get_object_or_404(Commande.objects.prefetch_related('items__produit'), pk=pk)
+    _check_commande_access(request, commande)
+    return render(request, 'boutique/suivi_commande.html', {
+        'commande': commande,
+        'etapes': commande.etapes_suivi(),
+        'title': f'Suivi de la commande #{commande.pk}',
+    })
 
 
 def facture_commande_pdf(request, pk):

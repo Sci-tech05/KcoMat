@@ -289,6 +289,7 @@ JAZZMIN_SETTINGS = {
         'core.temoignage': 'fas fa-star',
         'core.statistique': 'fas fa-chart-bar',
         'core.contactmessage': 'fas fa-envelope',
+        'core.avis': 'fas fa-star-half-alt',
         'formations': 'fas fa-graduation-cap',
         'formations.categorieformation': 'fas fa-folder-open',
         'formations.formation': 'fas fa-graduation-cap',

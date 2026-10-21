@@ -1,6 +1,7 @@
 from unittest.mock import patch
 
 from django.contrib.auth.models import User
+from django.core import mail
 from django.test import TestCase, override_settings
 from django.urls import reverse
 
@@ -111,3 +112,58 @@ class PanierSansRechargementTests(TestCase):
     def test_repli_sans_javascript(self):
         r = self.client.post(reverse('boutique:supprimer_item', args=[self.i1.pk]))
         self.assertRedirects(r, reverse('boutique:panier'))
+
+
+@override_settings(EMAIL_BACKEND='django.core.mail.backends.locmem.EmailBackend')
+class SuiviCommandeTests(TestCase):
+    def setUp(self):
+        self.client_kc = User.objects.create_user('ama', 'ama@example.com', 'pw-ama-12345')
+        self.commande = Commande.objects.create(
+            utilisateur=self.client_kc, nom='Kossi', prenom='Ama', email='ama@example.com', telephone='1',
+            adresse_livraison='Rue 1', ville='Lokossa', montant_total=10000, statut='payee',
+        )
+
+    def test_dates_remplies_au_changement_de_statut(self):
+        self.assertIsNotNone(self.commande.payee_le)
+        self.commande.statut = 'expediee'
+        self.commande.save()
+        self.commande.refresh_from_db()
+        self.assertIsNotNone(self.commande.expediee_le)
+        self.assertEqual(self.commande.progression, 67)
+        etapes = self.commande.etapes_suivi()
+        self.assertEqual([e['faite'] for e in etapes], [True, True, True, False])
+        self.assertEqual([e['actuelle'] for e in etapes], [False, False, True, False])
+
+    def test_page_de_suivi_reservee_au_proprietaire(self):
+        url = reverse('boutique:suivi_commande', args=[self.commande.pk])
+        self.client.force_login(self.client_kc)
+        self.assertContains(self.client.get(url), 'Paiement reçu')
+        self.client.force_login(User.objects.create_user('autre', password='pw-autre-123'))
+        self.assertEqual(self.client.get(url).status_code, 403)
+
+    def test_action_admin_previent_le_client(self):
+        admin_user = User.objects.create_superuser('chef', 'chef@example.com', 'pw-chef-12345')
+        self.client.force_login(admin_user)
+        session = self.client.session
+        session['admin_2fa_verified_user_id'] = admin_user.id
+        session.save()
+        url = reverse('admin:boutique_commande_changelist')
+        self.client.post(url, {'action': 'marquer_expediee', '_selected_action': [self.commande.pk]})
+        self.commande.refresh_from_db()
+        self.assertEqual(self.commande.statut, 'expediee')
+        self.assertEqual(len(mail.outbox), 1)
+        self.assertIn('en route', mail.outbox[0].subject)
+        self.assertIn(f'/boutique/commande/{self.commande.pk}/suivi/', mail.outbox[0].body)
+
+    def test_commande_impayee_ne_bouge_pas(self):
+        self.commande.statut = 'en_attente'
+        self.commande.save()
+        admin_user = User.objects.create_superuser('chef', 'chef@example.com', 'pw-chef-12345')
+        self.client.force_login(admin_user)
+        session = self.client.session
+        session['admin_2fa_verified_user_id'] = admin_user.id
+        session.save()
+        self.client.post(reverse('admin:boutique_commande_changelist'), {'action': 'marquer_livree', '_selected_action': [self.commande.pk]})
+        self.commande.refresh_from_db()
+        self.assertEqual(self.commande.statut, 'en_attente')
+        self.assertEqual(len(mail.outbox), 0)

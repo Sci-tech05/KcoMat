@@ -1,3 +1,6 @@
+from django.conf import settings
+from django.contrib.contenttypes.fields import GenericForeignKey
+from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 
 
@@ -64,3 +67,43 @@ class ContactMessage(models.Model):
 
     def __str__(self):
         return f"{self.nom} — {self.sujet}"
+
+
+class Avis(models.Model):
+    """Avis d'un client (note 1 à 5 + commentaire) sur un composant ou une formation.
+
+    Un seul avis par client et par article : un nouvel envoi remplace l'ancien.
+    Publié tout de suite ; l'admin peut le masquer en décochant « Publié ».
+    """
+    NOTES = [(n, f'{n} étoile{"s" if n > 1 else ""}') for n in range(1, 6)]
+
+    content_type = models.ForeignKey('contenttypes.ContentType', on_delete=models.CASCADE)
+    object_id = models.PositiveIntegerField()
+    objet = GenericForeignKey('content_type', 'object_id')
+    utilisateur = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='avis')
+    note = models.PositiveSmallIntegerField(choices=NOTES, validators=[MinValueValidator(1), MaxValueValidator(5)])
+    commentaire = models.TextField(max_length=1500, blank=True)
+    achat_verifie = models.BooleanField(default=False, help_text="Le client a payé ce composant ou cette formation.")
+    publie = models.BooleanField('Publié', default=True)
+    cree_le = models.DateTimeField(auto_now_add=True)
+    modifie_le = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-modifie_le']
+        verbose_name = 'Avis client'
+        verbose_name_plural = 'Avis clients'
+        constraints = [
+            models.UniqueConstraint(fields=['content_type', 'object_id', 'utilisateur'], name='un_avis_par_client_et_article'),
+        ]
+        indexes = [models.Index(fields=['content_type', 'object_id', 'publie'])]
+
+    def __str__(self):
+        return f'{self.note}★ — {self.utilisateur} sur {self.objet}'
+
+    @property
+    def auteur(self):
+        """Prénom + initiale du nom si renseignés (jamais le nom complet), sinon le pseudo."""
+        u = self.utilisateur
+        if u.first_name:
+            return f'{u.first_name} {u.last_name[:1]}.' if u.last_name else u.first_name
+        return u.get_username()

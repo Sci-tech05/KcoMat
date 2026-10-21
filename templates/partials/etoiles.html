@@ -1,0 +1,14 @@
+{% comment %}
+  Cinq étoiles en lecture seule (arrondi à la demi-étoile).
+  Paramètres : note (0 à 5, décimale possible), taille (classes Tailwind de taille).
+{% endcomment %}{% load kcomat_tags %}
+<span class="mt-1 inline-flex items-center gap-0.5" role="img" aria-label="Note : {{ note|floatformat:1 }} sur 5">
+    {% for pct in note|remplissage_etoiles %}
+    <span class="relative inline-block {{ taille|default:'w-4 h-4' }}">
+        <svg class="absolute inset-0 h-full w-full text-slate-200" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path d="M9.05 2.93c.3-.92 1.6-.92 1.9 0l1.28 3.93a1 1 0 00.95.69h4.13c.97 0 1.37 1.24.59 1.81l-3.34 2.43a1 1 0 00-.36 1.12l1.27 3.93c.3.92-.75 1.69-1.54 1.12l-3.34-2.43a1 1 0 00-1.17 0l-3.34 2.43c-.78.57-1.84-.2-1.54-1.12l1.28-3.93a1 1 0 00-.37-1.12L1.1 9.36c-.78-.57-.38-1.81.59-1.81h4.13a1 1 0 00.95-.69l1.28-3.93z"/></svg>
+        {% if pct %}<span class="absolute inset-y-0 left-0 overflow-hidden" style="width: {{ pct }}%">
+            <svg class="h-full max-w-none text-amber-400 {{ taille|default:'w-4 h-4' }}" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path d="M9.05 2.93c.3-.92 1.6-.92 1.9 0l1.28 3.93a1 1 0 00.95.69h4.13c.97 0 1.37 1.24.59 1.81l-3.34 2.43a1 1 0 00-.36 1.12l1.27 3.93c.3.92-.75 1.69-1.54 1.12l-3.34-2.43a1 1 0 00-1.17 0l-3.34 2.43c-.78.57-1.84-.2-1.54-1.12l1.28-3.93a1 1 0 00-.37-1.12L1.1 9.36c-.78-.57-.38-1.81.59-1.81h4.13a1 1 0 00.95-.69l1.28-3.93z"/></svg>
+        </span>{% endif %}
+    </span>
+    {% endfor %}
+</span>
