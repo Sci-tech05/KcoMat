@@ -96,3 +96,73 @@ class PartageTests(TestCase):
         html = self.client.get(reverse('formations:detail', args=[f.slug])).content.decode()
         for attendu in ('wa.me/?text=Domotique', 'facebook.com/sharer/sharer.php', 'linkedin.com/sharing', 'data-partage-copier'):
             self.assertIn(attendu, html)
+
+
+from django.core import mail
+from django.test import override_settings
+
+
+@override_settings(EMAIL_BACKEND='django.core.mail.backends.locmem.EmailBackend')
+class NotificationsAdminTests(TestCase):
+    """Chaque demande ou paiement d'un client envoie un e-mail pro à l'admin principal."""
+    ADMIN = 'kcomat0@gmail.com'
+
+    def mail_admin(self):
+        envoyes = [m for m in mail.outbox if self.ADMIN in m.to]
+        self.assertEqual(len(envoyes), 1, [m.subject for m in mail.outbox])
+        m = envoyes[0]
+        self.assertTrue(m.alternatives, "version HTML attendue")
+        return m
+
+    def test_message_de_contact(self):
+        self.client.post(reverse('core:contact'), {'nom': 'Ama', 'email': 'ama@example.com', 'telephone': '0100',
+                                                   'sujet': 'Devis', 'message': 'Bonjour'})
+        m = self.mail_admin()
+        self.assertIn('Nouveau message : Devis', m.subject)
+        self.assertEqual(m.reply_to, ['ama@example.com'])
+        self.assertIn('/core/contactmessage/', m.alternatives[0][0])   # bouton vers l'admin
+
+    def test_demande_de_service(self):
+        from services.models import Service
+        s = Service.objects.create(titre='Installation solaire', description_courte='x', description='x')
+        self.client.post(reverse('services:detail', args=[s.slug]), {'nom': 'Kofi', 'email': 'k@example.com', 'telephone': '01',
+                                                                    'localite': 'Lokossa', 'description_besoin': 'Panneaux'})
+        self.assertIn('Demande de devis : Installation solaire', self.mail_admin().subject)
+
+    def test_demande_de_partenariat(self):
+        self.client.post(reverse('partenariats:index'), {'nom_organisation': 'ONG Test', 'email': 'ong@example.com', 'telephone': '01'})
+        self.assertIn('Demande de partenariat : ONG Test', self.mail_admin().subject)
+
+    def test_inscription_confirmee_puis_formation_payee(self):
+        from formations.views import _mark_inscription_formation_paid, _mark_inscription_frais_paid
+        f = Formation.objects.create(titre='Domotique', description_courte='x', description='x', prix=20000)
+        i = Inscription.objects.create(formation=f, nom='Doe', prenom='Jane', email='jane@example.com', telephone='01')
+        _mark_inscription_frais_paid(i)
+        m = self.mail_admin()
+        self.assertIn('Nouvelle inscription : Domotique', m.subject)
+        self.assertIn('2 000 FCFA', m.body)
+        mail.outbox.clear()
+        _mark_inscription_formation_paid(i)
+        m = self.mail_admin()
+        self.assertIn('Formation payée : Domotique', m.subject)
+        self.assertIn('20 000 FCFA', m.body)
+
+    def test_commande_payee(self):
+        from boutique.views import _mark_commande_paid
+        p = Produit.objects.create(nom='ESP32', slug='esp32-n', description_courte='x', description='x', prix=10000, stock=5)
+        c = Commande.objects.create(nom='Doe', prenom='Jane', email='jane@example.com', telephone='01',
+                                    adresse_livraison='Rue 1', ville='Lokossa', montant_total=20000)
+        CommandeItem.objects.create(commande=c, produit=p, nom_produit='ESP32', prix_unitaire=10000, quantite=2)
+        _mark_commande_paid(c)
+        m = self.mail_admin()
+        self.assertIn(f'Commande payée #{c.pk}', m.subject)
+        self.assertIn('2 × ESP32', m.body)
+
+    def test_echec_d_envoi_ne_bloque_pas_le_client(self):
+        from unittest.mock import patch
+        from .models import ContactMessage
+        with patch('core.notifications_admin.EmailMultiAlternatives.send', side_effect=OSError('SMTP indisponible')):
+            reponse = self.client.post(reverse('core:contact'), {'nom': 'Ama', 'email': 'ama@example.com',
+                                                                 'sujet': 'Test', 'message': 'Bonjour'})
+        self.assertEqual(reponse.status_code, 302)
+        self.assertTrue(ContactMessage.objects.filter(sujet='Test').exists())

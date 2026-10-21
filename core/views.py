@@ -3,10 +3,10 @@ from django.contrib import messages
 from django.http import HttpResponse
 from django.views.decorators.cache import cache_control
 from django.views.decorators.http import require_GET
-from django.core.mail import send_mail
 from django.conf import settings
 from .models import TeamMember, Temoignage, Statistique
 from .forms import ContactForm
+from .notifications_admin import notifier_admin
 from formations.models import Formation
 from services.models import Service
 from boutique.models import Produit
@@ -48,16 +48,13 @@ def contact(request):
     form = ContactForm(request.POST or None)
     if request.method == 'POST' and form.is_valid():
         msg = form.save()
-        try:
-            send_mail(
-                subject=f"[KcoMat] Nouveau message : {msg.sujet}",
-                message=f"De : {msg.nom} ({msg.email})\nTél : {msg.telephone}\n\n{msg.message}",
-                from_email=settings.DEFAULT_FROM_EMAIL,
-                recipient_list=[settings.KCOMAT_INFO['email']],
-                fail_silently=True,
-            )
-        except Exception:
-            pass
+        notifier_admin(
+            type_evenement='contact', sujet=f"Nouveau message : {msg.sujet}",
+            titre='Nouveau message de contact',
+            intro=f"{msg.nom} vous a écrit depuis la page Contact du site.",
+            details=[('Nom', msg.nom), ('E-mail', msg.email), ('Téléphone', msg.telephone), ('Sujet', msg.sujet)],
+            message=msg.message, objet=msg, repondre_a=msg.email, request=request,
+        )
         messages.success(request, "✅ Votre message a été envoyé avec succès ! Nous vous répondrons bientôt.")
         return redirect('core:contact')
     return render(request, 'core/contact.html', {'form': form, 'title': 'Contact'})

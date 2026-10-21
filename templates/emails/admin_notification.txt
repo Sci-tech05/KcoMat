@@ -1,0 +1,14 @@
+{% autoescape off %}{{ titre }}
+{{ intro }}
+
+{% for libelle, valeur in details %}{{ libelle }} : {{ valeur }}
+{% endfor %}{% if message %}
+Message :
+{{ message }}
+{% endif %}{% if lien_admin %}
+Ouvrir dans l'administration : {{ lien_admin }}
+{% endif %}{% if repondre_a %}
+Répondez directement à cet e-mail pour écrire à {{ repondre_a }}.
+{% endif %}
+— Site KcoMat, {{ date|date:"j F Y à H:i" }}
+{% endautoescape %}

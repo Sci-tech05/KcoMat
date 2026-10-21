@@ -17,6 +17,7 @@ from django.db.models import Count, Prefetch, Q
 from django.utils.text import slugify
 from .models import Formation, FormationSessionPassee, Inscription, CategorieFormation
 from core.avis import resume as resume_avis
+from core.notifications_admin import notifier_admin
 from .forms import InscriptionForm
 from core.pdf_invoices import build_invoice_response
 from api.fedapay_service import create_fedapay_transaction, verify_fedapay_payment
@@ -190,12 +191,36 @@ def _send_inscription_invoice_email(inscription):
     message.send(fail_silently=False)
 
 
+def _notifier_admin_inscription(inscription, etape):
+    """E-mail à l'admin : inscription confirmée (frais payés) ou formation entièrement payée."""
+    formation = inscription.formation
+    if etape == 'frais':
+        sujet, titre = f"Nouvelle inscription : {formation.titre} — {inscription.prenom} {inscription.nom}", 'Nouvelle inscription confirmée'
+        intro = f"{inscription.prenom} {inscription.nom} a payé ses frais d'inscription à « {formation.titre} »."
+        montant = settings.KCOMAT_INFO['frais_inscription']
+    else:
+        sujet, titre = f"Formation payée : {formation.titre} — {inscription.prenom} {inscription.nom}", 'Paiement de formation reçu'
+        intro = f"{inscription.prenom} {inscription.nom} a réglé la formation « {formation.titre} » : l'inscription est complète."
+        montant = formation.prix
+    notifier_admin(
+        type_evenement='inscription' if etape == 'frais' else 'paiement', sujet=sujet, titre=titre, intro=intro,
+        details=[
+            ('Formation', formation.titre), ('Participant', f"{inscription.prenom} {inscription.nom}"),
+            ('E-mail', inscription.email), ('Téléphone', inscription.telephone),
+            ('Mode souhaité', inscription.get_mode_preference_display()), ('Niveau actuel', inscription.niveau_actuel),
+            ('Montant payé', f"{montant:,} FCFA".replace(',', ' ')), ('Inscription', f"#{inscription.pk}"),
+        ],
+        message=inscription.message, objet=inscription, repondre_a=inscription.email,
+    )
+
+
 def _mark_inscription_frais_paid(inscription):
     if inscription.statut != 'en_attente':
         return
     inscription.statut = 'frais_payes'
     inscription.frais_payes_le = timezone.now()
     inscription.save(update_fields=['statut', 'frais_payes_le'])
+    _notifier_admin_inscription(inscription, 'frais')
     _send_inscription_invoice_email(inscription)
 
 
@@ -207,6 +232,7 @@ def _mark_inscription_formation_paid(inscription):
     inscription.statut = 'complet'
     inscription.formation_payee_le = timezone.now()
     inscription.save(update_fields=['statut', 'formation_payee_le'])
+    _notifier_admin_inscription(inscription, 'formation')
     _send_inscription_invoice_email(inscription)
 
 
