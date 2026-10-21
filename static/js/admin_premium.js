@@ -159,9 +159,106 @@
         });
     }
 
+    // Onglets sur une ligne défilante : fondu sur le bord qui cache des onglets,
+    // et l'onglet actif est ramené dans la zone visible.
+    function initTabsScroll() {
+        var bar = document.querySelector('ul#jazzy-tabs');
+        if (!bar) return;
+        function maj() {
+            var max = bar.scrollWidth - bar.clientWidth;
+            bar.classList.toggle('kx-more-left', bar.scrollLeft > 4);
+            bar.classList.toggle('kx-more-right', max - bar.scrollLeft > 4);
+        }
+        function montrerActif() {
+            var actif = bar.querySelector('.nav-link.active');
+            if (!actif) return;
+            var item = actif.parentElement;
+            var gauche = item.offsetLeft - bar.offsetLeft;
+            if (gauche < bar.scrollLeft || gauche + item.offsetWidth > bar.scrollLeft + bar.clientWidth) {
+                bar.scrollTo({ left: Math.max(0, gauche - 24), behavior: 'smooth' });
+            }
+        }
+        bar.addEventListener('scroll', maj, { passive: true });
+        window.addEventListener('resize', maj);
+        bar.addEventListener('click', function () { setTimeout(function () { montrerActif(); maj(); }, 50); });
+        montrerActif();
+        maj();
+    }
+
+    // Barre latérale : garde sa position de défilement d'une page à l'autre
+    // (exécuté tout de suite, avant le premier affichage, pour éviter tout saut).
+    function initSidebarScroll() {
+        var CLE = 'kx-sidebar-scroll';
+        // Jazzmin fait défiler l'élément #jazzy-sidebar (et non .sidebar)
+        var barre = document.getElementById('jazzy-sidebar') || document.querySelector('.main-sidebar');
+        if (!barre) return;
+        function restaurer() {
+            var memo = null;
+            try { memo = sessionStorage.getItem(CLE); } catch (e) { /* stockage indisponible */ }
+            if (memo !== null) {
+                barre.scrollTop = parseInt(memo, 10) || 0;
+            }
+            // lien actif hors de la zone visible (première visite, lien ouvert depuis ailleurs) : on le ramène au centre
+            var actif = barre.querySelector('.nav-link.active');
+            if (actif) {
+                var r = actif.getBoundingClientRect(), b = barre.getBoundingClientRect();
+                if (r.top < b.top + 60 || r.bottom > b.bottom - 20) {
+                    barre.scrollTop += r.top - b.top - (barre.clientHeight - r.height) / 2;
+                }
+            }
+        }
+        restaurer();
+        // page préchargée en arrière-plan : on relit la position au moment où elle s'affiche vraiment
+        if (document.prerendering) {
+            document.addEventListener('prerenderingchange', restaurer, { once: true });
+        }
+        function sauver() {
+            if (document.prerendering) return;   // une page encore invisible ne doit rien écraser
+            try { sessionStorage.setItem(CLE, String(Math.round(barre.scrollTop))); } catch (e) { /* ignoré */ }
+        }
+        var attente = null;
+        barre.addEventListener('scroll', function () { clearTimeout(attente); attente = setTimeout(sauver, 120); }, { passive: true });
+        window.addEventListener('pagehide', sauver);
+        barre.addEventListener('click', sauver, true);
+    }
+
+    // Préchargement des pages de la barre latérale : la page suivante est prête
+    // avant même le clic (survol à la souris, appui au doigt).
+    function initPrechargement() {
+        var liens = '.nav-sidebar a.nav-link[href^="/"]:not([href*="logout"])';
+        if (window.HTMLScriptElement && HTMLScriptElement.supports && HTMLScriptElement.supports('speculationrules')) {
+            var regles = document.createElement('script');
+            regles.type = 'speculationrules';
+            regles.textContent = JSON.stringify({
+                prerender: [{ source: 'document', where: { selector_matches: liens }, eagerness: 'moderate' }]
+            });
+            document.head.appendChild(regles);
+            return;
+        }
+        var faits = {};
+        function prefetch(e) {
+            var a = e.target.closest && e.target.closest(liens);
+            if (!a || faits[a.href] || a.href === location.href) return;
+            faits[a.href] = true;
+            var l = document.createElement('link');
+            l.rel = 'prefetch'; l.href = a.href;
+            document.head.appendChild(l);
+        }
+        document.addEventListener('mouseover', prefetch, { passive: true });
+        document.addEventListener('touchstart', prefetch, { passive: true });
+    }
+
+    document.documentElement.classList.add('kx-preload');
+    initSidebarScroll();
+    window.addEventListener('load', function () {
+        requestAnimationFrame(function () { document.documentElement.classList.remove('kx-preload'); });
+    });
+
     document.addEventListener('DOMContentLoaded', function () {
+        initPrechargement();
         initTabsHash();
         initUserMenuFallback();
         initFilePreviews();
+        initTabsScroll();
     });
 })();
