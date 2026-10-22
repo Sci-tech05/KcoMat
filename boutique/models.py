@@ -89,6 +89,21 @@ class Produit(models.Model):
                 'libelle': self.reference or (self.categorie.nom if self.categorie else 'KcoMat')}
 
 
+class ProduitRetire(models.Model):
+    """Composant du catalogue supprimé par l'admin : « Charger le catalogue » ne le recrée plus."""
+    slug = models.SlugField(unique=True)
+    nom = models.CharField(max_length=200)
+    retire_le = models.DateTimeField('Retiré le', auto_now_add=True)
+
+    class Meta:
+        ordering = ['nom']
+        verbose_name = "Composant retiré du catalogue"
+        verbose_name_plural = "Composants retirés du catalogue"
+
+    def __str__(self):
+        return self.nom
+
+
 class ImageProduit(models.Model):
     produit = models.ForeignKey(Produit, on_delete=models.CASCADE, related_name='images')
     image = models.ImageField(upload_to='produits/gallery/')

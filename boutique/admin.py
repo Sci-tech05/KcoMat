@@ -19,7 +19,7 @@ from core.templatetags.kcomat_tags import webp
 
 from .catalogue import charger_catalogue, nombre_produits
 from .images import image_depuis_lien
-from .models import CategorieProduit, Produit, ImageProduit, Commande, CommandeItem
+from .models import CategorieProduit, Produit, ProduitRetire, ImageProduit, Commande, CommandeItem
 from .suivi import envoyer_email_suivi, raison_echec_email
 
 logger = logging.getLogger(__name__)
@@ -30,6 +30,21 @@ class CategorieProduitAdmin(admin.ModelAdmin):
     list_display = ['nom', 'slug', 'ordre']
     list_editable = ['ordre']
     prepopulated_fields = {'slug': ('nom',)}
+
+
+@admin.register(ProduitRetire)
+class ProduitRetireAdmin(admin.ModelAdmin):
+    list_display = ['nom', 'slug', 'retire_le']
+    search_fields = ['nom', 'slug']
+    readonly_fields = ['nom', 'slug', 'retire_le']
+
+    def has_add_permission(self, request):
+        return False  # ajouté automatiquement quand un composant du catalogue est supprimé
+
+    def changelist_view(self, request, extra_context=None):
+        self.message_user(request, "Ces composants du catalogue ont été supprimés : « Charger le catalogue » ne les recrée plus. "
+                                   "Supprimez une ligne pour que le composant revienne au prochain chargement.", messages.INFO)
+        return super().changelist_view(request, extra_context)
 
 
 class ImageProduitInline(admin.TabularInline):
@@ -156,12 +171,15 @@ class ProduitAdmin(admin.ModelAdmin):
     def charger_catalogue_view(self, request):
         if request.method != 'POST' or not self.has_add_permission(request):
             raise Http404
-        crees, _, _ = charger_catalogue(force=False)
+        crees, _, _, ignores = charger_catalogue(force=False)
         if crees:
             self.message_user(request, f"{crees} produit(s) ajouté(s), masqués avec un stock à 0 : ajoutez l'image et la quantité "
                                        "puis publiez ceux que vous souhaitez afficher.", messages.SUCCESS)
         else:
             self.message_user(request, "Le catalogue est déjà complet : aucun produit ajouté.", messages.INFO)
+        if ignores:
+            self.message_user(request, f"{ignores} composant(s) que vous aviez supprimé(s) n'ont pas été recréés "
+                                       "(voir « Composants retirés du catalogue »).", messages.INFO)
         return redirect(reverse('admin:boutique_produit_changelist') + '?actif__exact=0')
 
     def changelist_view(self, request, extra_context=None):

@@ -12,7 +12,8 @@ class Command(BaseCommand):
                             help="Réécrit aussi les textes des produits du catalogue déjà présents (prix, stock et images conservés).")
 
     def handle(self, *args, **options):
-        crees, maj, inchangees = charger_catalogue(force=options['force'])
+        crees, maj, inchangees, ignores = charger_catalogue(force=options['force'])
         self.stdout.write(self.style.SUCCESS(
-            f"Catalogue ({nombre_produits()} produits) : {crees} créé(s), {maj} mis à jour, {inchangees} inchangé(s)."
+            f"Catalogue ({nombre_produits()} produits) : {crees} créé(s), {maj} mis à jour, {inchangees} inchangé(s), "
+            f"{ignores} retiré(s) par l'admin, ignoré(s)."
         ))

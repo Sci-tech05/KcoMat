@@ -233,7 +233,7 @@ class CatalogueProduitsTests(TestCase):
 
     def test_catalogue_masque_stock_zero_sans_doublon(self):
         from boutique.catalogue import charger_catalogue, nombre_produits
-        crees, _, inchangees = charger_catalogue()
+        crees, _, inchangees, _ = charger_catalogue()
         self.assertEqual((crees, inchangees), (nombre_produits() - 2, 14))  # ESP32, Relay 5V + DHT22, MQ-2, 3 LED, relais 5V, module 2 canaux, 220 Ω, ESP32 Wi-Fi, protoboard, jumpers M-M et M-F déjà au catalogue
         self.assertEqual(Produit.objects.count(), nombre_produits())
         arduino = Produit.objects.get(slug='arduino-uno-r3')
@@ -482,3 +482,29 @@ class ImagesLibresTests(TestCase):
         self.hcsr04.refresh_from_db()
         self.assertTrue(self.hcsr04.image)
         pause.assert_any_call(15)
+
+
+class ComposantsRetiresTests(TestCase):
+    """Un composant du catalogue supprimé dans l'admin ne revient pas au chargement suivant."""
+
+    def test_composant_supprime_non_recree(self):
+        from boutique.catalogue import charger_catalogue
+        from boutique.models import ProduitRetire
+        charger_catalogue()
+        Produit.objects.get(slug='arduino-uno-r3').delete()
+        Produit.objects.filter(slug__in=['esp32', 'dht22']).delete()          # suppression groupée (action admin)
+        self.assertEqual(set(ProduitRetire.objects.values_list('slug', flat=True)), {'arduino-uno-r3', 'esp32', 'dht22'})
+        crees, _, _, ignores = charger_catalogue()
+        self.assertEqual(crees, 0)
+        self.assertFalse(Produit.objects.filter(slug__in=['arduino-uno-r3', 'esp32', 'dht22']).exists())
+        # DHT22 et ESP32 ont aussi une fiche alias (capteurs, sans fil) : elles ne les recréent pas non plus
+        self.assertEqual(ignores, 5)
+
+        ProduitRetire.objects.filter(slug='arduino-uno-r3').delete()             # l'admin change d'avis
+        self.assertEqual(charger_catalogue()[0], 1)
+        self.assertTrue(Produit.objects.filter(slug='arduino-uno-r3').exists())
+
+    def test_produit_hors_catalogue_non_memorise(self):
+        from boutique.models import ProduitRetire
+        Produit.objects.create(nom='Article perso', description_courte='x', description='x', prix=100).delete()
+        self.assertFalse(ProduitRetire.objects.exists())
