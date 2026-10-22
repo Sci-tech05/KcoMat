@@ -33,6 +33,8 @@ VISUELS_CATEGORIE = {
     'moteurs-robotique': ('#7C3AED', 'bot'),
     'leds-afficheurs': ('#DB2777', 'sun'),
     'boutons-interrupteurs': ('#0891B2', 'grid'),
+    'relais': ('#EA580C', 'network'),
+    'resistances': ('#4D7C0F', 'chart'),
 }
 VISUEL_PAR_DEFAUT = ('#475569', 'cpu')
 

@@ -1,6 +1,6 @@
 """
 Catalogue de composants de la boutique (Électronique, Électricité, Capteurs, Moteurs & Robotique, LED & Afficheurs,
-Boutons & Interrupteurs), prix en FCFA.
+Boutons & Interrupteurs, Relais, Résistances), prix en FCFA.
 
 Chargés MASQUÉS et avec un stock à 0 : l'admin ajoute l'image et la quantité, puis coche « Actif ».
 Chargement : bouton « Charger le catalogue » dans l'admin des produits, ou
@@ -17,6 +17,8 @@ from .catalogue_afficheurs import AFFICHEURS
 from .catalogue_boutons import BOUTONS
 from .catalogue_capteurs import CAPTEURS
 from .catalogue_moteurs import MOTEURS
+from .catalogue_relais import RELAIS
+from .catalogue_resistances import RESISTANCES
 
 MAJORATION = 30  # % ajoutés au prix source (catégories reprises de YoupiLab)
 
@@ -33,6 +35,10 @@ CATEGORIES = {
                         'description': "LED, matrices, afficheurs 7 segments, écrans LCD, OLED et TFT."},
     'boutons-interrupteurs': {'nom': 'Boutons & Interrupteurs', 'icone': 'fas fa-toggle-on', 'ordre': 6,
                               'description': "Boutons poussoirs, interrupteurs, fins de course, claviers et boutons tactiles."},
+    'relais': {'nom': 'Relais', 'icone': 'fas fa-plug', 'ordre': 7,
+               'description': "Relais, modules relais 5 V / 12 V / 30 A, relais statiques (SSR) et commutateurs connectés."},
+    'resistances': {'nom': 'Résistances', 'icone': 'fas fa-wave-square', 'ordre': 8,
+                    'description': "Résistances 1/4 W, 1/2 W et 1 W, et kit d'assortiment."},
 }
 
 PRODUITS = {
@@ -359,7 +365,8 @@ def prix_majore(prix_source, pourcentage=MAJORATION):
 
 # « prix_min » : plancher de prix (ex. 50 FCFA pour les LED vendues moins cher chez la source)
 for _categorie, _fiches in (('capteurs', CAPTEURS), ('moteurs-robotique', MOTEURS), ('leds-afficheurs', AFFICHEURS),
-                            ('boutons-interrupteurs', BOUTONS)):
+                            ('boutons-interrupteurs', BOUTONS), ('relais', RELAIS),
+                            ('resistances', RESISTANCES)):
     PRODUITS[_categorie] = [{**fiche, 'prix': max(prix_majore(fiche['prix_source']), fiche.get('prix_min', 0))}
                             for fiche in _fiches]
 
