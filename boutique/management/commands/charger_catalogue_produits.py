@@ -4,7 +4,7 @@ from boutique.catalogue import charger_catalogue, nombre_produits
 
 
 class Command(BaseCommand):
-    help = ("Charge le catalogue de composants (Électronique, Électricité, Capteurs, Moteurs & Robotique, LED & Afficheurs, Boutons & Interrupteurs, Relais, Résistances). "
+    help = ("Charge le catalogue de composants (Électronique, Électricité, Capteurs, Moteurs & Robotique, LED & Afficheurs, Boutons & Interrupteurs, Relais, Résistances, Sans fil, GSM & GPS, Laboratoire). "
             "Les produits créés sont masqués avec un stock à 0 : ajoutez image et quantité puis publiez-les depuis l'admin.")
 
     def add_arguments(self, parser):

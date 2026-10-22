@@ -234,7 +234,7 @@ class CatalogueProduitsTests(TestCase):
     def test_catalogue_masque_stock_zero_sans_doublon(self):
         from boutique.catalogue import charger_catalogue, nombre_produits
         crees, _, inchangees = charger_catalogue()
-        self.assertEqual((crees, inchangees), (nombre_produits() - 2, 10))  # ESP32, Relay 5V + DHT22, MQ-2, 3 LED, relais 5V, module 2 canaux et 220 Ω déjà au catalogue
+        self.assertEqual((crees, inchangees), (nombre_produits() - 2, 12))  # ESP32, Relay 5V + DHT22, MQ-2, 3 LED, relais 5V, module 2 canaux, 220 Ω, ESP32 Wi-Fi et protoboard déjà au catalogue
         self.assertEqual(Produit.objects.count(), nombre_produits())
         arduino = Produit.objects.get(slug='arduino-uno-r3')
         self.assertEqual((arduino.prix, arduino.stock, arduino.actif, arduino.categorie.slug), (6500, 0, False, 'electronique'))
@@ -262,6 +262,11 @@ class CatalogueProduitsTests(TestCase):
         self.assertEqual((ssr.prix, ssr.categorie.slug), (3585, 'relais'))
         self.assertEqual(Produit.objects.get(slug='resistance-22k-1w').prix, 55)
         self.assertEqual(Produit.objects.get(slug='resistance-10k-1-4w').prix, 50)  # 20 FCFA + 30 % → minimum 50
+        hc05 = Produit.objects.get(slug='module-bluetooth-hc-05')
+        self.assertEqual((hc05.prix, hc05.categorie.slug), (5070, 'sans-fil'))
+        self.assertFalse(Produit.objects.filter(slug='module-wifi-esp32').exists())  # = ESP32 existant
+        self.assertEqual(Produit.objects.get(slug='module-gps-neo-6m').categorie.slug, 'gsm-gps')
+        self.assertEqual(Produit.objects.get(slug='tresse-a-dessouder').prix, 730)
         self.assertFalse(Produit.objects.filter(slug='resistance-220-ohms-1-4w').exists())  # = « Résistance 220 Ω » existante
         self.assertFalse(Produit.objects.filter(slug__in=['relais-5v-simple', 'module-relais-5v-2-canaux']).exists())
         oled = Produit.objects.get(slug='ecran-oled-091')
