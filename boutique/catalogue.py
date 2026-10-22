@@ -1,7 +1,8 @@
 """
 Catalogue de composants de la boutique (Électronique, Électricité, Capteurs, Moteurs & Robotique, LED & Afficheurs,
 Boutons & Interrupteurs, Relais, Résistances,
-Sans fil & Communication, GSM, GPRS & GPS, Équipements de laboratoire), prix en FCFA.
+Sans fil & Communication, GSM, GPRS & GPS, Équipements de laboratoire,
+Câbles & Connecteurs), prix en FCFA.
 
 Chargés MASQUÉS et avec un stock à 0 : l'admin ajoute l'image et la quantité, puis coche « Actif ».
 Chargement : bouton « Charger le catalogue » dans l'admin des produits, ou
@@ -23,6 +24,7 @@ from .catalogue_resistances import RESISTANCES
 from .catalogue_sans_fil import SANS_FIL
 from .catalogue_gsm_gps import GSM_GPS
 from .catalogue_labo import LABO
+from .catalogue_cables import CABLES
 
 MAJORATION = 30  # % ajoutés au prix source (catégories reprises de YoupiLab)
 
@@ -49,6 +51,8 @@ CATEGORIES = {
                 'description': "Modules GSM / GPRS (SMS, appels, données), récepteurs GPS et antennes."},
     'labo': {'nom': 'Équipements de laboratoire', 'icone': 'fas fa-flask', 'ordre': 11,
              'description': "Protoboards, veroboards, plaques cuivrées, soudure et rangement pour l'atelier électronique."},
+    'cables': {'nom': 'Câbles & Connecteurs', 'icone': 'fas fa-link', 'ordre': 12,
+               'description': "Jumpers, câbles USB / HDMI / Grove, convertisseurs série, connecteurs et cordons de test."},
 }
 
 PRODUITS = {
@@ -374,11 +378,13 @@ def prix_majore(prix_source, pourcentage=MAJORATION):
 
 
 # « prix_min » : plancher de prix (ex. 50 FCFA pour les LED vendues moins cher chez la source)
+# « prix_fixe » : prix KcoMat imposé, sans majoration (ex. jumpers à 50 FCFA l'unité)
 for _categorie, _fiches in (('capteurs', CAPTEURS), ('moteurs-robotique', MOTEURS), ('leds-afficheurs', AFFICHEURS),
                             ('boutons-interrupteurs', BOUTONS), ('relais', RELAIS),
                             ('resistances', RESISTANCES), ('sans-fil', SANS_FIL),
-                            ('gsm-gps', GSM_GPS), ('labo', LABO)):
-    PRODUITS[_categorie] = [{**fiche, 'prix': max(prix_majore(fiche['prix_source']), fiche.get('prix_min', 0))}
+                            ('gsm-gps', GSM_GPS), ('labo', LABO), ('cables', CABLES)):
+    PRODUITS[_categorie] = [{**fiche, 'prix': fiche.get('prix_fixe') or max(prix_majore(fiche['prix_source']),
+                                                                             fiche.get('prix_min', 0))}
                             for fiche in _fiches]
 
 
