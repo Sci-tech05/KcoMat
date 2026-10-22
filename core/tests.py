@@ -246,3 +246,42 @@ class CompressionImagesTests(TestCase):
         self.assertIn('1 image(s)', sortie.getvalue())
         call_command('compresser_images', '--appliquer', stdout=sortie)  # relancer ne refait rien
         self.assertEqual(Service.objects.get(pk=service.pk).image.name, 'services/ancienne.webp')
+
+    def test_ancienne_image_supprimee_si_remplacee_effacee_ou_element_supprime(self):
+        import os
+        from services.models import Service
+        chemin = lambda nom: os.path.join(self.media, nom)
+        with self.captureOnCommitCallbacks(execute=True):
+            service = Service.objects.create(titre='A', description_courte='x', description='x', image=self.fichier('a.jpg', (400, 300)))
+        premiere = service.image.name
+
+        with self.captureOnCommitCallbacks(execute=True):            # remplacement
+            service.image = self.fichier('b.jpg', (400, 300))
+            service.save()
+        self.assertFalse(os.path.exists(chemin(premiere)))
+        seconde = service.image.name
+        self.assertTrue(os.path.exists(chemin(seconde)))
+
+        with self.captureOnCommitCallbacks(execute=True):            # case « Effacer »
+            service.image = None
+            service.save()
+        self.assertFalse(os.path.exists(chemin(seconde)))
+
+        with self.captureOnCommitCallbacks(execute=True):            # suppression de l'élément
+            service.image = self.fichier('c.jpg', (400, 300))
+            service.save()
+        troisieme = service.image.name
+        with self.captureOnCommitCallbacks(execute=True):
+            service.delete()
+        self.assertFalse(os.path.exists(chemin(troisieme)))
+
+    def test_image_partagee_jamais_supprimee(self):
+        import os
+        from services.models import Service
+        with self.captureOnCommitCallbacks(execute=True):
+            a = Service.objects.create(titre='A', description_courte='x', description='x', image=self.fichier('a.jpg', (400, 300)))
+            b = Service.objects.create(titre='B', description_courte='x', description='x')
+        Service.objects.filter(pk=b.pk).update(image=a.image.name)
+        with self.captureOnCommitCallbacks(execute=True):
+            a.delete()
+        self.assertTrue(os.path.exists(os.path.join(self.media, a.image.name)))

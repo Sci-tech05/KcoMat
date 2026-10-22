@@ -6,6 +6,8 @@ Seule la version compressée est conservée : redressée (EXIF), réduite, encod
 métadonnées (GPS, appareil). L'original n'est jamais écrit sur le disque.
 - À l'envoi : signal pre_save (core.apps) → `compresser_envoi`.
 - Images déjà en ligne : `python manage.py compresser_images`.
+- Image remplacée, effacée ou élément supprimé : l'ancien fichier est supprimé du disque
+  (`memoriser_anciennes_images` / `supprimer_images_remplacees` / `supprimer_images_de_l_element`).
 """
 import logging
 from io import BytesIO
@@ -13,7 +15,7 @@ from pathlib import Path
 
 from django.core.exceptions import ValidationError
 from django.core.files.base import ContentFile
-from django.db import models
+from django.db import models, transaction
 from PIL import Image, ImageOps, UnidentifiedImageError
 
 logger = logging.getLogger(__name__)
@@ -84,3 +86,40 @@ def compresser_envoi(sender, instance, raw=False, **kwargs):
             continue
         if contenu is not None:
             fichier.save(nom_webp(fichier.name), contenu, save=False)
+
+
+def _supprimer_si_inutilise(modele, champ, nom):
+    """Supprime le fichier une fois la transaction validée, s'il n'est plus utilisé par aucun élément."""
+    def supprimer():
+        if not modele._default_manager.filter(**{champ.attname: nom}).exists():
+            champ.storage.delete(nom)
+    transaction.on_commit(supprimer)
+
+
+def memoriser_anciennes_images(sender, instance, raw=False, **kwargs):
+    """pre_save : retient les images actuellement enregistrées, pour supprimer celles qui seront remplacées."""
+    champs = champs_image(sender)
+    if raw or not champs or instance.pk is None:
+        return
+    instance._images_avant = sender._default_manager.filter(pk=instance.pk).values(
+        *[champ.attname for champ in champs]).first() or {}
+
+
+def supprimer_images_remplacees(sender, instance, raw=False, **kwargs):
+    """post_save : supprime du disque l'image remplacée ou effacée (case « Effacer »)."""
+    avant = getattr(instance, '_images_avant', None)
+    if raw or not avant:
+        return
+    del instance._images_avant
+    for champ in champs_image(sender):
+        ancien = avant.get(champ.attname)
+        if ancien and ancien != getattr(instance, champ.attname).name:
+            _supprimer_si_inutilise(sender, champ, ancien)
+
+
+def supprimer_images_de_l_element(sender, instance, **kwargs):
+    """post_delete : supprime du disque les images de l'élément supprimé."""
+    for champ in champs_image(sender):
+        fichier = getattr(instance, champ.attname)
+        if fichier:
+            _supprimer_si_inutilise(sender, champ, fichier.name)

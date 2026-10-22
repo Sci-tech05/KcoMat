@@ -11,7 +11,10 @@ class CoreConfig(AppConfig):
         from .labels import appliquer_libelles
         appliquer_libelles()
 
-        # Toute image envoyée (admin, formulaires) est compressée en WebP avant d'être écrite : voir core/images.py
-        from django.db.models.signals import pre_save
-        from .images import compresser_envoi
-        pre_save.connect(compresser_envoi, dispatch_uid='core.compresser_images_envoyees')
+        # Images : compressées en WebP avant d'être écrites, anciennes versions supprimées du disque (core/images.py)
+        from django.db.models.signals import post_delete, post_save, pre_save
+        from . import images
+        pre_save.connect(images.memoriser_anciennes_images, dispatch_uid='core.memoriser_anciennes_images')
+        pre_save.connect(images.compresser_envoi, dispatch_uid='core.compresser_images_envoyees')
+        post_save.connect(images.supprimer_images_remplacees, dispatch_uid='core.supprimer_images_remplacees')
+        post_delete.connect(images.supprimer_images_de_l_element, dispatch_uid='core.supprimer_images_de_l_element')
