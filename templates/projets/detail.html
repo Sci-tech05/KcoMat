@@ -40,6 +40,10 @@
             {% endfor %}
         </div>
         {% endif %}
+        <div class="mt-8">
+            {% capture as image_partage %}{% if projet.image %}{{ SITE_URL }}{{ projet.image|og_image }}{% elif projet.video.miniature_sd %}{{ projet.video.miniature_sd }}{% endif %}{% endcapture %}
+            {% include 'partials/partage.html' with titre=projet.titre texte=projet.description_courte image=image_partage style='sombre' %}
+        </div>
     </div>
 </section>
 
