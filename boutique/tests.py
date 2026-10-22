@@ -365,3 +365,31 @@ class VisuelEtImageParLienTests(TestCase):
             self.produit.refresh_from_db()
             self.assertTrue(self.produit.image.name.endswith('.webp'), self.produit.image.name)
             self.assertLess(self.produit.image.size, 200 * 1024)
+
+
+class StockEnMasseTests(TestCase):
+    def setUp(self):
+        for i in range(3):
+            Produit.objects.create(nom=f'Composant {i}', description_courte='x', description='x', prix=100, stock=i)
+        admin = User.objects.create_superuser('admin', 'admin@x.com', 'mdp')
+        self.client.force_login(admin)
+        session = self.client.session
+        session['admin_2fa_verified_user_id'] = admin.pk
+        session.save()
+
+    def lancer(self, **donnees):
+        return self.client.post(reverse('admin:boutique_produit_changelist'), {
+            'action': 'definir_stock', 'index': 0, 'select_across': 1,
+            '_selected_action': [p.pk for p in Produit.objects.all()], **donnees}, follow=True)
+
+    def test_stock_de_tous_les_produits_a_la_quantite_saisie(self):
+        reponse = self.lancer(quantite=25)
+        self.assertEqual(set(Produit.objects.values_list('stock', flat=True)), {25})
+        self.assertContains(reponse, 'Stock mis à 25 pour 3 produit(s).')
+
+    def test_sans_quantite_rien_ne_change(self):
+        reponse = self.lancer(quantite='')
+        self.assertEqual(sorted(Produit.objects.values_list('stock', flat=True)), [0, 1, 2])
+        self.assertContains(reponse, 'Saisissez la quantité')
+        self.lancer(quantite=-4)
+        self.assertEqual(sorted(Produit.objects.values_list('stock', flat=True)), [0, 1, 2])

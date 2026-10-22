@@ -2,6 +2,7 @@ import logging
 
 from django import forms
 from django.contrib import admin, messages
+from django.contrib.admin.helpers import ActionForm
 from django.db.models import Q, Sum
 from django.http import Http404, HttpResponse
 from django.shortcuts import redirect
@@ -57,6 +58,15 @@ class ProduitAdminForm(forms.ModelForm):
         return lien
 
 
+class ProduitActionForm(ActionForm):
+    # case affichée à côté de la liste des actions, utilisée par « Mettre le stock à la quantité saisie »
+    quantite = forms.IntegerField(
+        required=False, min_value=0, label='Quantité',
+        widget=forms.NumberInput(attrs={'placeholder': 'Quantité', 'min': 0, 'class': 'form-control',
+                                        'style': 'width:7.5rem;display:inline-block;margin-left:.5rem'}),
+    )
+
+
 class SansImageFilter(admin.SimpleListFilter):
     title = 'photo'
     parameter_name = 'photo'
@@ -88,7 +98,21 @@ class ProduitAdmin(admin.ModelAdmin):
     prepopulated_fields = {'slug': ('nom',)}
     inlines = [ImageProduitInline]
     change_list_template = 'admin/boutique/produit/change_list.html'
-    actions = ['publier', 'masquer']
+    action_form = ProduitActionForm
+    actions = ['definir_stock', 'publier', 'masquer']
+
+    @admin.action(description="Mettre le stock des produits sélectionnés à la quantité saisie")
+    def definir_stock(self, request, queryset):
+        try:
+            quantite = int(request.POST.get('quantite', ''))
+        except ValueError:
+            quantite = -1
+        if quantite < 0:
+            self.message_user(request, "Saisissez la quantité (nombre entier, 0 ou plus) dans la case « Quantité » "
+                                       "à côté de l'action, puis relancez.", messages.ERROR)
+            return
+        nombre = queryset.update(stock=quantite)
+        self.message_user(request, f"Stock mis à {quantite} pour {nombre} produit(s).", messages.SUCCESS)
 
     @admin.display(description='Photo')
     def miniature(self, obj):
@@ -106,13 +130,11 @@ class ProduitAdmin(admin.ModelAdmin):
 
     def save_model(self, request, obj, form, change):
         image_importee = getattr(form, 'image_importee', None)
-        ancienne = Produit.objects.filter(pk=obj.pk).values_list('image', flat=True).first() if change else None
         if image_importee:
+            # l'ancienne photo est supprimée du disque après l'enregistrement (core/images.py)
             obj.image.save(f"{obj.slug or 'produit'}.webp", image_importee, save=False)
         super().save_model(request, obj, form, change)
         if image_importee:
-            if ancienne and ancienne != obj.image.name:
-                obj.image.storage.delete(ancienne)  # pas de vieille photo oubliée sur le disque
             self.message_user(request, "Image importée depuis le lien et compressée en WebP.", messages.SUCCESS)
 
     @admin.action(description="Publier les produits sélectionnés")
