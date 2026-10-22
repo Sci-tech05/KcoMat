@@ -408,3 +408,57 @@ class StockEnMasseTests(TestCase):
         self.assertContains(reponse, 'Saisissez la quantité')
         self.lancer(quantite=-4)
         self.assertEqual(sorted(Produit.objects.values_list('stock', flat=True)), [0, 1, 2])
+
+
+class ImagesLibresTests(TestCase):
+    """Photos libres (Wikimedia Commons) : import avec crédit, jamais par-dessus une photo existante."""
+
+    def setUp(self):
+        import tempfile
+        self.media = tempfile.mkdtemp()
+        self.reglage = override_settings(MEDIA_ROOT=self.media)
+        self.reglage.enable()
+        self.hcsr04 = Produit.objects.create(nom='Capteur à ultrasons HC-SR04', slug='capteur-a-ultrasons-hc-sr04',
+                                             description_courte='x', description='x', prix=2080)
+        self.bc547 = Produit.objects.create(nom='Transistor BC547', slug='transistor-bc547', description_courte='x',
+                                            description='x', prix=400, image='produits/ma-photo.webp')
+
+    def tearDown(self):
+        import shutil
+        self.reglage.disable()
+        shutil.rmtree(self.media, ignore_errors=True)
+
+    def test_liste_coherente_avec_le_catalogue(self):
+        from boutique.catalogue import PRODUITS, slug_produit
+        from boutique.images_libres import IMAGES_LIBRES
+        slugs = {slug_produit(f) for fiches in PRODUITS.values() for f in fiches}
+        self.assertTrue(set(IMAGES_LIBRES) <= slugs, set(IMAGES_LIBRES) - slugs)
+        for photo in IMAGES_LIBRES.values():
+            self.assertTrue(photo['url'].startswith('https://upload.wikimedia.org/'))
+            self.assertTrue(photo['credit'].startswith('Photo : '))
+
+    def test_import_avec_credit_sans_remplacer_les_photos_existantes(self):
+        from io import StringIO
+        from django.core.management import call_command
+        from boutique.images import compresser
+        from boutique.images_libres import IMAGES_LIBRES
+        png = VisuelEtImageParLienTests.png((800, 600))
+        call_command('importer_images_libres', stdout=StringIO())        # simulation
+        self.hcsr04.refresh_from_db()
+        self.assertFalse(self.hcsr04.image)
+        from io import BytesIO
+        with patch('boutique.management.commands.importer_images_libres.image_depuis_lien',
+                   side_effect=lambda url: compresser(BytesIO(png))):
+            call_command('importer_images_libres', '--appliquer', stdout=StringIO())
+        self.hcsr04.refresh_from_db()
+        self.bc547.refresh_from_db()
+        self.assertTrue(self.hcsr04.image.name.endswith('.webp'))
+        self.assertEqual(self.hcsr04.credit_image, IMAGES_LIBRES['capteur-a-ultrasons-hc-sr04']['credit'])
+        self.assertEqual(self.bc547.image.name, 'produits/ma-photo.webp')  # photo existante conservée
+        self.assertEqual(self.bc547.credit_image, '')
+
+        self.hcsr04.actif = True
+        self.hcsr04.save()
+        page = self.client.get(reverse('boutique:detail', args=[self.hcsr04.slug])).content.decode()
+        self.assertIn('class="kx-credit-photo"', page)
+        self.assertIn(IMAGES_LIBRES['capteur-a-ultrasons-hc-sr04']['source'], page)

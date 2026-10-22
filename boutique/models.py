@@ -51,6 +51,12 @@ class Produit(models.Model):
     description_courte = models.CharField(max_length=300)
     description = models.TextField()
     image = models.ImageField(upload_to='produits/', blank=True, null=True)
+    credit_image = models.CharField(
+        'Crédit photo', max_length=200, blank=True,
+        help_text="Obligatoire pour une photo sous licence libre (ex. « Photo : Auteur, CC BY-SA 4.0, Wikimedia Commons »). "
+                  "Vide pour vos propres photos.",
+    )
+    source_image = models.URLField('Source de la photo', blank=True, help_text="Page d'origine de la photo (licence).")
     prix = models.DecimalField(max_digits=10, decimal_places=0)
     stock = models.PositiveIntegerField(default=0)
     actif = models.BooleanField(default=True)
