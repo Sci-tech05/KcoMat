@@ -35,6 +35,9 @@ VISUELS_CATEGORIE = {
     'boutons-interrupteurs': ('#0891B2', 'grid'),
     'relais': ('#EA580C', 'network'),
     'resistances': ('#4D7C0F', 'chart'),
+    'sans-fil': ('#4F46E5', 'wifi'),
+    'gsm-gps': ('#0F766E', 'map-pin'),
+    'labo': ('#9F1239', 'wrench'),
 }
 VISUEL_PAR_DEFAUT = ('#475569', 'cpu')
 
