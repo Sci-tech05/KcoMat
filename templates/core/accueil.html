@@ -609,7 +609,7 @@
           {% if produit.image %}
           <img src="{{ produit.image|webp:480 }}" alt="{{ produit.nom }}" loading="lazy" decoding="async">
           {% else %}
-          {% include 'partials/icon.html' with name='cpu' class='w-12 h-12 text-slate-300' stroke='1.25' %}
+          {% include 'partials/visuel_produit.html' with produit=produit taille='carte' %}
           {% endif %}
           {% if produit.stock == 0 %}<span class="prod-slide__stock bg-rose-500">Rupture</span>{% elif produit.en_vedette %}<span class="prod-slide__stock bg-blue-600">Populaire</span>{% endif %}
         </span>

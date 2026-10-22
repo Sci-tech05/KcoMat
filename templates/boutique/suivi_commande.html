@@ -77,7 +77,7 @@
                     {% for item in commande.items.all %}
                     <li class="flex items-center gap-4 py-3">
                         <span class="grid h-14 w-14 flex-shrink-0 place-items-center overflow-hidden rounded-xl bg-slate-50 ring-1 ring-inset ring-slate-100">
-                            {% if item.produit.image %}<img src="{{ item.produit.image|webp:120 }}" alt="" loading="lazy" class="h-full w-full object-contain p-1.5">{% else %}{% include 'partials/icon.html' with name='cpu' class='w-6 h-6 text-slate-300' %}{% endif %}
+                            {% if item.produit.image %}<img src="{{ item.produit.image|webp:120 }}" alt="" loading="lazy" class="h-full w-full object-contain p-1.5">{% elif item.produit %}{% include 'partials/visuel_produit.html' with produit=item.produit taille='mini' %}{% else %}{% include 'partials/icon.html' with name='cpu' class='w-6 h-6 text-slate-300' %}{% endif %}
                         </span>
                         <span class="min-w-0 flex-1">
                             {% if item.produit and item.produit.actif %}<a href="{% url 'boutique:detail' item.produit.slug %}" class="block truncate font-semibold text-slate-900 hover:text-blue-600">{{ item.nom_produit }}</a>

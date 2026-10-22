@@ -12,7 +12,7 @@ register = template.Library()
 logger = logging.getLogger(__name__)
 
 WEBP_CACHE_DIR = 'cache/webp'
-WEBP_SKIP_SUFFIXES = {'.gif', '.svg', '.webp'}
+WEBP_SKIP_SUFFIXES = {'.gif', '.svg'}
 
 
 @register.filter
@@ -37,6 +37,11 @@ def webp(image, width=800):
         relative = Path(WEBP_CACHE_DIR, str(width), image.name).with_suffix('.webp')
         target = Path(settings.MEDIA_ROOT, relative)
         if not target.exists() or target.stat().st_mtime < source.stat().st_mtime:
+            if source.suffix.lower() == '.webp':
+                # image déjà compressée à l'envoi (core/images.py) : pas de copie si elle est assez petite
+                with Image.open(source) as img:
+                    if img.width <= width:
+                        return original_url
             target.parent.mkdir(parents=True, exist_ok=True)
             with Image.open(source) as img:
                 img = ImageOps.exif_transpose(img)

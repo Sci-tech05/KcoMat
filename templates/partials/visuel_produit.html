@@ -1,0 +1,18 @@
+{% comment %}
+  Visuel généré pour un produit sans photo : aucun fichier, quelques centaines d'octets de HTML.
+  Couleur et icône selon la catégorie (Produit.visuel), référence en gros, nom en dessous.
+
+  Paramètres :
+    produit   le produit
+    taille    'grand' (fiche produit), 'carte' (listes, par défaut) ou 'mini' (panier, commande)
+{% endcomment %}
+{% with v=produit.visuel taille=taille|default:'carte' %}
+<span class="kx-visuel kx-visuel--{{ taille }}" style="--kx-visuel: {{ v.couleur }}" role="img" aria-label="{{ produit.nom }}">
+    <span class="kx-visuel__icone">{% include 'partials/icon.html' with name=v.icone class='kx-visuel__svg' stroke='1.5' %}</span>
+    {% if taille != 'mini' %}
+    <span class="kx-visuel__ref">{{ v.libelle }}</span>
+    <span class="kx-visuel__nom">{{ produit.nom }}</span>
+    {% if taille == 'grand' %}<span class="kx-visuel__note">Visuel indicatif · photo à venir</span>{% endif %}
+    {% endif %}
+</span>
+{% endwith %}
