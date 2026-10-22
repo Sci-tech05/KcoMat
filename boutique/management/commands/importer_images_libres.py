@@ -1,9 +1,24 @@
+import time
+
 from django.core.exceptions import ValidationError
 from django.core.management.base import BaseCommand
 
 from boutique.images import image_depuis_lien
 from boutique.images_libres import IMAGES_LIBRES
 from boutique.models import Produit
+
+PAUSE = 2                    # secondes entre deux téléchargements (Wikimedia limite le débit)
+ATTENTES_SI_LIMITE = (15, 60)  # nouvelles tentatives après un refus « trop de requêtes » (code 429)
+
+
+def telecharger(url):
+    for attente in (*ATTENTES_SI_LIMITE, None):
+        try:
+            return image_depuis_lien(url)
+        except ValidationError as erreur:
+            if attente is None or '429' not in ' '.join(erreur.messages):
+                raise
+            time.sleep(attente)
 
 
 class Command(BaseCommand):
@@ -29,8 +44,10 @@ class Command(BaseCommand):
                 self.stdout.write(f"  + {slug} : {photo['credit']}")
                 ajoutees += 1
                 continue
+            if ajoutees or erreurs:
+                time.sleep(PAUSE)
             try:
-                contenu = image_depuis_lien(photo['url'])
+                contenu = telecharger(photo['url'])
             except ValidationError as erreur:
                 erreurs += 1
                 self.stdout.write(f"  ! {slug} : {' '.join(erreur.messages)}")

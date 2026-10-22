@@ -448,7 +448,7 @@ class ImagesLibresTests(TestCase):
         self.assertFalse(self.hcsr04.image)
         from io import BytesIO
         with patch('boutique.management.commands.importer_images_libres.image_depuis_lien',
-                   side_effect=lambda url: compresser(BytesIO(png))):
+                   side_effect=lambda url: compresser(BytesIO(png))),                 patch('boutique.management.commands.importer_images_libres.time.sleep'):
             call_command('importer_images_libres', '--appliquer', stdout=StringIO())
         self.hcsr04.refresh_from_db()
         self.bc547.refresh_from_db()
@@ -462,3 +462,23 @@ class ImagesLibresTests(TestCase):
         page = self.client.get(reverse('boutique:detail', args=[self.hcsr04.slug])).content.decode()
         self.assertIn('class="kx-credit-photo"', page)
         self.assertIn(IMAGES_LIBRES['capteur-a-ultrasons-hc-sr04']['source'], page)
+
+    def test_nouvelle_tentative_apres_refus_429(self):
+        from io import BytesIO, StringIO
+        from django.core.exceptions import ValidationError
+        from django.core.management import call_command
+        from boutique.images import compresser
+        png = VisuelEtImageParLienTests.png((800, 600))
+        reponses = iter([ValidationError("Le site a refusé l'accès à l'image (code 429).")])
+
+        def telecharger(url):
+            erreur = next(reponses, None)
+            if erreur:
+                raise erreur
+            return compresser(BytesIO(png))
+
+        with patch('boutique.management.commands.importer_images_libres.image_depuis_lien', side_effect=telecharger),                 patch('boutique.management.commands.importer_images_libres.time.sleep') as pause:
+            call_command('importer_images_libres', '--appliquer', stdout=StringIO())
+        self.hcsr04.refresh_from_db()
+        self.assertTrue(self.hcsr04.image)
+        pause.assert_any_call(15)
