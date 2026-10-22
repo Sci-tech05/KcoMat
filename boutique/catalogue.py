@@ -9,6 +9,7 @@ Chargement : bouton « Charger le catalogue » dans l'admin des produits, ou
 `python manage.py charger_catalogue_produits`.
 Un produit déjà présent (même slug, ou ancien slug listé dans « alias ») n'est jamais dupliqué
 et garde son prix, son stock, ses images et sa publication.
+Un produit du catalogue supprimé dans l'admin est mémorisé (ProduitRetire) et n'est plus recréé.
 """
 from decimal import ROUND_CEILING, Decimal
 
@@ -411,11 +412,13 @@ def charger_catalogue(force=False):
     Crée les catégories et les produits du catalogue absents (masqués, stock à 0, sans image).
     force=True réécrit aussi les textes des produits du catalogue déjà présents
     (sans toucher au prix, au stock, aux images ni à la publication).
-    Retourne (créés, mis à jour, inchangés).
+    Les composants supprimés dans l'admin (ProduitRetire) sont ignorés.
+    Retourne (créés, mis à jour, inchangés, retirés ignorés).
     """
-    from .models import CategorieProduit, Produit
+    from .models import CategorieProduit, Produit, ProduitRetire
 
-    crees, maj, inchangees = 0, 0, 0
+    retires = set(ProduitRetire.objects.values_list('slug', flat=True))
+    crees, maj, inchangees, ignores = 0, 0, 0, 0
     for slug_categorie, fiches in PRODUITS.items():
         infos = CATEGORIES[slug_categorie]
         categorie, _ = CategorieProduit.objects.get_or_create(
@@ -430,6 +433,9 @@ def charger_catalogue(force=False):
                 'description': description(fiche),
             }
             slugs = [slug_produit(fiche), *fiche.get('alias', [])]
+            if retires.intersection(slugs):
+                ignores += 1
+                continue
             produit = Produit.objects.filter(slug__in=slugs).first()
             if produit is None:
                 Produit.objects.create(nom=fiche['nom'], slug=slugs[0], prix=fiche['prix'], stock=0, actif=False, **champs)
@@ -441,4 +447,17 @@ def charger_catalogue(force=False):
                 maj += 1
             else:
                 inchangees += 1
-    return crees, maj, inchangees
+    return crees, maj, inchangees, ignores
+
+
+def slugs_du_catalogue():
+    """Tous les slugs connus du catalogue, alias compris."""
+    return {slug for fiches in PRODUITS.values() for fiche in fiches
+            for slug in (slug_produit(fiche), *fiche.get('alias', []))}
+
+
+def memoriser_retrait(sender, instance, **kwargs):
+    """post_delete d'un Produit : un composant du catalogue supprimé ne doit plus revenir au prochain chargement."""
+    from .models import ProduitRetire
+    if instance.slug in slugs_du_catalogue():
+        ProduitRetire.objects.get_or_create(slug=instance.slug, defaults={'nom': instance.nom})
