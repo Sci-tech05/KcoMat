@@ -1350,3 +1350,12 @@ body {
 .kx-visuel--mini::before { display: none; }
 .kx-visuel--mini .kx-visuel__icone { width: auto; height: auto; background: none; box-shadow: none; }
 .kx-visuel--mini .kx-visuel__svg { width: 55%; height: 55%; min-width: 1.1rem; min-height: 1.1rem; }
+
+/* Boutique : crédit d'une photo sous licence libre, sur la fiche produit */
+.kx-credit-photo {
+  position: absolute; right: .75rem; bottom: .6rem; max-width: calc(100% - 1.5rem);
+  padding: .15rem .5rem; border-radius: .5rem; background: rgba(255, 255, 255, .85);
+  font-size: .65rem; line-height: 1.4; color: #64748B; text-decoration: none;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+a.kx-credit-photo:hover { color: #0F172A; text-decoration: underline; }

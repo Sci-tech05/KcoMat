@@ -37,7 +37,7 @@ def _telecharger(url):
         _verifier_adresse(url)
         try:
             reponse = requests.get(url, stream=True, timeout=15, allow_redirects=False,
-                                   headers={'User-Agent': 'KcoMat/1.0 (import image produit)'})
+                                   headers={'User-Agent': 'KcoMat/1.0 (import image produit; kcomat0@gmail.com)'})
         except requests.RequestException:
             raise ValidationError("Impossible de télécharger l'image : le site ne répond pas.")
         if reponse.is_redirect:

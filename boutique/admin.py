@@ -91,7 +91,7 @@ class ProduitAdmin(admin.ModelAdmin):
     list_filter = ['actif', SansImageFilter, 'en_vedette', 'nouveau', 'categorie']
     list_select_related = ['categorie']
     fields = ['categorie', 'nom', 'slug', 'reference', 'description_courte', 'description',
-              'apercu', 'image', 'image_lien', 'prix', 'stock', 'actif', 'nouveau', 'en_vedette']
+              'apercu', 'image', 'image_lien', 'credit_image', 'source_image', 'prix', 'stock', 'actif', 'nouveau', 'en_vedette']
     readonly_fields = ['apercu']
     list_editable = ['actif', 'en_vedette', 'prix', 'stock']
     search_fields = ['nom', 'reference', 'description']
@@ -130,6 +130,10 @@ class ProduitAdmin(admin.ModelAdmin):
 
     def save_model(self, request, obj, form, change):
         image_importee = getattr(form, 'image_importee', None)
+        nouvelle_photo = image_importee or 'image' in form.changed_data
+        if nouvelle_photo and not {'credit_image', 'source_image'} & set(form.changed_data):
+            # nouvelle photo sans nouveau crédit : l'ancien crédit ne la concerne plus
+            obj.credit_image, obj.source_image = '', ''
         if image_importee:
             # l'ancienne photo est supprimée du disque après l'enregistrement (core/images.py)
             obj.image.save(f"{obj.slug or 'produit'}.webp", image_importee, save=False)
