@@ -1,9 +1,10 @@
 import logging
 
 from django.contrib import admin, messages
-from django.db.models import Sum
-from django.http import HttpResponse
-from django.urls import path
+from django.db.models import Q, Sum
+from django.http import Http404, HttpResponse
+from django.shortcuts import redirect
+from django.urls import path, reverse
 from django.utils import timezone
 from datetime import timedelta
 
@@ -11,6 +12,7 @@ from reportlab.lib.pagesizes import A4
 from reportlab.lib import colors
 from reportlab.pdfgen import canvas
 
+from .catalogue import charger_catalogue, nombre_produits
 from .models import CategorieProduit, Produit, ImageProduit, Commande, CommandeItem
 from .suivi import envoyer_email_suivi, raison_echec_email
 
@@ -38,6 +40,42 @@ class ProduitAdmin(admin.ModelAdmin):
     search_fields = ['nom', 'reference', 'description']
     prepopulated_fields = {'slug': ('nom',)}
     inlines = [ImageProduitInline]
+    change_list_template = 'admin/boutique/produit/change_list.html'
+    actions = ['publier', 'masquer']
+
+    @admin.action(description="Publier les produits sélectionnés")
+    def publier(self, request, queryset):
+        self.message_user(request, f"{queryset.update(actif=True)} produit(s) publié(s).", messages.SUCCESS)
+
+    @admin.action(description="Masquer les produits sélectionnés")
+    def masquer(self, request, queryset):
+        self.message_user(request, f"{queryset.update(actif=False)} produit(s) masqué(s).", messages.SUCCESS)
+
+    def get_urls(self):
+        return [path('charger-catalogue/', self.admin_site.admin_view(self.charger_catalogue_view),
+                     name='boutique_produit_charger_catalogue')] + super().get_urls()
+
+    def charger_catalogue_view(self, request):
+        if request.method != 'POST' or not self.has_add_permission(request):
+            raise Http404
+        crees, _, _ = charger_catalogue(force=False)
+        if crees:
+            self.message_user(request, f"{crees} produit(s) ajouté(s), masqués avec un stock à 0 : ajoutez l'image et la quantité "
+                                       "puis publiez ceux que vous souhaitez afficher.", messages.SUCCESS)
+        else:
+            self.message_user(request, "Le catalogue est déjà complet : aucun produit ajouté.", messages.INFO)
+        return redirect(reverse('admin:boutique_produit_changelist') + '?actif__exact=0')
+
+    def changelist_view(self, request, extra_context=None):
+        extra_context = {
+            **(extra_context or {}),
+            'nb_publies': Produit.objects.filter(actif=True).count(),
+            'nb_masques': Produit.objects.filter(actif=False).count(),
+            'nb_sans_image': Produit.objects.filter(Q(image='') | Q(image__isnull=True)).count(),
+            'nb_rupture': Produit.objects.filter(stock=0).count(),
+            'catalogue_total': nombre_produits(),
+        }
+        return super().changelist_view(request, extra_context=extra_context)
 
 
 class CommandeItemInline(admin.TabularInline):
