@@ -327,6 +327,8 @@ JAZZMIN_SETTINGS = {
         'auth': 'fas fa-users-cog',
         'auth.user': 'fas fa-user',
         'auth.group': 'fas fa-users',
+        'account': 'fas fa-at',
+        'account.emailaddress': 'fas fa-envelope-open-text',
         'core': 'fas fa-globe-africa',
         'core.teammember': 'fas fa-id-badge',
         'core.temoignage': 'fas fa-star',

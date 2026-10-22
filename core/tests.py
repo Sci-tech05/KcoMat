@@ -97,6 +97,21 @@ class PartageTests(TestCase):
         for attendu in ('wa.me/?text=Domotique', 'facebook.com/sharer/sharer.php', 'linkedin.com/sharing', 'data-partage-copier'):
             self.assertIn(attendu, html)
 
+    def test_boutons_de_partage_sur_projet(self):
+        from projets.models import Projet
+        p = Projet.objects.create(titre='Robot', description_courte='Robot suiveur', description='x', actif=True)
+        html = self.client.get(reverse('projets:detail', args=[p.slug])).content.decode()
+        for attendu in ('wa.me/?text=Robot', 'facebook.com/sharer/sharer.php', 'linkedin.com/sharing', 'data-partage-copier'):
+            self.assertIn(attendu, html)
+
+    def test_admin_sans_comptes_sociaux(self):
+        from allauth.account.models import EmailAddress
+        from allauth.socialaccount.models import SocialAccount, SocialApp, SocialToken
+        from django.contrib import admin
+        for modele in (SocialApp, SocialAccount, SocialToken):
+            self.assertFalse(admin.site.is_registered(modele))
+        self.assertTrue(admin.site.is_registered(EmailAddress))
+
 
 from django.core import mail
 from django.test import override_settings
