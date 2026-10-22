@@ -181,3 +181,68 @@ class NotificationsAdminTests(TestCase):
                                                                  'sujet': 'Test', 'message': 'Bonjour'})
         self.assertEqual(reponse.status_code, 302)
         self.assertTrue(ContactMessage.objects.filter(sujet='Test').exists())
+
+
+class CompressionImagesTests(TestCase):
+    """Images envoyées compressées en WebP (original jamais conservé) + commande pour les images existantes."""
+
+    def setUp(self):
+        import tempfile
+        self.media = tempfile.mkdtemp()
+        self.reglage = override_settings(MEDIA_ROOT=self.media)
+        self.reglage.enable()
+
+    def tearDown(self):
+        import shutil
+        self.reglage.disable()
+        shutil.rmtree(self.media, ignore_errors=True)
+
+    @staticmethod
+    def fichier(nom, taille=(3000, 2000), mode='RGB', format_='JPEG'):
+        from io import BytesIO
+        from PIL import Image
+        from django.core.files.uploadedfile import SimpleUploadedFile
+        tampon = BytesIO()
+        Image.new(mode, taille, (200, 30, 30, 0) if mode == 'RGBA' else (200, 30, 30)).save(tampon, format_)
+        return SimpleUploadedFile(nom, tampon.getvalue())
+
+    def test_image_envoyee_compressee_sans_original(self):
+        import os
+        from PIL import Image
+        from services.models import Service
+        service = Service.objects.create(titre='Domotique', description_courte='x', description='x',
+                                         image=self.fichier('photo-telephone.jpg'))
+        self.assertTrue(service.image.name.endswith('.webp'), service.image.name)
+        with Image.open(service.image.path) as img:
+            self.assertEqual((img.format, max(img.size)), ('WEBP', 1600))
+        self.assertEqual(os.listdir(os.path.join(self.media, 'services')), [os.path.basename(service.image.name)])
+
+    def test_logo_partenaire_garde_sa_transparence(self):
+        from PIL import Image
+        from partenariats.models import Partenaire
+        partenaire = Partenaire.objects.create(nom='EEJ', logo=self.fichier('logo.png', (900, 300), 'RGBA', 'PNG'))
+        with Image.open(partenaire.logo.path) as img:
+            self.assertEqual((img.mode, max(img.size)), ('RGBA', 600))
+
+    def test_commande_simulation_puis_application(self):
+        import os
+        from io import StringIO
+        from django.core.management import call_command
+        from django.core.files.storage import default_storage
+        from services.models import Service
+        nom = default_storage.save('services/ancienne.jpg', self.fichier('ancienne.jpg'))
+        service = Service.objects.create(titre='Ancien', description_courte='x', description='x')
+        Service.objects.filter(pk=service.pk).update(image=nom)       # image déjà en ligne, non compressée
+
+        call_command('compresser_images', stdout=StringIO())
+        service.refresh_from_db()
+        self.assertEqual(service.image.name, nom)                      # simulation : rien ne change
+
+        sortie = StringIO()
+        call_command('compresser_images', '--appliquer', stdout=sortie)
+        service.refresh_from_db()
+        self.assertEqual(service.image.name, 'services/ancienne.webp')
+        self.assertFalse(os.path.exists(os.path.join(self.media, nom)))  # original supprimé
+        self.assertIn('1 image(s)', sortie.getvalue())
+        call_command('compresser_images', '--appliquer', stdout=sortie)  # relancer ne refait rien
+        self.assertEqual(Service.objects.get(pk=service.pk).image.name, 'services/ancienne.webp')

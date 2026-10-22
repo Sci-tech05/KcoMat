@@ -25,6 +25,18 @@ class CategorieProduit(models.Model):
         return self.nom
 
 
+# Visuel affiché tant qu'un produit n'a pas de photo : couleur + icône (partials/icon.html) par catégorie
+VISUELS_CATEGORIE = {
+    'electronique': ('#2563EB', 'cpu'),
+    'electricite': ('#D97706', 'zap'),
+    'capteurs': ('#059669', 'target'),
+    'moteurs-robotique': ('#7C3AED', 'bot'),
+    'leds-afficheurs': ('#DB2777', 'sun'),
+    'boutons-interrupteurs': ('#0891B2', 'grid'),
+}
+VISUEL_PAR_DEFAUT = ('#475569', 'cpu')
+
+
 class Produit(models.Model):
     categorie = models.ForeignKey(CategorieProduit, on_delete=models.SET_NULL, null=True, related_name='produits')
     nom = models.CharField(max_length=200)
@@ -56,6 +68,13 @@ class Produit(models.Model):
     @property
     def en_stock(self):
         return self.stock > 0
+
+    @property
+    def visuel(self):
+        """Couleur, icône et libellé du visuel généré (produit sans photo)."""
+        couleur, icone = VISUELS_CATEGORIE.get(self.categorie.slug if self.categorie else '', VISUEL_PAR_DEFAUT)
+        return {'couleur': couleur, 'icone': icone,
+                'libelle': self.reference or (self.categorie.nom if self.categorie else 'KcoMat')}
 
 
 class ImageProduit(models.Model):

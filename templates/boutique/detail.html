@@ -87,10 +87,7 @@
                         x-show="active === {{ forloop.counter0 }}{% if produit.image %} + 1{% endif %}" {% if produit.image or not forloop.first %}style="display:none"{% endif %} />
                     {% endfor %}
                     {% if not produit.image and not produit.images.all %}
-                    <div class="absolute inset-0 flex flex-col items-center justify-center gap-3 text-slate-300">
-                        {% include 'partials/icon.html' with name='cpu' class='w-24 h-24' stroke='1' %}
-                        <span class="text-sm">Aucune image disponible</span>
-                    </div>
+                    <div class="absolute inset-0">{% include 'partials/visuel_produit.html' with produit=produit taille='grand' %}</div>
                     {% endif %}
 
                     {% if produit.categorie %}

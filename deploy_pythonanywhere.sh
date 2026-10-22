@@ -20,7 +20,14 @@ echo "→ Sauvegarde dans $SAUVEGARDE"
 mkdir -p "$SAUVEGARDE"
 cp -a .env "$SAUVEGARDE/" 2>/dev/null || echo "  (pas de .env à sauvegarder)"
 cp -a db.sqlite3 "$SAUVEGARDE/" 2>/dev/null || echo "  (pas de base SQLite à sauvegarder)"
-[ -d media ] && cp -a media "$SAUVEGARDE/media"
+# media/cache (copies WebP redimensionnées, aperçus de partage) se régénère : inutile de le sauvegarder
+if [ -d media ]; then
+    if command -v rsync >/dev/null; then
+        rsync -a --exclude 'cache/' media/ "$SAUVEGARDE/media/"
+    else
+        cp -a media "$SAUVEGARDE/media" && rm -rf "$SAUVEGARDE/media/cache"
+    fi
+fi
 
 echo "→ Mise à jour du code depuis GitHub"
 git fetch origin

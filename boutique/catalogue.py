@@ -1,5 +1,6 @@
 """
-Catalogue de composants de la boutique (Électronique et Électricité), prix en FCFA.
+Catalogue de composants de la boutique (Électronique, Électricité, Capteurs, Moteurs & Robotique, LED & Afficheurs,
+Boutons & Interrupteurs), prix en FCFA.
 
 Chargés MASQUÉS et avec un stock à 0 : l'admin ajoute l'image et la quantité, puis coche « Actif ».
 Chargement : bouton « Charger le catalogue » dans l'admin des produits, ou
@@ -7,14 +8,31 @@ Chargement : bouton « Charger le catalogue » dans l'admin des produits, ou
 Un produit déjà présent (même slug, ou ancien slug listé dans « alias ») n'est jamais dupliqué
 et garde son prix, son stock, ses images et sa publication.
 """
+from decimal import ROUND_CEILING, Decimal
+
 from django.db import transaction
 from django.utils.text import slugify
+
+from .catalogue_afficheurs import AFFICHEURS
+from .catalogue_boutons import BOUTONS
+from .catalogue_capteurs import CAPTEURS
+from .catalogue_moteurs import MOTEURS
+
+MAJORATION = 30  # % ajoutés au prix source (catégories reprises de YoupiLab)
 
 CATEGORIES = {
     'electronique': {'nom': 'Électronique', 'icone': 'fas fa-microchip', 'ordre': 1,
                      'description': "Cartes, capteurs, modules et petits composants pour vos montages et projets IoT."},
     'electricite': {'nom': 'Électricité', 'icone': 'fas fa-lightbulb', 'ordre': 2,
                     'description': "Matériel d'installation électrique, de protection et d'énergie solaire."},
+    'capteurs': {'nom': 'Capteurs', 'icone': 'fas fa-satellite-dish', 'ordre': 3,
+                 'description': "Capteurs et modules de mesure : température, distance, gaz, courant, présence, santé…"},
+    'moteurs-robotique': {'nom': 'Moteurs & Robotique', 'icone': 'fas fa-robot', 'ordre': 4,
+                          'description': "Servomoteurs, moteurs pas à pas, drivers, châssis et roues pour vos robots."},
+    'leds-afficheurs': {'nom': 'LED & Afficheurs', 'icone': 'fas fa-tv', 'ordre': 5,
+                        'description': "LED, matrices, afficheurs 7 segments, écrans LCD, OLED et TFT."},
+    'boutons-interrupteurs': {'nom': 'Boutons & Interrupteurs', 'icone': 'fas fa-toggle-on', 'ordre': 6,
+                              'description': "Boutons poussoirs, interrupteurs, fins de course, claviers et boutons tactiles."},
 }
 
 PRODUITS = {
@@ -333,6 +351,23 @@ PRODUITS = {
 }
 
 
+def prix_majore(prix_source, pourcentage=MAJORATION):
+    """Prix source (entier ou décimal) + pourcentage, arrondi au multiple de 5 FCFA supérieur."""
+    prix = Decimal(str(prix_source)) * (100 + pourcentage) / 500
+    return int(prix.to_integral_value(rounding=ROUND_CEILING)) * 5
+
+
+# « prix_min » : plancher de prix (ex. 50 FCFA pour les LED vendues moins cher chez la source)
+for _categorie, _fiches in (('capteurs', CAPTEURS), ('moteurs-robotique', MOTEURS), ('leds-afficheurs', AFFICHEURS),
+                            ('boutons-interrupteurs', BOUTONS)):
+    PRODUITS[_categorie] = [{**fiche, 'prix': max(prix_majore(fiche['prix_source']), fiche.get('prix_min', 0))}
+                            for fiche in _fiches]
+
+
+def slug_produit(fiche):
+    return fiche.get('slug') or slugify(fiche['nom'])
+
+
 def description(fiche):
     """Texte complet de la fiche produit : présentation puis caractéristiques à puces."""
     lignes = '\n'.join(f"• {spec}" for spec in fiche['specs'])
@@ -340,7 +375,10 @@ def description(fiche):
 
 
 def nombre_produits():
-    return sum(len(fiches) for fiches in PRODUITS.values())
+    """Produits distincts : une fiche dont l'alias désigne une autre fiche du catalogue (ex. DHT22) ne compte qu'une fois."""
+    fiches = [fiche for fiches in PRODUITS.values() for fiche in fiches]
+    slugs = {slug_produit(fiche) for fiche in fiches}
+    return sum(1 for fiche in fiches if not slugs & set(fiche.get('alias', [])))
 
 
 @transaction.atomic
@@ -367,7 +405,7 @@ def charger_catalogue(force=False):
                 'description_courte': fiche['courte'],
                 'description': description(fiche),
             }
-            slugs = [slugify(fiche['nom']), *fiche.get('alias', [])]
+            slugs = [slug_produit(fiche), *fiche.get('alias', [])]
             produit = Produit.objects.filter(slug__in=slugs).first()
             if produit is None:
                 Produit.objects.create(nom=fiche['nom'], slug=slugs[0], prix=fiche['prix'], stock=0, actif=False, **champs)

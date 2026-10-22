@@ -1,18 +1,23 @@
 import logging
 
+from django import forms
 from django.contrib import admin, messages
 from django.db.models import Q, Sum
 from django.http import Http404, HttpResponse
 from django.shortcuts import redirect
 from django.urls import path, reverse
 from django.utils import timezone
+from django.utils.html import format_html
 from datetime import timedelta
 
 from reportlab.lib.pagesizes import A4
 from reportlab.lib import colors
 from reportlab.pdfgen import canvas
 
+from core.templatetags.kcomat_tags import webp
+
 from .catalogue import charger_catalogue, nombre_produits
+from .images import image_depuis_lien
 from .models import CategorieProduit, Produit, ImageProduit, Commande, CommandeItem
 from .suivi import envoyer_email_suivi, raison_echec_email
 
@@ -32,16 +37,83 @@ class ImageProduitInline(admin.TabularInline):
     fields = ['image', 'alt', 'ordre']
 
 
+class ProduitAdminForm(forms.ModelForm):
+    image_lien = forms.URLField(
+        label="Image depuis un lien", required=False, assume_scheme='https',
+        help_text="Collez l'adresse d'une image (clic droit sur l'image → « Copier l'adresse de l'image »). "
+                  "Elle est téléchargée une fois, réduite et compressée en WebP : le site reste léger. "
+                  "Remplace l'image principale actuelle. N'utilisez que des images dont vous avez le droit "
+                  "(vos photos, images fabricant, photos libres de droits).",
+    )
+
+    class Meta:
+        model = Produit
+        fields = '__all__'
+
+    def clean_image_lien(self):
+        lien = self.cleaned_data.get('image_lien')
+        # téléchargé ici pour afficher l'erreur sous le champ si le lien ne convient pas
+        self.image_importee = image_depuis_lien(lien) if lien else None
+        return lien
+
+
+class SansImageFilter(admin.SimpleListFilter):
+    title = 'photo'
+    parameter_name = 'photo'
+
+    def lookups(self, request, model_admin):
+        return [('non', 'Sans photo'), ('oui', 'Avec photo')]
+
+    def queryset(self, request, queryset):
+        sans_photo = Q(image='') | Q(image__isnull=True)
+        if self.value() == 'non':
+            return queryset.filter(sans_photo)
+        if self.value() == 'oui':
+            return queryset.exclude(sans_photo)
+        return queryset
+
+
 @admin.register(Produit)
 class ProduitAdmin(admin.ModelAdmin):
-    list_display = ['nom', 'categorie', 'prix', 'stock', 'actif', 'en_vedette', 'nouveau']
-    list_filter = ['actif', 'en_vedette', 'nouveau', 'categorie']
+    form = ProduitAdminForm
+    list_display = ['miniature', 'nom', 'categorie', 'prix', 'stock', 'actif', 'en_vedette', 'nouveau']
+    list_display_links = ['miniature', 'nom']
+    list_filter = ['actif', SansImageFilter, 'en_vedette', 'nouveau', 'categorie']
+    list_select_related = ['categorie']
+    fields = ['categorie', 'nom', 'slug', 'reference', 'description_courte', 'description',
+              'apercu', 'image', 'image_lien', 'prix', 'stock', 'actif', 'nouveau', 'en_vedette']
+    readonly_fields = ['apercu']
     list_editable = ['actif', 'en_vedette', 'prix', 'stock']
     search_fields = ['nom', 'reference', 'description']
     prepopulated_fields = {'slug': ('nom',)}
     inlines = [ImageProduitInline]
     change_list_template = 'admin/boutique/produit/change_list.html'
     actions = ['publier', 'masquer']
+
+    @admin.display(description='Photo')
+    def miniature(self, obj):
+        if not obj.image:
+            return format_html('<span style="color:#94A3B8">—</span>')
+        return format_html('<img src="{}" alt="" style="width:44px;height:44px;object-fit:contain;'
+                           'border-radius:8px;background:#fff;border:1px solid #E2E8F0">', webp(obj.image, 120))
+
+    @admin.display(description='Aperçu')
+    def apercu(self, obj):
+        if obj.image:
+            return format_html('<img src="{}" alt="" style="max-width:220px;max-height:220px;border-radius:12px;'
+                               'background:#fff;border:1px solid #E2E8F0;padding:6px">', webp(obj.image, 480))
+        return "Aucune photo : le site affiche un visuel généré (couleur de la catégorie + référence + nom)."
+
+    def save_model(self, request, obj, form, change):
+        image_importee = getattr(form, 'image_importee', None)
+        ancienne = Produit.objects.filter(pk=obj.pk).values_list('image', flat=True).first() if change else None
+        if image_importee:
+            obj.image.save(f"{obj.slug or 'produit'}.webp", image_importee, save=False)
+        super().save_model(request, obj, form, change)
+        if image_importee:
+            if ancienne and ancienne != obj.image.name:
+                obj.image.storage.delete(ancienne)  # pas de vieille photo oubliée sur le disque
+            self.message_user(request, "Image importée depuis le lien et compressée en WebP.", messages.SUCCESS)
 
     @admin.action(description="Publier les produits sélectionnés")
     def publier(self, request, queryset):
