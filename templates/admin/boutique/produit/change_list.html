@@ -1,0 +1,23 @@
+{% extends "admin/change_list.html" %}
+
+{% block date_hierarchy %}
+<div class="kx-month">
+  <div class="kx-month__head">
+    <div>
+      <span class="kx-month__eyebrow"><i class="fas fa-microchip mr-1"></i> Produits de la boutique</span>
+      <h3 class="kx-month__title">{{ nb_publies }} publié{{ nb_publies|pluralize }} <small>· {{ nb_masques }} masqué{{ nb_masques|pluralize }} · {{ nb_sans_image }} sans image · {{ nb_rupture }} en rupture</small></h3>
+    </div>
+    <form method="post" action="{% url 'admin:boutique_produit_charger_catalogue' %}">
+      {% csrf_token %}
+      <button type="submit" class="btn btn-primary"><i class="fas fa-magic mr-1"></i> Charger le catalogue de composants ({{ catalogue_total }})</button>
+    </form>
+  </div>
+  <p class="kx-month__hint"><i class="fas fa-info-circle mr-1"></i>
+    Le catalogue ajoute les composants <b>Électronique</b> et <b>Électricité</b> avec leur prix et leur description, <b>masqués</b> et avec un <b>stock à 0</b>.
+    Les produits déjà présents ne sont ni dupliqués ni modifiés.
+    Pour en afficher un : ouvrez-le, <b>ajoutez une image</b> et la <b>quantité en stock</b>, puis cochez « Actif ».
+    Vous pouvez aussi publier plusieurs produits d'un coup avec l'action « Publier les produits sélectionnés ».
+  </p>
+</div>
+{{ block.super }}
+{% endblock %}

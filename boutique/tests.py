@@ -221,3 +221,38 @@ class RechercheBoutiqueTests(TestCase):
     def test_adresse_propre_dans_le_navigateur(self):
         reponse = self.client.get(reverse('boutique:liste'), {'q': 'esp', 'categorie': ''}, HTTP_HX_REQUEST='true')
         self.assertEqual(reponse['HX-Push-Url'], '/boutique/?q=esp')
+
+
+class CatalogueProduitsTests(TestCase):
+    def setUp(self):
+        from boutique.models import CategorieProduit
+        electronique = CategorieProduit.objects.create(nom='Electronique', slug='electronique')
+        Produit.objects.create(categorie=electronique, nom='ESP32', description_courte='x', description='x', prix=7000, stock=4)
+        Produit.objects.create(categorie=electronique, nom='Relay 5V', description_courte='x', description='x', prix=800, stock=10)
+        self.admin = User.objects.create_superuser('admin', 'admin@x.com', 'mdp')
+
+    def test_catalogue_masque_stock_zero_sans_doublon(self):
+        from boutique.catalogue import charger_catalogue, nombre_produits
+        crees, _, inchangees = charger_catalogue()
+        self.assertEqual((crees, inchangees), (nombre_produits() - 2, 2))
+        self.assertEqual(Produit.objects.count(), nombre_produits())
+        arduino = Produit.objects.get(slug='arduino-uno-r3')
+        self.assertEqual((arduino.prix, arduino.stock, arduino.actif, arduino.categorie.slug), (6500, 0, False, 'electronique'))
+        self.assertIn('Caractéristiques :\n• ', arduino.description)
+        self.assertEqual(Produit.objects.get(slug='pompe-12v-4200-lh').categorie.nom, 'Électricité')
+        # produits existants conservés tels quels (prix, stock, publication)
+        esp32, relais = Produit.objects.get(slug='esp32'), Produit.objects.get(slug='relay-5v')
+        self.assertEqual((esp32.prix, esp32.stock, esp32.actif), (7000, 4, True))
+        self.assertEqual((relais.prix, relais.stock), (800, 10))
+        self.assertFalse(Produit.objects.filter(slug='relais-5v').exists())
+        self.assertEqual(charger_catalogue()[0], 0)
+
+    def test_bouton_admin(self):
+        self.client.force_login(self.admin)
+        session = self.client.session
+        session['admin_2fa_verified_user_id'] = self.admin.pk
+        session.save()
+        self.assertContains(self.client.get(reverse('admin:boutique_produit_changelist')), 'Charger le catalogue de composants')
+        reponse = self.client.post(reverse('admin:boutique_produit_charger_catalogue'))
+        self.assertRedirects(reponse, reverse('admin:boutique_produit_changelist') + '?actif__exact=0')
+        self.assertTrue(Produit.objects.filter(slug='monnayeur-electronique-ch-926', stock=0, actif=False).exists())
