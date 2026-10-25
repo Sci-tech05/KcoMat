@@ -138,6 +138,25 @@ class CandidatureAdminTests(TestCase):
         self.retenue.refresh_from_db()
         self.assertIsNotNone(self.retenue.reponse_envoyee_le)
 
+    def test_passage_en_entretien_envoie_les_notes(self):
+        url = reverse('admin:carrieres_candidature_change', args=[self.refusee.pk])
+        data = {'statut': 'entretien', 'note': '', 'notes_internes': 'Entretien le 3 novembre à 10 h au siège.',
+                'offre': self.offre.pk, 'formule': '', 'prenom': 'Eva', 'nom': 'Houn', 'email': 'eva@example.com',
+                'telephone': '0197000001', 'message': ''}
+        self.client.post(url, data)
+        self.assertEqual(len(mail.outbox), 1)
+        self.assertEqual(mail.outbox[0].to, ['eva@example.com'])
+        self.assertIn('Entretien le 3 novembre à 10 h au siège.', mail.outbox[0].body)
+        mail.outbox.clear()
+        self.client.post(url, {**data, 'notes_internes': 'Autre note'})   # statut inchangé : pas de nouvel e-mail
+        self.assertEqual(len(mail.outbox), 0)
+
+    def test_action_statut_previent_le_candidat(self):
+        self.client.post(reverse('admin:carrieres_candidature_changelist'), {
+            'action': 'marquer_refusee', '_selected_action': [self.retenue.pk, self.refusee.pk]})
+        self.assertEqual([m.to for m in mail.outbox], [['luc@example.com']])   # Eva était déjà refusée
+        self.assertIn('pas en mesure de donner une suite favorable', mail.outbox[0].body)
+
     def test_candidature_apres_date_limite_penalisee(self):
         self.offre.date_limite = timezone.localdate() - timedelta(days=1)
         self.offre.save()
