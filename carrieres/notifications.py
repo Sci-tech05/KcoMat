@@ -113,6 +113,10 @@ def envoyer_reponse(candidature):
     if candidature.statut not in REPONSES:
         return False
     sujet, texte = REPONSES[candidature.statut]
+    notes = (candidature.notes_internes or '').strip()
+    if candidature.statut == candidature.STATUT_ENTRETIEN and notes:
+        # Le message saisi dans « Notes internes » (date, heure, lieu…) remplace la suite du texte type
+        texte = f"Votre candidature a retenu notre attention et nous souhaitons vous rencontrer en entretien.\n\n{notes}"
     body = (
         f"Bonjour {candidature.prenom},\n\n"
         f"Merci pour votre candidature au poste « {candidature.offre.titre} ».\n\n{texte}\n\n"

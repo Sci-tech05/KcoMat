@@ -1,5 +1,6 @@
 """Connexion avec Google (django-allauth) : règles propres à KcoMat."""
 from allauth.account.adapter import DefaultAccountAdapter
+from allauth.account.models import EmailAddress
 from allauth.core.exceptions import ImmediateHttpResponse
 from allauth.socialaccount.adapter import DefaultSocialAccountAdapter
 from django.contrib import messages
@@ -9,12 +10,22 @@ from django.shortcuts import redirect
 class AdaptateurGoogle(DefaultSocialAccountAdapter):
 
     def pre_social_login(self, request, sociallogin):
-        # Les comptes d'administration ne passent jamais par Google :
-        # ils gardent mot de passe + code de vérification (double authentification).
+        # Un compte administrateur peut se connecter au site avec Google comme tout le monde :
+        # l'administration reste protégée par le code de vérification envoyé par e-mail
+        # (core.admin_security.AdminSecurityMiddleware), demandé quelle que soit la méthode de connexion.
         utilisateur = sociallogin.user
-        if utilisateur.pk and (utilisateur.is_staff or utilisateur.is_superuser):
-            messages.error(request, "Ce compte est un compte d'administration : connectez-vous avec votre mot de passe.")
-            raise ImmediateHttpResponse(redirect('accounts:connexion'))
+        if utilisateur.pk and utilisateur.is_staff:
+            emails_google = {e.email.lower() for e in sociallogin.email_addresses if e.verified}
+            if (utilisateur.email or '').lower() in emails_google:
+                # E-mail confirmé par Google : allauth n'efface plus le mot de passe du compte
+                # (il le fait pour une adresse non vérifiée), indispensable pour entrer dans l'admin.
+                adresse = EmailAddress.objects.filter(user=utilisateur, email__iexact=utilisateur.email).first()
+                if adresse is None:
+                    EmailAddress.objects.create(user=utilisateur, email=utilisateur.email, verified=True,
+                                                primary=not EmailAddress.objects.filter(user=utilisateur, primary=True).exists())
+                elif not adresse.verified:
+                    adresse.verified = True
+                    adresse.save(update_fields=['verified'])
         super().pre_social_login(request, sociallogin)
 
     def save_user(self, request, sociallogin, form=None):

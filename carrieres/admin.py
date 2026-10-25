@@ -14,7 +14,7 @@ from django.utils.html import format_html, format_html_join
 from .catalogue import DOMAINES, charger_catalogue
 from .exports import STATUT_COLORS, rapport_pdf, zip_dossiers
 from .models import Candidature, FormuleOffre, Offre
-from .notifications import document_filename, envoyer_reponse
+from .notifications import REPONSES, document_filename, envoyer_reponse
 from notifications.admin import notifier_abonnes
 from notifications.push import notifier_publication
 
@@ -142,16 +142,35 @@ class PotentielFilter(admin.SimpleListFilter):
         }.get(self.value(), queryset)
 
 
+def _prevenir_candidat(candidature):
+    """E-mail automatique au passage en Entretien / Retenue / Refusée. Retourne None, 'envoye' ou 'echec'."""
+    if candidature.statut not in REPONSES:
+        return None
+    try:
+        envoyer_reponse(candidature)
+        return 'envoye'
+    except Exception:
+        logger.exception("Envoi automatique de la réponse impossible pour la candidature #%s", candidature.pk)
+        return 'echec'
+
+
 def _changer_statut(statut):
     def action(modeladmin, request, queryset):
-        n = 0
-        for candidature in queryset:
+        n, envoyes, echecs = 0, 0, 0
+        for candidature in queryset.select_related('offre'):
             if candidature.statut != statut:
                 candidature.statut = statut
                 candidature.save()
                 n += 1
+                resultat = _prevenir_candidat(candidature)
+                envoyes += resultat == 'envoye'
+                echecs += resultat == 'echec'
         label = dict(Candidature.STATUT_CHOICES)[statut]
         modeladmin.message_user(request, f"{n} candidature(s) passée(s) en « {label} ».", messages.SUCCESS)
+        if envoyes:
+            modeladmin.message_user(request, f"{envoyes} candidat(s) prévenu(s) par e-mail.", messages.SUCCESS)
+        if echecs:
+            modeladmin.message_user(request, f"{echecs} e-mail(s) non envoyé(s) : vérifiez la configuration e-mail.", messages.ERROR)
     action.__name__ = f'marquer_{statut}'
     action.short_description = f"Statut → {dict(Candidature.STATUT_CHOICES)[statut]}"
     return action
@@ -171,7 +190,10 @@ class CandidatureAdmin(admin.ModelAdmin):
     ordering = ['-created_at']
     readonly_fields = ['documents_detail', 'score_detail', 'created_at', 'statut_modifie_le', 'reponse_envoyee_le']
     fieldsets = (
-        ('Évaluation', {'fields': ('statut', 'note', 'score_detail', 'notes_internes')}),
+        ('Évaluation', {'fields': ('statut', 'note', 'score_detail', 'notes_internes'),
+                        'description': "Changer le statut prévient le candidat par e-mail : « Entretien » lui envoie "
+                                       "le texte des Notes internes (date, heure, lieu…), « Retenue » et « Refusée » "
+                                       "un message adapté."}),
         ('Candidat', {'fields': ('offre', 'formule', 'prenom', 'nom', 'email', 'telephone', 'message')}),
         ('Documents', {'fields': ('documents_detail', 'cv', 'lettre_motivation')}),
         ('Historique', {'fields': ('created_at', 'statut_modifie_le', 'reponse_envoyee_le')}),
@@ -186,6 +208,19 @@ class CandidatureAdmin(admin.ModelAdmin):
         'exporter_rapport_pdf',
         'envoyer_reponses',
     ]
+
+    def save_model(self, request, obj, form, change):
+        # Fiche ou liste modifiable : e-mail au candidat seulement si le statut vient de changer
+        ancien = Candidature.objects.filter(pk=obj.pk).values_list('statut', flat=True).first() if change else None
+        super().save_model(request, obj, form, change)
+        if obj.statut == ancien:
+            return
+        resultat = _prevenir_candidat(obj)
+        if resultat == 'envoye':
+            self.message_user(request, f"E-mail « {obj.get_statut_display()} » envoyé à {obj.email}.", messages.SUCCESS)
+        elif resultat == 'echec':
+            self.message_user(request, f"Statut enregistré, mais l'e-mail à {obj.email} n'a pas pu partir : "
+                                       "vérifiez la configuration e-mail.", messages.ERROR)
 
     # ------------------------------------------------------------------ colonnes
     @admin.display(description='Candidat', ordering='nom')

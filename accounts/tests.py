@@ -1,5 +1,6 @@
 import re
 
+from django.conf import settings
 from django.contrib.auth.models import User
 from django.core import mail
 from django.test import TestCase, override_settings
@@ -221,8 +222,13 @@ class ConnexionGoogleTests(TestCase):
         self.assertEqual(User.objects.filter(email__iexact='kofi@gmail.com').count(), 1)
         self.assertTrue(existant.socialaccount_set.filter(provider='google').exists())
 
-    def test_compte_admin_refuse(self):
-        User.objects.create_superuser('chef', 'chef@gmail.com', MOT_DE_PASSE)
+    def test_compte_admin_connecte_mais_admin_garde_le_code(self):
+        chef = User.objects.create_superuser('chef', 'chef@gmail.com', MOT_DE_PASSE)
         requete, reponse = connexion_google_simulee(self.client, 'chef@gmail.com')
-        self.assertRedirects(reponse, reverse('accounts:connexion'), fetch_redirect_response=False)
-        self.assertNotIn('_auth_user_id', requete.session)
+        self.assertEqual(requete.session.get('_auth_user_id'), str(chef.pk))
+        chef.refresh_from_db()
+        self.assertTrue(chef.check_password(MOT_DE_PASSE))     # mot de passe conservé pour l'admin
+        self.client.force_login(chef)
+        reponse = self.client.get('/' + settings.ADMIN_URL.lstrip('/'))
+        self.assertEqual(reponse.status_code, 302)
+        self.assertIn(settings.ADMIN_2FA_PATH.strip('/'), reponse['Location'])
