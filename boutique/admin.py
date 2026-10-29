@@ -38,12 +38,41 @@ class ProduitRetireAdmin(admin.ModelAdmin):
     search_fields = ['nom', 'slug']
     readonly_fields = ['nom', 'slug', 'retire_le']
 
+    actions = ['supprimer_definitivement', 'autoriser_retour']
+
+    def get_queryset(self, request):
+        # les composants supprimés définitivement ne s'affichent plus (mais restent bloqués)
+        return super().get_queryset(request).filter(definitif=False)
+
     def has_add_permission(self, request):
         return False  # ajouté automatiquement quand un composant du catalogue est supprimé
 
+    def has_delete_permission(self, request, obj=None):
+        return False  # supprimer la ligne ferait revenir le composant : voir les actions ci-dessous
+
+    def get_actions(self, request):
+        actions = super().get_actions(request)
+        if request.user.has_perm('boutique.change_produitretire'):
+            return actions
+        return {}
+
+    @admin.action(description="Supprimer définitivement (le composant ne reviendra jamais)")
+    def supprimer_definitivement(self, request, queryset):
+        n = queryset.update(definitif=True)
+        self.message_user(request, f"{n} composant(s) supprimé(s) définitivement : ils ne reviendront plus dans la boutique, "
+                                   "même en rechargeant le catalogue.", messages.SUCCESS)
+
+    @admin.action(description="Autoriser le retour au prochain « Charger le catalogue »")
+    def autoriser_retour(self, request, queryset):
+        n, _ = queryset.delete()
+        self.message_user(request, f"{n} composant(s) seront recréés (masqués) au prochain « Charger le catalogue ».",
+                          messages.SUCCESS)
+
     def changelist_view(self, request, extra_context=None):
-        self.message_user(request, "Ces composants du catalogue ont été supprimés : « Charger le catalogue » ne les recrée plus. "
-                                   "Supprimez une ligne pour que le composant revienne au prochain chargement.", messages.INFO)
+        if request.method == 'GET':
+            self.message_user(request, "Ces composants du catalogue ont été supprimés : « Charger le catalogue » ne les recrée plus. "
+                                       "Sélectionnez-les puis « Supprimer définitivement » pour les faire disparaître de cette liste "
+                                       "pour toujours, ou « Autoriser le retour » pour les récupérer.", messages.INFO)
         return super().changelist_view(request, extra_context)
 
 

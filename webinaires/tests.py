@@ -207,7 +207,8 @@ class CatalogueEtAdminTests(TestCase):
         self.assertEqual(charger_catalogue(), (0, len(CATALOGUE)))
         self.assertFalse(Webinaire.objects.filter(actif=True).exists())
         debuts = [timezone.localtime(w.date_debut) for w in Webinaire.objects.order_by('date_debut')]
-        self.assertTrue(all(d.weekday() == 5 and d.hour == 10 for d in debuts))
+        self.assertTrue(all(d.weekday() == 5 and d.hour == 20 for d in debuts))
+        self.assertTrue(all(w.duree == '2 h' for w in Webinaire.objects.all()))
 
     def test_pages_admin(self):
         admin_user = User.objects.create_superuser('chef', 'chef@example.com', 'pw-chef-12345')
@@ -223,6 +224,12 @@ class CatalogueEtAdminTests(TestCase):
         self.assertEqual(self.client.get(reverse('admin:webinaires_participationwebinaire_changelist')).status_code, 200)
         pdf = self.client.get(reverse('admin:webinaires_participationwebinaire_attestation', args=[p.pk]))
         self.assertTrue(pdf.content.startswith(b'%PDF'))
+        futur = creer_webinaire(timedelta(days=4))
+        self.client.post(reverse('admin:webinaires_webinaire_changelist'),
+                         {'action': 'mettre_horaire_soiree', '_selected_action': [futur.pk]})
+        futur.refresh_from_db()
+        debut, fin = timezone.localtime(futur.date_debut), timezone.localtime(futur.date_fin)
+        self.assertEqual((debut.hour, fin.hour, debut.date()), (20, 22, fin.date()))
         csv = self.client.post(reverse('admin:webinaires_webinaire_changelist'),
                                {'action': 'exporter_participants', '_selected_action': [w.pk]})
         self.assertIn('Chef', csv.content.decode('utf-8'))

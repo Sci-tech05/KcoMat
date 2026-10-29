@@ -504,6 +504,26 @@ class ComposantsRetiresTests(TestCase):
         self.assertEqual(charger_catalogue()[0], 1)
         self.assertTrue(Produit.objects.filter(slug='arduino-uno-r3').exists())
 
+    def test_suppression_definitive_depuis_l_admin(self):
+        from boutique.catalogue import charger_catalogue
+        from boutique.models import ProduitRetire
+        charger_catalogue()
+        Produit.objects.filter(slug__in=['arduino-uno-r3', 'esp32']).delete()
+        admin_user = User.objects.create_superuser('chef', 'chef@example.com', 'pw-chef-12345')
+        self.client.force_login(admin_user)
+        session = self.client.session
+        session['admin_2fa_verified_user_id'] = admin_user.pk
+        session.save()
+        liste = reverse('admin:boutique_produitretire_changelist')
+        uno, esp = ProduitRetire.objects.get(slug='arduino-uno-r3'), ProduitRetire.objects.get(slug='esp32')
+        self.client.post(liste, {'action': 'supprimer_definitivement', '_selected_action': [uno.pk]})
+        self.client.post(liste, {'action': 'autoriser_retour', '_selected_action': [esp.pk]})
+        page = self.client.get(liste)
+        self.assertNotContains(page, 'arduino-uno-r3')                          # n'apparaît plus dans la liste
+        charger_catalogue()
+        self.assertFalse(Produit.objects.filter(slug='arduino-uno-r3').exists())  # ne revient jamais
+        self.assertTrue(Produit.objects.filter(slug='esp32').exists())           # retour autorisé
+
     def test_produit_hors_catalogue_non_memorise(self):
         from boutique.models import ProduitRetire
         Produit.objects.create(nom='Article perso', description_courte='x', description='x', prix=100).delete()

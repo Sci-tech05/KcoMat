@@ -347,6 +347,7 @@ JAZZMIN_SETTINGS = {
         'boutique.categorieproduit': 'fas fa-tags',
         'boutique.produit': 'fas fa-microchip',
         'boutique.commande': 'fas fa-shopping-cart',
+        'boutique.produitretire': 'fas fa-ban',
         'services': 'fas fa-tools',
         'services.service': 'fas fa-tools',
         'services.demandeservice': 'fas fa-clipboard-list',
@@ -362,6 +363,9 @@ JAZZMIN_SETTINGS = {
         'notifications': 'fas fa-bell',
         'notifications.abonnementpush': 'fas fa-bell',
         'notifications.notificationpush': 'fas fa-paper-plane',
+        'webinaires': 'fas fa-video',
+        'webinaires.webinaire': 'fas fa-video',
+        'webinaires.participationwebinaire': 'fas fa-user-check',
     },
     # Icône par défaut
     'default_icon_parents': 'fas fa-chevron-circle-right',
