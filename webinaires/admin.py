@@ -14,6 +14,7 @@ from notifications.push import notifier_publication
 
 from .attestation import reponse_pdf
 from .catalogue import CATALOGUE, HEURE_DEBUT, HEURE_FIN, charger_catalogue
+from .forms import WebinaireAdminForm
 from .models import ParticipationWebinaire, Webinaire
 from .rappels import envoyer_rappel
 
@@ -51,6 +52,7 @@ class ParticipationInline(admin.TabularInline):
 
 @admin.register(Webinaire)
 class WebinaireAdmin(admin.ModelAdmin):
+    form = WebinaireAdminForm
     change_list_template = 'admin/webinaires/webinaire/change_list.html'
     actions = ['publier', 'masquer', notifier_abonnes, 'mettre_horaire_soiree', 'envoyer_rappel_maintenant', 'exporter_participants']
     list_display = ['vignette', 'titre', 'quand', 'statut_badge', 'inscrits', 'presents', 'actif']
@@ -70,7 +72,7 @@ class WebinaireAdmin(admin.ModelAdmin):
         ('Date et heure (heure du Bénin)', {
             'description': "Rappel push + e-mail aux inscrits 20 min avant le début ; bouton « Participer » 10 min avant ; "
                            "attestations téléchargeables dès l'heure de fin.",
-            'fields': (('date_debut', 'date_fin'), 'places'),
+            'fields': ('jour', ('heure_debut', 'heure_fin'), 'places'),
         }),
         ('Publication', {'fields': ('actif',)}),
         ('Séance en ligne', {

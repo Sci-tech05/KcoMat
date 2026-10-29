@@ -224,6 +224,20 @@ class CatalogueEtAdminTests(TestCase):
         self.assertEqual(self.client.get(reverse('admin:webinaires_participationwebinaire_changelist')).status_code, 200)
         pdf = self.client.get(reverse('admin:webinaires_participationwebinaire_attestation', args=[p.pk]))
         self.assertTrue(pdf.content.startswith(b'%PDF'))
+        # saisie : une date, une heure de début, une heure de fin
+        ajout = self.client.post(reverse('admin:webinaires_webinaire_add'), {
+            'titre': 'Algorithmique', 'slug': '', 'theme': 'algorithmique', 'accroche': 'Accroche.', 'description': 'Texte.',
+            'points_cles': '', 'intervenant': 'KcoMat', 'intervenant_fonction': '', 'places': 0,
+            'jour': (timezone.localdate() + timedelta(days=10)).strftime('%d/%m/%Y'),
+            'heure_debut': '20:00', 'heure_fin': '22:00',
+            'participations-TOTAL_FORMS': 0, 'participations-INITIAL_FORMS': 0,
+            'participations-MIN_NUM_FORMS': 0, 'participations-MAX_NUM_FORMS': 1000,
+        })
+        self.assertEqual(ajout.status_code, 302, ajout.context and ajout.context['adminform'].form.errors)
+        cree = Webinaire.objects.get(titre='Algorithmique')
+        self.assertEqual((timezone.localtime(cree.date_debut).hour, timezone.localtime(cree.date_fin).hour), (20, 22))
+        self.assertEqual(timezone.localtime(cree.date_debut).date(), timezone.localtime(cree.date_fin).date())
+        self.assertContains(self.client.get(reverse('admin:webinaires_webinaire_change', args=[cree.pk])), 'value="20:00"')
         futur = creer_webinaire(timedelta(days=4))
         self.client.post(reverse('admin:webinaires_webinaire_changelist'),
                          {'action': 'mettre_horaire_soiree', '_selected_action': [futur.pk]})
