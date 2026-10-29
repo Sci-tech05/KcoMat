@@ -1,6 +1,8 @@
 """Attestation de participation (PDF A4 paysage) : participant, webinaire, entreprise, QR de vérification."""
 from io import BytesIO
+from pathlib import Path
 
+from django.conf import settings
 from django.http import HttpResponse
 from django.urls import reverse
 from django.utils import timezone, translation
@@ -24,8 +26,16 @@ GRIS = colors.HexColor('#5B6475')
 FILET = colors.HexColor('#D6DCE5')
 
 
+# Cachet et signature : dossier non versionné (le dépôt GitHub est public), à déposer sur le serveur
+DOSSIER_PRIVE = Path(settings.BASE_DIR) / 'prive'
+
+
+def _image_privee(nom):
+    chemin = DOSSIER_PRIVE / nom
+    return str(chemin) if chemin.exists() else None
+
+
 def _site_url():
-    from django.conf import settings
     return (getattr(settings, 'FEDAPAY_APP_URL', '') or 'https://kcomat0.pythonanywhere.com').rstrip('/')
 
 
@@ -53,7 +63,7 @@ def _qr(pdf, donnees, x, y, taille):
 
 
 def _cachet(pdf, cx, cy, nom):
-    """Cachet circulaire stylisé de l'entreprise."""
+    """Cachet dessiné, utilisé seulement si prive/cachet_kcomat.png est absent."""
     pdf.saveState()
     pdf.setStrokeColor(BLEU)
     pdf.setFillColor(BLEU)
@@ -142,15 +152,13 @@ def generer_pdf(participation):
     pdf.circle(centre, y - 13, 2.6, stroke=0, fill=1)
 
     with translation.override('fr'):
-        debut = timezone.localtime(webinaire.date_debut)
-        fin = timezone.localtime(webinaire.date_fin)
-        jour = date_format(debut, 'l j F Y')
-        emis = date_format(timezone.localtime(fin), 'j F Y')
+        jour = date_format(timezone.localtime(webinaire.date_debut), 'l j F Y')
+        emis = date_format(timezone.localtime(webinaire.date_fin), 'j F Y')
 
     y -= 46
     pdf.setFillColor(GRIS)
     pdf.setFont('Helvetica', 12)
-    pdf.drawCentredString(centre, y, f"La société {entreprise['name']} atteste que")
+    pdf.drawCentredString(centre, y, f"L'Entreprise {entreprise['name']} atteste que")
 
     y -= 40
     pdf.setFillColor(NAVY)
@@ -171,7 +179,7 @@ def generer_pdf(participation):
     pdf.setFillColor(colors.HexColor('#334155'))
     details = (f"animé par {webinaire.intervenant}"
                + (f" ({webinaire.intervenant_fonction})" if webinaire.intervenant_fonction else '')
-               + f", le {jour} de {debut:%H:%M} à {fin:%H:%M} (durée : {webinaire.duree}),"
+               + f", le {jour},"
                " en ligne sur la plateforme de visioconférence KcoMat.")
     _texte_centre(pdf, details, centre, y, 'Helvetica', 11, largeur - 260, 15)
 
@@ -191,17 +199,25 @@ def generer_pdf(participation):
     pdf.setFont('Helvetica-Oblique', 10.5)
     pdf.drawCentredString(centre, bas + 112, f"Fait à Lokossa, le {emis}")
 
-    signature_x = largeur - 175
-    _cachet(pdf, signature_x - 62, bas + 36, entreprise['name'])
+    # Signataire : titre, puis cachet et signature superposés comme sur un document tamponné
+    signature_cx = largeur - 165
     pdf.setFillColor(NAVY)
     pdf.setFont('Helvetica-Bold', 10.5)
-    pdf.drawCentredString(signature_x + 30, bas + 56, f"Pour {entreprise['name']}")
-    pdf.setFont('Helvetica', 9)
+    pdf.drawCentredString(signature_cx, bas + 118, f"Pour {entreprise['name']},")
+    pdf.setFont('Helvetica', 9.5)
     pdf.setFillColor(GRIS)
-    pdf.drawCentredString(signature_x + 30, bas + 43, "La Direction")
-    pdf.setStrokeColor(NAVY)
-    pdf.setLineWidth(0.8)
-    pdf.line(signature_x - 20, bas + 18, signature_x + 80, bas + 18)
+    pdf.drawCentredString(signature_cx, bas + 105, "Le Directeur")
+    cachet, signature = _image_privee('cachet_kcomat.png'), _image_privee('signature_kcomat.png')
+    if cachet:
+        pdf.drawImage(cachet, signature_cx - 92, bas - 8, width=96, height=96, preserveAspectRatio=True, mask='auto')
+    else:
+        _cachet(pdf, signature_cx - 44, bas + 40, entreprise['name'])
+    if signature:
+        pdf.drawImage(signature, signature_cx - 30, bas - 2, width=96, height=90, preserveAspectRatio=True, mask='auto')
+    else:
+        pdf.setStrokeColor(NAVY)
+        pdf.setLineWidth(0.8)
+        pdf.line(signature_cx - 10, bas + 18, signature_cx + 70, bas + 18)
 
     # Pied de page légal
     legal = [entreprise['name']]

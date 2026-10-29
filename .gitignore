@@ -41,3 +41,6 @@ tailwindcss*.exe
 .DS_Store
 Thumbs.db
 desktop.ini
+
+# ─── Cachet et signature (attestations) : jamais sur GitHub ──
+prive/
