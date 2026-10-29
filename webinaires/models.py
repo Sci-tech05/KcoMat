@@ -21,6 +21,7 @@ THEMES = {
     'iot': ('IoT & Cloud', 'wifi', '#06B6D4', '#10B981'),
     'ia': ('Edge AI', 'sparkles', '#8B5CF6', '#EC4899'),
     'python': ('Python & automatisation', 'code', '#2563EB', '#FACC15'),
+    'algorithmique': ('Algorithmique & programmation', 'network', '#0EA5E9', '#6366F1'),
     'domotique': ('Domotique', 'home', '#10B981', '#84CC16'),
     'entrepreneuriat': ('Entrepreneuriat tech', 'lightbulb', '#F97316', '#F43F5E'),
     'robotique': ('Robotique', 'bot', '#6366F1', '#22D3EE'),
