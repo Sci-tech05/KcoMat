@@ -90,10 +90,14 @@ class Produit(models.Model):
 
 
 class ProduitRetire(models.Model):
-    """Composant du catalogue supprimé par l'admin : « Charger le catalogue » ne le recrée plus."""
+    """Composant du catalogue supprimé par l'admin : « Charger le catalogue » ne le recrée plus.
+
+    definitif : retiré pour toujours ; la ligne n'apparaît plus dans l'admin mais bloque toujours le composant.
+    """
     slug = models.SlugField(unique=True)
     nom = models.CharField(max_length=200)
     retire_le = models.DateTimeField('Retiré le', auto_now_add=True)
+    definitif = models.BooleanField('Supprimé définitivement', default=False)
 
     class Meta:
         ordering = ['nom']

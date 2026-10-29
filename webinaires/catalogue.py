@@ -1,6 +1,6 @@
 """Webinaires proposés, chargés masqués depuis l'admin (« Charger les webinaires proposés »).
 
-Les dates sont une proposition : un samedi sur deux à 10 h 00 (1 h 30), à partir du samedi suivant.
+Les dates sont une proposition : un samedi sur deux de 20 h 00 à 22 h 00, à partir du samedi suivant.
 Un webinaire déjà présent (même slug) n'est jamais modifié.
 """
 from datetime import datetime, time, timedelta
@@ -8,6 +8,10 @@ from datetime import datetime, time, timedelta
 from django.utils import timezone
 
 from .models import Webinaire
+
+# Horaire de tous les webinaires (heure du Bénin)
+HEURE_DEBUT = time(20, 0)
+HEURE_FIN = time(22, 0)
 
 CATALOGUE = [
     {
@@ -161,13 +165,14 @@ CATALOGUE = [
 
 
 def calendrier_propose(maintenant=None, nombre=len(CATALOGUE)):
-    """Un samedi sur deux à 10 h 00, à partir du prochain samedi (heure locale)."""
+    """Un samedi sur deux, de HEURE_DEBUT à HEURE_FIN, à partir du prochain samedi (heure locale)."""
     aujourd_hui = timezone.localtime(maintenant or timezone.now()).date()
     samedi = aujourd_hui + timedelta(days=(5 - aujourd_hui.weekday()) % 7 or 7)
     zone = timezone.get_current_timezone()
     for i in range(nombre):
-        debut = timezone.make_aware(datetime.combine(samedi + timedelta(weeks=2 * i), time(10, 0)), zone)
-        yield debut, debut + timedelta(minutes=90)
+        jour = samedi + timedelta(weeks=2 * i)
+        yield (timezone.make_aware(datetime.combine(jour, HEURE_DEBUT), zone),
+               timezone.make_aware(datetime.combine(jour, HEURE_FIN), zone))
 
 
 def charger_catalogue():

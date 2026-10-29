@@ -1,4 +1,5 @@
 import csv
+from datetime import datetime
 
 from django.contrib import admin, messages
 from django.db.models import Count, Q
@@ -12,7 +13,7 @@ from notifications.admin import notifier_abonnes
 from notifications.push import notifier_publication
 
 from .attestation import reponse_pdf
-from .catalogue import CATALOGUE, charger_catalogue
+from .catalogue import CATALOGUE, HEURE_DEBUT, HEURE_FIN, charger_catalogue
 from .models import ParticipationWebinaire, Webinaire
 from .rappels import envoyer_rappel
 
@@ -51,7 +52,7 @@ class ParticipationInline(admin.TabularInline):
 @admin.register(Webinaire)
 class WebinaireAdmin(admin.ModelAdmin):
     change_list_template = 'admin/webinaires/webinaire/change_list.html'
-    actions = ['publier', 'masquer', notifier_abonnes, 'envoyer_rappel_maintenant', 'exporter_participants']
+    actions = ['publier', 'masquer', notifier_abonnes, 'mettre_horaire_soiree', 'envoyer_rappel_maintenant', 'exporter_participants']
     list_display = ['vignette', 'titre', 'quand', 'statut_badge', 'inscrits', 'presents', 'actif']
     list_display_links = ['titre']
     list_editable = ['actif']
@@ -134,6 +135,19 @@ class WebinaireAdmin(admin.ModelAdmin):
     @admin.action(description="Masquer les webinaires sélectionnés")
     def masquer(self, request, queryset):
         self.message_user(request, f"{queryset.update(actif=False)} webinaire(s) masqué(s).", messages.SUCCESS)
+
+    @admin.action(description=f"Programmer de {HEURE_DEBUT:%H} h à {HEURE_FIN:%H} h (même jour)")
+    def mettre_horaire_soiree(self, request, queryset):
+        zone = timezone.get_current_timezone()
+        n = 0
+        for webinaire in queryset.filter(date_fin__gt=timezone.now()):
+            jour = timezone.localtime(webinaire.date_debut).date()
+            webinaire.date_debut = timezone.make_aware(datetime.combine(jour, HEURE_DEBUT), zone)
+            webinaire.date_fin = timezone.make_aware(datetime.combine(jour, HEURE_FIN), zone)
+            webinaire.rappel_envoye_le = None
+            webinaire.save(update_fields=['date_debut', 'date_fin', 'rappel_envoye_le', 'updated_at'])
+            n += 1
+        self.message_user(request, f"{n} webinaire(s) programmé(s) de {HEURE_DEBUT:%H} h à {HEURE_FIN:%H} h.", messages.SUCCESS)
 
     @admin.action(description="Envoyer le rappel maintenant (push + e-mail aux inscrits)")
     def envoyer_rappel_maintenant(self, request, queryset):
