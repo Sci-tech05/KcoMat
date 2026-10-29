@@ -1,11 +1,14 @@
-{% load kcomat_tags %}{% comment %}Couverture d'un webinaire : image, ou visuel généré aux couleurs du thème. Paramètres : w, largeur (px){% endcomment %}
+{% load kcomat_tags %}{% comment %}Couverture d'un webinaire, toujours en 16:9 sans recadrage : l'image chargée (affiche déjà composée),
+ou un visuel généré aux couleurs du thème. Paramètres : w, largeur (px){% endcomment %}
 <span class="wb-cover" style="{{ w.theme_style }}">
   {% if w.image %}
   <img src="{{ w.image|webp:largeur }}" alt="" loading="lazy" decoding="async">
   {% else %}
   <span class="wb-cover__art" aria-hidden="true"><span class="wb-cover__icon">{% include 'partials/icon.html' with name=w.theme_icone stroke='1.5' %}</span></span>
   {% endif %}
+  {% if not w.image or w.etat != 'a_venir' %}<span class="wb-cover__top">{% include 'webinaires/_statut.html' %}</span>{% endif %}
+  {% if not w.image %}
   <span class="wb-cover__shade"></span>
-  <span class="wb-cover__top">{% include 'webinaires/_statut.html' %}</span>
   <span class="wb-cover__date" aria-hidden="true"><b>{{ w.date_debut|date:"d" }}</b><span>{{ w.date_debut|date:"M" }}</span></span>
+  {% endif %}
 </span>

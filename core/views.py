@@ -26,7 +26,7 @@ def accueil(request):
     temoignages = Temoignage.objects.filter(actif=True)[:6]
     statistiques = Statistique.objects.all()[:6]
     # webinaires à venir (ou en direct) : en tête de page, juste sous le héros
-    webinaires_accueil = contexte_cartes(request, list(avec_inscrits(Webinaire.objects.a_venir())[:4]))
+    webinaires_accueil = contexte_cartes(request, list(avec_inscrits(Webinaire.objects.a_venir())[:3]))
     ctx = {
         'webinaires_accueil': webinaires_accueil,
         'formations_vedette': formations_vedette,
