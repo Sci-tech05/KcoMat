@@ -120,10 +120,11 @@ def notifier(type_notification, titre, message, url, image='', objet_id=None):
 
 # --------------------------------------------------------------------------- publications
 def _contenu(instance):
-    """(type, titre, message, url, image) pour une offre, une formation ou un projet."""
+    """(type, titre, message, url, image) pour une offre, une formation, un projet ou un webinaire."""
     from carrieres.models import Offre
     from formations.models import Formation
     from projets.models import Projet
+    from webinaires.models import Webinaire
     from django.urls import reverse
     from django.utils.text import Truncator
 
@@ -142,6 +143,14 @@ def _contenu(instance):
         return ('formation', f"Nouvelle formation : {instance.titre}",
                 Truncator(instance.description_courte).chars(180) + prix,
                 reverse('formations:detail', args=[instance.slug]), image_url)
+    if isinstance(instance, Webinaire):
+        from django.utils import formats, timezone, translation
+        debut = timezone.localtime(instance.date_debut)
+        with translation.override('fr'):
+            quand = formats.date_format(debut, 'l j F')
+        return ('webinaire', f"Nouveau webinaire : {instance.titre}",
+                f"{quand.capitalize()} à {debut:%H:%M}, en ligne et gratuit. Réservez votre place !",
+                reverse('webinaires:detail', args=[instance.slug]), image_url)
     if isinstance(instance, Projet):
         return ('projet', f"Nouveau projet réalisé : {instance.titre}",
                 Truncator(instance.description_courte).chars(200),

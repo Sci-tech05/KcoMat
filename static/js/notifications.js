@@ -123,7 +123,7 @@
 
   function sAbonner(bouton) {
     var prefs = preferences();
-    if (!prefs.offres && !prefs.formations && !prefs.projets) {
+    if (!prefs.offres && !prefs.formations && !prefs.projets && !prefs.webinaires) {
       erreur('Choisissez au moins un type de notification.');
       return;
     }
@@ -161,7 +161,7 @@
 
   function enregistrerPreferences(bouton) {
     var prefs = preferences();
-    if (!prefs.offres && !prefs.formations && !prefs.projets) {
+    if (!prefs.offres && !prefs.formations && !prefs.projets && !prefs.webinaires) {
       erreur('Choisissez au moins un type de notification, ou désabonnez-vous.');
       return;
     }

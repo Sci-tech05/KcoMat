@@ -1,0 +1,28 @@
+{% comment %}
+Bouton principal d'un webinaire selon le moment et l'inscription du visiteur.
+Paramètres : w (avec .etat et .ma_participation, cf. views.contexte_cartes), sombre (fond foncé), petit, bloc
+{% endcomment %}{% with taille=petit|yesno:"wb-btn--sm," largeur=bloc|yesno:"wb-btn--block," %}
+{% if w.etat == 'ouvert' or w.etat == 'en_direct' %}
+  <a href="{% url 'webinaires:salle' w.slug %}" class="wb-btn wb-btn--live {{ taille }} {{ largeur }}">
+    {% include 'partials/icon.html' with name='video' class='w-4 h-4' stroke='2.25' %}Participer
+  </a>
+{% elif w.etat == 'termine' %}
+  {% if w.ma_participation.a_participe %}
+  <a href="{% url 'webinaires:attestation' w.slug %}" class="wb-btn wb-btn--success {{ taille }} {{ largeur }}">
+    {% include 'partials/icon.html' with name='download' class='w-4 h-4' stroke='2.25' %}Télécharger mon attestation
+  </a>
+  {% else %}
+  <span class="wb-btn wb-btn--muted {{ taille }} {{ largeur }}">Séance terminée</span>
+  {% endif %}
+{% elif w.ma_participation %}
+  <a href="{% url 'webinaires:agenda' w.slug %}" class="wb-btn {% if sombre %}wb-btn--ghost-dark{% else %}wb-btn--ghost{% endif %} {{ taille }} {{ largeur }}">
+    {% include 'partials/icon.html' with name='calendar-plus' class='w-4 h-4' stroke='2' %}Ajouter à mon agenda
+  </a>
+{% elif w.est_complet %}
+  <span class="wb-btn wb-btn--muted {{ taille }} {{ largeur }}">Complet</span>
+{% else %}
+  <a href="{% url 'webinaires:detail' w.slug %}#reserver" class="wb-btn wb-btn--primary {{ taille }} {{ largeur }}">
+    Réserver ma place{% include 'partials/icon.html' with name='arrow-right' class='w-4 h-4' stroke='2.25' %}
+  </a>
+{% endif %}
+{% endwith %}

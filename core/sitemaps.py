@@ -6,6 +6,7 @@ from carrieres.models import Offre
 from formations.models import Formation
 from projets.models import Projet
 from services.models import Service
+from webinaires.models import Webinaire
 
 
 class PagesSitemap(Sitemap):
@@ -14,6 +15,7 @@ class PagesSitemap(Sitemap):
     PRIORITIES = {
         'core:accueil': 1.0,
         'formations:liste': 0.9,
+        'webinaires:liste': 0.9,
         'boutique:liste': 0.8,
         'services:liste': 0.8,
         'projets:liste': 0.7,
@@ -80,9 +82,20 @@ class OffreSitemap(SlugSitemap):
     changefreq = 'daily'
 
 
+class WebinaireSitemap(SlugSitemap):
+    model = Webinaire
+    url_name = 'webinaires:detail'
+    priority = 0.8
+    changefreq = 'daily'
+
+    def lastmod(self, obj):
+        return obj.updated_at
+
+
 SITEMAPS = {
     'pages': PagesSitemap,
     'formations': FormationSitemap,
+    'webinaires': WebinaireSitemap,
     'produits': ProduitSitemap,
     'services': ServiceSitemap,
     'projets': ProjetSitemap,

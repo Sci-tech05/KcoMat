@@ -96,8 +96,9 @@
         <!-- Desktop Menu -->
         <div class="hidden lg:flex items-center gap-1">
           <a href="{% url 'core:accueil' %}" class="nav-link {% if request.resolver_match.namespace == 'core' and request.resolver_match.url_name == 'accueil' %}active{% endif %}">Accueil</a>
-          <a href="{% url 'core:a_propos' %}" class="nav-link {% if request.resolver_match.namespace == 'core' and request.resolver_match.url_name == 'a_propos' %}active{% endif %}">À propos</a>
+          <a href="{% url 'core:a_propos' %}" class="nav-link hidden xl:inline {% if request.resolver_match.namespace == 'core' and request.resolver_match.url_name == 'a_propos' %}active{% endif %}">À propos</a>
           <a href="{% url 'formations:liste' %}" class="nav-link {% if request.resolver_match.namespace == 'formations' %}active{% endif %}">Formations</a>
+          <a href="{% url 'webinaires:liste' %}" class="nav-link inline-flex items-center gap-1.5 {% if request.resolver_match.namespace == 'webinaires' %}active{% endif %}"><span class="wb-dot text-rose-500" aria-hidden="true"></span>Webinaires</a>
           <a href="{% url 'boutique:liste' %}" class="nav-link {% if request.resolver_match.namespace == 'boutique' %}active{% endif %}">Boutique</a>
           <a href="{% url 'services:liste' %}" class="nav-link {% if request.resolver_match.namespace == 'services' %}active{% endif %}">Services</a>
           <a href="{% url 'projets:liste' %}" class="nav-link {% if request.resolver_match.namespace == 'projets' %}active{% endif %}">Projets</a>
@@ -166,6 +167,7 @@
       <a href="{% url 'core:accueil' %}" class="mobile-nav-link">Accueil</a>
       <a href="{% url 'core:a_propos' %}" class="mobile-nav-link">À propos</a>
       <a href="{% url 'formations:liste' %}" class="mobile-nav-link">Formations</a>
+      <a href="{% url 'webinaires:liste' %}" class="mobile-nav-link flex items-center gap-2"><span class="wb-dot text-rose-500" aria-hidden="true"></span>Webinaires en direct</a>
       <a href="{% url 'boutique:liste' %}" class="mobile-nav-link">Boutique</a>
       <a href="{% url 'services:liste' %}" class="mobile-nav-link">Services</a>
       <a href="{% url 'projets:liste' %}" class="mobile-nav-link">Projets</a>
@@ -245,6 +247,7 @@
             <li><a href="{% url 'core:accueil' %}" class="footer-link">Accueil</a></li>
             <li><a href="{% url 'core:a_propos' %}" class="footer-link">À propos</a></li>
             <li><a href="{% url 'formations:liste' %}" class="footer-link">Formations</a></li>
+            <li><a href="{% url 'webinaires:liste' %}" class="footer-link">Webinaires gratuits</a></li>
             <li><a href="{% url 'boutique:liste' %}" class="footer-link">Boutique composants</a></li>
             <li><a href="{% url 'services:liste' %}" class="footer-link">Services</a></li>
             <li><a href="{% url 'projets:liste' %}" class="footer-link">Projets réalisés</a></li>

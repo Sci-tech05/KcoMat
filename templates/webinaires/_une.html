@@ -1,0 +1,28 @@
+{% comment %}Webinaire à la une (accueil, page Webinaires). Paramètre : w (préparé par views.contexte_cartes){% endcomment %}
+<article class="wb-feature" style="{{ w.theme_style }}">
+  <a href="{% url 'webinaires:detail' w.slug %}" class="block" tabindex="-1" aria-hidden="true">{% include 'webinaires/_couverture.html' with largeur=1200 %}</a>
+  <div class="wb-feature__body">
+    <span class="wb-theme">{% include 'partials/icon.html' with name=w.theme_icone class='w-4 h-4' stroke='2.25' %}{{ w.theme_libelle }} · Webinaire gratuit</span>
+    <h3 class="wb-feature__title"><a href="{% url 'webinaires:detail' w.slug %}" class="hover:text-sky-200 transition-colors">{{ w.titre }}</a></h3>
+    <p class="text-[15px] leading-relaxed text-slate-300">{{ w.accroche }}</p>
+    <div class="wb-meta">
+      <span>{% include 'partials/icon.html' with name='calendar' class='w-4 h-4' %}{{ w.date_debut|date:"l j F Y"|capfirst }}</span>
+      <span>{% include 'partials/icon.html' with name='clock' class='w-4 h-4' %}{{ w.date_debut|date:"H:i" }} – {{ w.date_fin|date:"H:i" }} · {{ w.duree }}</span>
+      <span>{% include 'partials/icon.html' with name='user' class='w-4 h-4' %}{{ w.intervenant }}</span>
+    </div>
+    {% include 'webinaires/_compte.html' with sombre=1 %}
+    <div class="flex flex-wrap items-center gap-3">
+      {% include 'webinaires/_action.html' with sombre=1 %}
+      {% if w.ma_participation and w.etat == 'a_venir' %}
+      <span class="wb-reserve !text-emerald-300">{% include 'partials/icon.html' with name='check' class='w-4 h-4' stroke='2.5' %}Votre place est réservée</span>
+      {% else %}
+      <a href="{% url 'webinaires:detail' w.slug %}" class="wb-btn wb-btn--ghost-dark">Programme détaillé</a>
+      {% endif %}
+    </div>
+    <ul class="flex flex-wrap gap-x-5 gap-y-2 border-t border-white/10 pt-4 text-xs text-slate-400">
+      <li class="flex items-center gap-1.5">{% include 'partials/icon.html' with name='zap' class='w-3.5 h-3.5 text-amber-300' %}Rappel 20 min avant</li>
+      <li class="flex items-center gap-1.5">{% include 'partials/icon.html' with name='video' class='w-3.5 h-3.5 text-sky-300' %}Sur le site, sans installation</li>
+      <li class="flex items-center gap-1.5">{% include 'partials/icon.html' with name='award' class='w-3.5 h-3.5 text-emerald-300' %}Attestation de participation</li>
+    </ul>
+  </div>
+</article>

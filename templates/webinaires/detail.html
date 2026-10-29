@@ -1,0 +1,184 @@
+{% extends 'base.html' %}
+{% load static kcomat_tags %}
+
+{% block title %}{{ webinaire.titre }} — Webinaire gratuit{% endblock %}
+{% block meta_description %}{{ webinaire.accroche }} Webinaire gratuit en direct, {{ webinaire.date_debut|date:"l j F Y à H:i" }}.{% endblock %}
+{% block og_image %}{% if webinaire.image %}{{ SITE_URL }}{{ webinaire.image|og_image }}{% else %}{{ block.super }}{% endif %}{% endblock %}
+{% block structured_data %}
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "Event",
+  "name": "{{ webinaire.titre|escapejs }}",
+  "description": "{{ webinaire.accroche|escapejs }}",
+  "startDate": "{{ webinaire.date_debut|date:'c' }}",
+  "endDate": "{{ webinaire.date_fin|date:'c' }}",
+  "eventStatus": "https://schema.org/EventScheduled",
+  "eventAttendanceMode": "https://schema.org/OnlineEventAttendanceMode",
+  "location": {"@type": "VirtualLocation", "url": "{{ CANONICAL_URL }}"},
+  {% if webinaire.image %}"image": "{{ SITE_URL }}{{ webinaire.image|og_image }}",{% endif %}
+  "organizer": {"@id": "{{ SITE_URL }}/#organisation", "@type": "Organization", "name": "KcoMat", "url": "{{ SITE_URL }}/"},
+  "performer": {"@type": "Person", "name": "{{ webinaire.intervenant|escapejs }}"},
+  "isAccessibleForFree": true,
+  "offers": {"@type": "Offer", "price": "0", "priceCurrency": "XOF", "url": "{{ CANONICAL_URL }}", "availability": "https://schema.org/{% if webinaire.est_complet %}SoldOut{% else %}InStock{% endif %}"}
+}
+</script>
+{% endblock %}
+
+{% block content %}
+{% with w=webinaire %}
+<!-- ===== HÉROS ===== -->
+<section class="hx py-12 sm:py-16 lg:py-20" style="--hx-a:{% if w.theme == 'ia' %}#8B5CF6{% elif w.theme == 'domotique' %}#10B981{% elif w.theme == 'entrepreneuriat' %}#F97316{% elif w.theme == 'iot' %}#06B6D4{% else %}#0A84FF{% endif %};--hx-b:#22D3EE;--hx-c:#60A5FA;{{ w.theme_style }}">
+  {% include 'partials/hero_fx.html' %}
+  <div class="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <a href="{% url 'webinaires:liste' %}" class="inline-flex items-center gap-2 text-sky-300 hover:text-sky-200 text-sm mb-8 transition-colors group">
+      {% include 'partials/icon.html' with name='chevron-right' class='w-4 h-4 rotate-180 transition-transform group-hover:-translate-x-0.5' stroke='2.25' %}
+      Tous les webinaires
+    </a>
+    <div class="grid grid-cols-1 gap-10 lg:grid-cols-[1.15fr_1fr] items-center">
+      <div>
+        <div class="flex flex-wrap items-center gap-2">
+          {% include 'webinaires/_statut.html' %}
+          <span class="wb-pill wb-pill--glass">{% include 'partials/icon.html' with name=w.theme_icone class='w-3.5 h-3.5' stroke='2' %}{{ w.theme_libelle }}</span>
+        </div>
+        <h1 class="hx-title mt-5 text-3xl sm:text-4xl lg:text-5xl">{{ w.titre }}</h1>
+        <p class="hx-lead mt-5 text-lg max-w-2xl">{{ w.accroche }}</p>
+        <div class="mt-7 grid gap-3 sm:grid-cols-3 max-w-2xl">
+          <span class="hx-chip">{% include 'partials/icon.html' with name='calendar' class='w-4 h-4 text-sky-300' stroke='2' %}{{ w.date_debut|date:"D j M Y"|capfirst }}</span>
+          <span class="hx-chip">{% include 'partials/icon.html' with name='clock' class='w-4 h-4 text-sky-300' stroke='2' %}{{ w.date_debut|date:"H:i" }} – {{ w.date_fin|date:"H:i" }}</span>
+          <span class="hx-chip">{% include 'partials/icon.html' with name='video' class='w-4 h-4 text-sky-300' stroke='2' %}{{ w.duree }} · en ligne</span>
+        </div>
+        <div class="mt-7 flex items-center gap-3">
+          <span class="wb-avatar">{{ w.intervenant|slice:":1" }}</span>
+          <div>
+            <p class="text-sm font-bold text-white">{{ w.intervenant }}</p>
+            {% if w.intervenant_fonction %}<p class="text-xs text-slate-400">{{ w.intervenant_fonction }}</p>{% endif %}
+          </div>
+        </div>
+      </div>
+      <div class="overflow-hidden rounded-3xl border border-white/10 shadow-2xl shadow-black/40">
+        {% include 'webinaires/_couverture.html' with largeur=1200 %}
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== CONTENU ===== -->
+<section class="py-12 sm:py-16 bg-slate-50" style="{{ w.theme_style }}">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 grid grid-cols-1 gap-8 lg:grid-cols-[minmax(0,1fr)_24rem] items-start">
+
+    <!-- Colonne principale -->
+    <div class="grid grid-cols-1 gap-8 min-w-0 order-2 lg:order-1">
+      <div class="wb-panel p-6 sm:p-8">
+        <h2 class="text-xl font-black text-slate-900">À propos de ce webinaire</h2>
+        <div class="wb-prose mt-4 text-[15px] leading-relaxed text-slate-600">
+          {% for p in w.paragraphes %}<p>{{ p|linebreaksbr }}</p>{% endfor %}
+        </div>
+      </div>
+
+      {% if w.points_cles_list %}
+      <div class="wb-panel p-6 sm:p-8">
+        <h2 class="text-xl font-black text-slate-900">Ce que vous allez apprendre</h2>
+        <ul class="mt-5 grid gap-4 sm:grid-cols-2">
+          {% for point in w.points_cles_list %}
+          <li class="wb-check"><span class="wb-check__ico">{% include 'partials/icon.html' with name='check' class='w-4 h-4' stroke='2.5' %}</span><span class="text-sm text-slate-700">{{ point }}</span></li>
+          {% endfor %}
+        </ul>
+      </div>
+      {% endif %}
+
+      <div class="wb-panel p-6 sm:p-8">
+        <h2 class="text-xl font-black text-slate-900">Déroulement</h2>
+        <ol class="mt-5 grid gap-5">
+          <li class="wb-step"><span class="wb-step__n">1</span><div><p class="font-bold text-slate-900">Réservation</p><p class="text-sm text-slate-500">Avec votre compte KcoMat, jusqu'à la fin de la séance. Une confirmation et une invitation agenda vous sont envoyées par e-mail.</p></div></li>
+          <li class="wb-step"><span class="wb-step__n">2</span><div><p class="font-bold text-slate-900">Rappel · {{ w.heure_rappel|date:"H:i" }}</p><p class="text-sm text-slate-500">20 minutes avant, par e-mail et par notification si vous les avez activées.</p></div></li>
+          <li class="wb-step"><span class="wb-step__n">3</span><div><p class="font-bold text-slate-900">Ouverture de la salle · {{ w.ouverture_salle|date:"H:i" }}</p><p class="text-sm text-slate-500">Le bouton « Participer » apparaît sur cette page 10 minutes avant le début. Prévoyez un casque ou des écouteurs.</p></div></li>
+          <li class="wb-step"><span class="wb-step__n">4</span><div><p class="font-bold text-slate-900">Attestation · dès {{ w.date_fin|date:"H:i" }}</p><p class="text-sm text-slate-500">À la fin, téléchargez ici votre attestation de participation nominative, avec QR code de vérification.</p></div></li>
+        </ol>
+      </div>
+    </div>
+
+    <!-- Panneau de réservation -->
+    <aside id="reserver" class="order-1 lg:order-2 lg:sticky lg:top-24 scroll-mt-24">
+      <div class="wb-panel overflow-hidden">
+        <div class="p-6 grid gap-5">
+          {% include 'webinaires/_compte.html' %}
+
+          {% if w.etat == 'termine' %}
+            {% if participation.a_participe %}
+            <div class="rounded-2xl bg-emerald-50 p-4 text-sm text-emerald-800">
+              <p class="font-bold">Merci pour votre participation, {{ participation.prenom }} !</p>
+              <p class="mt-1">Votre attestation N° {{ participation.numero_attestation }} est prête.</p>
+            </div>
+            {% include 'webinaires/_action.html' with bloc=1 %}
+            {% elif participation %}
+            <p class="text-sm text-slate-500">La séance est terminée. Aucune connexion à la salle n'a été enregistrée pour votre compte : l'attestation est réservée aux personnes présentes. <a href="{% url 'core:contact' %}" class="font-semibold text-blue-600 hover:underline">Une erreur ? Contactez-nous.</a></p>
+            {% else %}
+            <p class="text-sm text-slate-500">Ce webinaire est terminé. Retrouvez les prochaines séances sur la page des webinaires.</p>
+            <a href="{% url 'webinaires:liste' %}" class="wb-btn wb-btn--primary wb-btn--block">Voir les prochains webinaires</a>
+            {% endif %}
+
+          {% elif not user.is_authenticated %}
+            <div>
+              <p class="font-extrabold text-slate-900">Réservez votre place gratuitement</p>
+              <p class="mt-1 text-sm text-slate-500">Un compte KcoMat est nécessaire pour participer et recevoir votre attestation.</p>
+            </div>
+            <a href="{% url 'accounts:inscription' %}?next={{ request.path|urlencode }}%23reserver" class="wb-btn wb-btn--primary wb-btn--block">Créer mon compte gratuit</a>
+            <a href="{% url 'accounts:connexion' %}?next={{ request.path|urlencode }}%23reserver" class="wb-btn wb-btn--ghost wb-btn--block">J'ai déjà un compte</a>
+
+          {% elif participation %}
+            {% if w.etat == 'a_venir' %}
+            <div class="rounded-2xl bg-emerald-50 p-4 text-sm text-emerald-800">
+              <p class="flex items-center gap-2 font-bold">{% include 'partials/icon.html' with name='badge-check' class='w-5 h-5' stroke='2' %}Votre place est réservée</p>
+              <p class="mt-1">Le bouton « Participer » apparaîtra ici le {{ w.ouverture_salle|date:"j F" }} à {{ w.ouverture_salle|date:"H:i" }}.</p>
+            </div>
+            {% endif %}
+            {% include 'webinaires/_action.html' with bloc=1 %}
+
+          {% elif w.est_complet %}
+            <p class="text-sm text-slate-500">Toutes les places sont réservées. Activez les notifications pour ne pas manquer le prochain webinaire.</p>
+            <span class="wb-btn wb-btn--muted wb-btn--block">Complet</span>
+
+          {% else %}
+            <form method="post" action="{% url 'webinaires:inscrire' w.slug %}" class="grid gap-3">
+              {% csrf_token %}
+              <div>
+                <p class="font-extrabold text-slate-900">{% if w.etat == 'a_venir' %}Réservez votre place{% else %}Rejoignez la séance{% endif %}</p>
+                <p class="mt-1 text-xs text-slate-500">Vos nom et prénom tels qu'ils figureront sur votre attestation.</p>
+              </div>
+              <label class="grid gap-1 text-xs font-semibold text-slate-600">Prénom {{ form.prenom }}</label>
+              <label class="grid gap-1 text-xs font-semibold text-slate-600">Nom {{ form.nom }}</label>
+              <button type="submit" class="wb-btn {% if w.etat == 'a_venir' %}wb-btn--primary{% else %}wb-btn--live{% endif %} wb-btn--block mt-1">
+                {% if w.etat == 'a_venir' %}Réserver ma place{% else %}{% include 'partials/icon.html' with name='video' class='w-4 h-4' stroke='2.25' %}Participer maintenant{% endif %}
+              </button>
+            </form>
+          {% endif %}
+        </div>
+
+        <dl class="grid grid-cols-2 border-t border-slate-100 text-center text-sm">
+          <div class="p-4 border-r border-slate-100"><dt class="text-xs text-slate-500">Tarif</dt><dd class="mt-1 font-black text-emerald-600">Gratuit</dd></div>
+          <div class="p-4"><dt class="text-xs text-slate-500">Places</dt><dd class="mt-1 font-black text-slate-900">{% if w.places %}{{ w.places_restantes }} restante{{ w.places_restantes|pluralize }}{% else %}Illimitées{% endif %}</dd></div>
+        </dl>
+        <ul class="grid gap-2 border-t border-slate-100 p-5 text-xs text-slate-500">
+          <li class="flex items-center gap-2">{% include 'partials/icon.html' with name='video' class='w-4 h-4 text-blue-500' %}Visioconférence dans le navigateur, sans installation</li>
+          <li class="flex items-center gap-2">{% include 'partials/icon.html' with name='smartphone' class='w-4 h-4 text-blue-500' %}Ordinateur, tablette ou téléphone</li>
+          <li class="flex items-center gap-2">{% include 'partials/icon.html' with name='award' class='w-4 h-4 text-blue-500' %}Attestation PDF vérifiable par QR code</li>
+        </ul>
+      </div>
+      {% include 'partials/partage.html' with titre=w.titre texte=w.accroche %}
+    </aside>
+  </div>
+
+  {% if autres %}
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-16">
+    <h2 class="mb-6 text-2xl font-black tracking-tight text-slate-900">Autres webinaires à venir</h2>
+    <div class="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+      {% for w in autres %}{% include 'webinaires/_carte.html' %}{% endfor %}
+    </div>
+  </div>
+  {% endif %}
+</section>
+{% endwith %}
+{% endblock %}
+
+{% block extra_js %}<script src="{% static 'js/webinaires.js' %}" defer></script>{% endblock %}

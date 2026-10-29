@@ -1,0 +1,22 @@
+{% extends "admin/change_list.html" %}
+
+{% block date_hierarchy %}
+<div class="kx-month">
+  <div class="kx-month__head">
+    <div>
+      <span class="kx-month__eyebrow"><i class="fas fa-video mr-1"></i> Webinaires</span>
+      <h3 class="kx-month__title">{{ nb_a_venir }} à venir <small>· {{ nb_masques }} masqué{{ nb_masques|pluralize }} · {{ nb_participants }} inscription{{ nb_participants|pluralize }} au total</small></h3>
+    </div>
+    <form method="post" action="{% url 'admin:webinaires_webinaire_charger_catalogue' %}">
+      {% csrf_token %}
+      <button type="submit" class="btn btn-primary"><i class="fas fa-magic mr-1"></i> Charger les webinaires proposés ({{ catalogue_total }})</button>
+    </form>
+  </div>
+  <p class="kx-month__hint"><i class="fas fa-info-circle mr-1"></i>
+    Les webinaires proposés arrivent <b>masqués</b>, programmés un samedi sur deux à 10 h : <b>ajustez la date</b>, ajoutez une image puis publiez
+    (les abonnés sont prévenus). <b>20 min avant</b> : notification push et e-mail aux inscrits · <b>10 min avant</b> : bouton « Participer » ·
+    <b>à la fin</b> : attestation PDF pour chaque participant entré dans la salle. Animateur : ouvrez le webinaire et cliquez « Entrer dans la salle » avant le début.
+  </p>
+</div>
+{{ block.super }}
+{% endblock %}

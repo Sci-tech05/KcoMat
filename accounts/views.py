@@ -16,6 +16,8 @@ ESSAIS_MAX = 5
 PAUSE_SECONDES = 15 * 60
 from formations.models import Inscription
 from boutique.models import Commande
+from webinaires.views import contexte_cartes
+from webinaires.models import Webinaire
 from .models import ProfilUtilisateur
 from .forms import InscriptionForm, UserUpdateForm, ProfilUtilisateurForm, KcomatPasswordChangeForm
 
@@ -99,8 +101,11 @@ def dashboard(request):
     profil, _ = ProfilUtilisateur.objects.get_or_create(utilisateur=request.user)
     inscriptions = Inscription.objects.filter(utilisateur=request.user).select_related('formation')[:10]
     commandes = Commande.objects.filter(utilisateur=request.user)[:10]
+    mes_webinaires = contexte_cartes(request, list(
+        Webinaire.objects.filter(participations__utilisateur=request.user).order_by('-date_debut')[:6]))
     ctx = {
         'profil': profil,
+        'mes_webinaires': mes_webinaires,
         'inscriptions': inscriptions,
         'commandes': commandes,
         'title': 'Mon espace KcoMat',

@@ -1,0 +1,95 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ title }}{% endblock %}
+{% block robots %}noindex, nofollow{% endblock %}
+
+{% block content %}
+{% with w=webinaire %}
+<section class="relative overflow-hidden bg-[radial-gradient(circle_at_15%_20%,#312e81_0%,#0f172a_45%,#020617_100%)] py-8 sm:py-10" style="{{ w.theme_style }}">
+  <div class="absolute inset-0 pointer-events-none">
+    <div class="absolute -top-20 left-8 h-72 w-72 rounded-full bg-violet-400/15 blur-3xl"></div>
+    <div class="absolute -bottom-24 right-0 h-80 w-80 rounded-full bg-sky-400/10 blur-3xl"></div>
+    <div class="absolute inset-0 opacity-[0.07]" style="background-image: linear-gradient(to right, #ffffff 1px, transparent 1px), linear-gradient(to bottom, #ffffff 1px, transparent 1px); background-size: 32px 32px;"></div>
+  </div>
+
+  <div class="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div class="rounded-3xl border border-white/15 bg-white/[0.07] backdrop-blur-md p-5 sm:p-6 shadow-2xl shadow-black/30">
+      <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+        <div class="min-w-0">
+          <div class="flex flex-wrap items-center gap-2">
+            {% if etat == 'en_direct' %}<span class="wb-pill wb-pill--live"><span class="wb-dot"></span>En direct</span>
+            {% elif etat == 'ouvert' %}<span class="wb-pill wb-pill--open"><span class="wb-dot"></span>Début à {{ w.date_debut|date:"H:i" }}</span>
+            {% elif etat == 'termine' %}<span class="wb-pill wb-pill--done">Séance terminée</span>
+            {% else %}<span class="wb-pill wb-pill--glass">Préparation · {{ w.date_debut|date:"j M H:i" }}</span>{% endif %}
+            <span class="wb-pill wb-pill--glass">Webinaire KcoMat</span>
+            {% if animateur %}<span class="wb-pill" style="background:#FBBF24;color:#1F1300">Animateur</span>{% endif %}
+          </div>
+          <h1 class="mt-3 text-xl sm:text-2xl lg:text-3xl font-black text-white leading-tight">{{ w.titre }}</h1>
+          <p class="mt-1 text-sm text-slate-300">{{ w.date_debut|date:"l j F"|capfirst }} · {{ w.date_debut|date:"H:i" }} – {{ w.date_fin|date:"H:i" }} · {{ w.intervenant }}</p>
+        </div>
+        <div class="flex flex-wrap items-center gap-2 flex-shrink-0">
+          <a href="{% url 'webinaires:detail' w.slug %}" class="wb-btn wb-btn--ghost-dark wb-btn--sm">Quitter la salle</a>
+          <a href="{{ meet_url }}" target="_blank" rel="noopener noreferrer" class="wb-btn wb-btn--primary wb-btn--sm">
+            {% include 'partials/icon.html' with name='external' class='w-4 h-4' stroke='2' %}Ouvrir en plein écran
+          </a>
+        </div>
+      </div>
+    </div>
+
+    <div class="mt-5 rounded-3xl border border-white/10 bg-slate-900/60 p-2 sm:p-3 shadow-2xl">
+      <div id="wb-status" class="mb-2 rounded-xl bg-white/5 px-3 py-2 text-xs sm:text-sm font-medium text-slate-300">Connexion à la salle…</div>
+      <div id="wb-jitsi" class="h-[72vh] min-h-[440px] rounded-2xl bg-slate-950"></div>
+    </div>
+
+    <div class="mt-5 grid gap-3 sm:grid-cols-3 text-sm text-slate-300">
+      <p class="flex items-start gap-2 rounded-2xl border border-white/10 bg-white/[0.04] p-4">{% include 'partials/icon.html' with name='user-check' class='w-5 h-5 flex-shrink-0 text-emerald-300' %}<span>Votre présence est enregistrée : votre attestation sera téléchargeable sur la page du webinaire dès {{ w.date_fin|date:"H:i" }}.</span></p>
+      <p class="flex items-start gap-2 rounded-2xl border border-white/10 bg-white/[0.04] p-4">{% include 'partials/icon.html' with name='message' class='w-5 h-5 flex-shrink-0 text-sky-300' %}<span>Posez vos questions dans la discussion de la salle : l'intervenant y répond en fin de séance.</span></p>
+      <p class="flex items-start gap-2 rounded-2xl border border-white/10 bg-white/[0.04] p-4">{% include 'partials/icon.html' with name='wifi' class='w-5 h-5 flex-shrink-0 text-amber-300' %}<span>Connexion faible ? Coupez votre caméra pour garder un son fluide.</span></p>
+    </div>
+  </div>
+</section>
+
+<script src="{{ jitsi_external_api_url }}"></script>
+<script>
+  (function () {
+    var statut = document.getElementById('wb-status');
+    function afficher(texte, ton) {
+      var tons = { ok: 'bg-emerald-500/15 text-emerald-200', alerte: 'bg-amber-500/15 text-amber-200', erreur: 'bg-rose-500/15 text-rose-200', neutre: 'bg-white/5 text-slate-300' };
+      statut.textContent = texte;
+      statut.className = 'mb-2 rounded-xl px-3 py-2 text-xs sm:text-sm font-medium ' + (tons[ton] || tons.neutre);
+    }
+    if (!window.JitsiMeetExternalAPI) {
+      afficher("Impossible de charger la visioconférence. Vérifiez votre connexion, rechargez la page ou utilisez « Ouvrir en plein écran ».", 'erreur');
+      return;
+    }
+    var api;
+    try {
+      api = new window.JitsiMeetExternalAPI("{{ jitsi_domain|escapejs }}", {
+        roomName: "{{ jitsi_room_name|escapejs }}",
+        parentNode: document.getElementById('wb-jitsi'),
+        width: '100%', height: '100%', lang: 'fr',
+        userInfo: { displayName: "{{ jitsi_display_name|escapejs }}", email: "{{ jitsi_user_email|escapejs }}" },
+        configOverwrite: {
+          subject: "{{ webinaire.titre|escapejs }}",
+          prejoinPageEnabled: true,
+          startWithAudioMuted: {% if animateur %}false{% else %}true{% endif %},
+          startWithVideoMuted: {% if animateur %}false{% else %}true{% endif %},
+          disableDeepLinking: true
+        },
+        interfaceConfigOverwrite: { MOBILE_APP_PROMO: false }
+      });
+    } catch (e) {
+      afficher("Erreur au chargement de la salle. Utilisez « Ouvrir en plein écran ».", 'erreur');
+      return;
+    }
+    afficher({% if animateur %}"Salle prête. En tant qu'animateur, entrez avant les participants pour en être le modérateur."{% else %}"Salle chargée : vérifiez votre micro, puis cliquez sur « Rejoindre la réunion ». Votre micro et votre caméra sont coupés par défaut."{% endif %}, 'alerte');
+    api.addEventListener('videoConferenceJoined', function () { afficher('Vous êtes connecté(e) à la séance. Bon webinaire !', 'ok'); });
+    api.addEventListener('readyToClose', function () {
+      afficher('Vous avez quitté la séance. Votre attestation sera disponible sur la page du webinaire à la fin.', 'neutre');
+      setTimeout(function () { window.location.href = "{% url 'webinaires:detail' webinaire.slug %}"; }, 2500);
+    });
+  })();
+</script>
+{% endwith %}
+{% endblock %}

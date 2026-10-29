@@ -11,6 +11,8 @@ from formations.models import Formation
 from services.models import Service
 from boutique.models import Produit
 from projets.models import Projet
+from webinaires.views import avec_inscrits, contexte_cartes
+from webinaires.models import Webinaire
 
 
 def accueil(request):
@@ -23,7 +25,10 @@ def accueil(request):
                        .order_by('-en_vedette', '-date_realisation', '-created_at')[:10])
     temoignages = Temoignage.objects.filter(actif=True)[:6]
     statistiques = Statistique.objects.all()[:6]
+    # webinaires à venir (ou en direct) : en tête de page, juste sous le héros
+    webinaires_accueil = contexte_cartes(request, list(avec_inscrits(Webinaire.objects.a_venir())[:4]))
     ctx = {
+        'webinaires_accueil': webinaires_accueil,
         'formations_vedette': formations_vedette,
         'services': services,
         'produits_vedette': produits_vedette,
@@ -71,6 +76,7 @@ ROBOTS_DISALLOW = [
     '/boutique/commande/',
     '/formations/inscription/',
     '/formations/mes-inscriptions/',
+    '/webinaires/attestation/',
 ]
 
 

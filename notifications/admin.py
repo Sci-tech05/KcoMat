@@ -11,11 +11,11 @@ def _oui_non(valeur):
 
 @admin.register(AbonnementPush)
 class AbonnementPushAdmin(admin.ModelAdmin):
-    list_display = ['abonne', 'appareil', 'pref_offres', 'pref_formations', 'pref_projets', 'actif', 'created_at', 'dernier_envoi']
-    list_filter = ['actif', 'offres', 'formations', 'projets', 'appareil']
+    list_display = ['abonne', 'appareil', 'pref_offres', 'pref_formations', 'pref_projets', 'pref_webinaires', 'actif', 'created_at', 'dernier_envoi']
+    list_filter = ['actif', 'offres', 'formations', 'projets', 'webinaires', 'appareil']
     search_fields = ['utilisateur__username', 'utilisateur__email', 'appareil']
     readonly_fields = ['endpoint', 'p256dh', 'auth', 'utilisateur', 'appareil', 'echecs', 'created_at', 'dernier_envoi']
-    fields = ['utilisateur', 'appareil', 'offres', 'formations', 'projets', 'actif', 'echecs', 'created_at', 'dernier_envoi', 'endpoint']
+    fields = ['utilisateur', 'appareil', 'offres', 'formations', 'projets', 'webinaires', 'actif', 'echecs', 'created_at', 'dernier_envoi', 'endpoint']
     actions = ['envoyer_test']
 
     def has_add_permission(self, request):
@@ -39,6 +39,10 @@ class AbonnementPushAdmin(admin.ModelAdmin):
     @admin.display(description='Projets')
     def pref_projets(self, obj):
         return _oui_non(obj.projets)
+
+    @admin.display(description='Webinaires')
+    def pref_webinaires(self, obj):
+        return _oui_non(obj.webinaires)
 
     @admin.action(description="Envoyer une notification de test")
     def envoyer_test(self, request, queryset):
@@ -89,7 +93,7 @@ class NotificationPushAdmin(admin.ModelAdmin):
 
 @admin.action(description="Notifier les abonnés (nouvelle publication)")
 def notifier_abonnes(modeladmin, request, queryset):
-    """Action ajoutée aux offres, formations et projets : renvoie l'annonce aux abonnés."""
+    """Action ajoutée aux offres, formations, projets et webinaires : renvoie l'annonce aux abonnés."""
     n = 0
     for obj in queryset.filter(actif=True):
         if notifier_publication(obj, forcer=True):

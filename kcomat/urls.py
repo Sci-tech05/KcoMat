@@ -48,6 +48,7 @@ urlpatterns = [
     path(settings.ADMIN_URL, admin.site.urls),
     path('', include('core.urls', namespace='core')),
     path('formations/', include('formations.urls', namespace='formations')),
+    path('webinaires/', include('webinaires.urls', namespace='webinaires')),
     path('boutique/', include('boutique.urls', namespace='boutique')),
     path('services/', include('services.urls', namespace='services')),
     path('projets/', include('projets.urls', namespace='projets')),

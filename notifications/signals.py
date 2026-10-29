@@ -1,14 +1,15 @@
-"""Notification automatique des abonnés quand une offre, une formation ou un projet est publié."""
+"""Notification automatique des abonnés quand une offre, une formation, un projet ou un webinaire est publié."""
 from django.db.models.signals import post_save, pre_save
 from django.dispatch import receiver
 
 from carrieres.models import Offre
 from formations.models import Formation
 from projets.models import Projet
+from webinaires.models import Webinaire
 
 from .push import notifier_publication
 
-MODELES_SUIVIS = (Offre, Formation, Projet)
+MODELES_SUIVIS = (Offre, Formation, Projet, Webinaire)
 
 
 def _etait_publie(sender, instance):
@@ -30,5 +31,5 @@ def notifier_si_publie(sender, instance, created, **kwargs):
     if getattr(instance, '_etait_publie', False):
         return                      # déjà en ligne : simple modification, pas de nouvelle annonce
     if getattr(instance, 'est_cloturee', False):
-        return                      # offre dont la date limite est passée
+        return                      # offre dont la date limite est passée, webinaire terminé
     notifier_publication(instance)

@@ -12,6 +12,7 @@ class AbonnementPush(models.Model):
     offres = models.BooleanField("Offres d'emploi & stages", default=True)
     formations = models.BooleanField("Formations", default=True)
     projets = models.BooleanField("Projets réalisés", default=True)
+    webinaires = models.BooleanField("Webinaires", default=True)
     appareil = models.CharField("Appareil", max_length=120, blank=True)
     actif = models.BooleanField(default=True)
     echecs = models.PositiveSmallIntegerField("Échecs consécutifs", default=0)
@@ -28,7 +29,8 @@ class AbonnementPush(models.Model):
         return f"{qui} · {self.appareil or 'navigateur'}"
 
     def accepte(self, type_notification):
-        return {'offre': self.offres, 'formation': self.formations, 'projet': self.projets}.get(type_notification, True)
+        return {'offre': self.offres, 'formation': self.formations, 'projet': self.projets,
+                'webinaire': self.webinaires, 'webinaire_rappel': self.webinaires}.get(type_notification, True)
 
 
 class NotificationPush(models.Model):
@@ -37,6 +39,8 @@ class NotificationPush(models.Model):
         ('offre', "Offre d'emploi / stage"),
         ('formation', 'Formation'),
         ('projet', 'Projet réalisé'),
+        ('webinaire', 'Webinaire'),
+        ('webinaire_rappel', 'Rappel de webinaire'),
         ('annonce', 'Annonce'),
         ('test', 'Test'),
     ]
