@@ -1,0 +1,54 @@
+{% load kcomat_tags %}{% comment %}Accueil : les prochains webinaires, juste sous le héros. Paramètre : webinaires_accueil{% endcomment %}
+{% if webinaires_accueil %}
+<section id="webinaires" class="relative py-16 sm:py-20 bg-gradient-to-b from-slate-100 via-slate-50 to-white overflow-hidden" aria-labelledby="webinaires-title">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div class="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-6 mb-10">
+      <div class="max-w-2xl">
+        <div class="section-tag">{% include 'partials/icon.html' with name='radio' class='w-3.5 h-3.5' stroke='2' %} Webinaires en direct</div>
+        <h2 id="webinaires-title" class="section-title">Apprenez en direct, <span class="text-gradient">gratuitement</span></h2>
+        <p class="section-subtitle mt-3">Des séances en ligne animées par nos formateurs : systèmes embarqués, IoT, IA, domotique, robotique… Réservez votre place avec votre compte KcoMat et repartez avec votre attestation.</p>
+      </div>
+      <a href="{% url 'webinaires:liste' %}" class="crl-all self-start lg:self-auto">Tous les webinaires {% include 'partials/icon.html' with name='arrow-right' class='w-4 h-4' stroke='2.25' %}</a>
+    </div>
+
+    <div class="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_22rem] items-start">
+      {% include 'webinaires/_une.html' with w=webinaires_accueil.0 %}
+
+      <aside class="grid grid-cols-1 gap-4 min-w-0">
+        {% if webinaires_accueil|length > 1 %}
+        <p class="text-xs font-bold uppercase tracking-[0.16em] text-slate-500">Prochains rendez-vous</p>
+        {% for w in webinaires_accueil|slice:"1:4" %}
+        <a href="{% url 'webinaires:detail' w.slug %}" class="wb-row group" style="{{ w.theme_style }}">
+          <span class="wb-row__thumb">
+            {% if w.image %}<img src="{{ w.image|webp:240 }}" alt="" loading="lazy" decoding="async">{% else %}{% include 'partials/icon.html' with name=w.theme_icone class='w-7 h-7' stroke='1.75' %}{% endif %}
+            <span class="wb-row__day">{{ w.date_debut|date:"j M" }}</span>
+          </span>
+          <span class="min-w-0 flex-1">
+            <span class="wb-theme !text-[10px]">{{ w.theme_libelle }}</span>
+            <span class="mt-0.5 block font-extrabold leading-snug text-slate-900 line-clamp-2 group-hover:text-blue-700 transition-colors">{{ w.titre }}</span>
+            <span class="mt-1 flex items-center gap-1.5 text-xs text-slate-500">
+              {% include 'partials/icon.html' with name='clock' class='w-3.5 h-3.5' %}{{ w.date_debut|date:"D j M · H:i"|capfirst }}
+              {% if w.ma_participation %}<span class="text-emerald-600 font-bold">· Inscrit(e)</span>{% endif %}
+            </span>
+          </span>
+        </a>
+        {% endfor %}
+        {% endif %}
+
+        <div class="rounded-[1.25rem] border border-slate-200 bg-white p-5">
+          <p class="font-extrabold text-slate-900">Comment ça marche ?</p>
+          <ol class="mt-4 grid gap-3 text-sm text-slate-600">
+            <li class="flex gap-3"><span class="grid place-items-center w-6 h-6 rounded-lg bg-blue-50 text-blue-700 text-xs font-black flex-shrink-0">1</span>Réservez votre place avec votre compte</li>
+            <li class="flex gap-3"><span class="grid place-items-center w-6 h-6 rounded-lg bg-amber-50 text-amber-700 text-xs font-black flex-shrink-0">2</span>Recevez un rappel 20 minutes avant</li>
+            <li class="flex gap-3"><span class="grid place-items-center w-6 h-6 rounded-lg bg-rose-50 text-rose-700 text-xs font-black flex-shrink-0">3</span>Cliquez « Participer » dès 10 minutes avant le début</li>
+            <li class="flex gap-3"><span class="grid place-items-center w-6 h-6 rounded-lg bg-emerald-50 text-emerald-700 text-xs font-black flex-shrink-0">4</span>Téléchargez votre attestation à la fin</li>
+          </ol>
+          <button type="button" data-push-open class="mt-5 wb-btn wb-btn--ghost wb-btn--sm wb-btn--block" aria-haspopup="dialog">
+            {% include 'partials/icon.html' with name='zap' class='w-4 h-4 text-amber-500' stroke='2' %}Être prévenu(e) des prochains directs
+          </button>
+        </div>
+      </aside>
+    </div>
+  </div>
+</section>
+{% endif %}

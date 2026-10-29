@@ -84,6 +84,13 @@
 
                 <!-- ============ Texte ============ -->
                 <div>
+                    {% with w=webinaires_accueil.0 %}{% if w %}
+                    <a href="{% url 'webinaires:detail' w.slug %}" class="wb-hero-pill hx-in mb-5 sm:mb-6" style="--d:0s">
+                        <span class="wb-hero-pill__tag"><span class="wb-dot"></span>{% if w.etat == 'en_direct' %}En direct{% elif w.etat == 'ouvert' %}Ça commence{% else %}Webinaire{% endif %}</span>
+                        <span class="wb-hero-pill__txt">{% if w.etat == 'a_venir' %}{{ w.date_debut|date:"D j M · H:i"|capfirst }} — {% endif %}{{ w.titre }}</span>
+                        {% include 'partials/icon.html' with name='arrow-right' class='w-4 h-4 flex-shrink-0' stroke='2.25' %}
+                    </a>
+                    {% endif %}{% endwith %}
                     <div class="hx-in" style="--d:.05s">
                         <span class="hx-eyebrow">
                             <span class="hx-eyebrow__tag"><span class="hx-dot"></span>LIVE</span>
@@ -280,6 +287,12 @@
         </div>
     </div>
 </section>
+
+
+<!-- ===================================================
+     WEBINAIRES (en première ligne, sous le héros)
+=================================================== -->
+{% include 'webinaires/_section_accueil.html' %}
 
 
 <!-- ===================================================
@@ -851,6 +864,7 @@
 
 {% block extra_js %}
 <script defer src="{% static 'js/carrousel.js' %}"></script>
+{% if webinaires_accueil %}<script defer src="{% static 'js/webinaires.js' %}"></script>{% endif %}
 <script>
 document.addEventListener('DOMContentLoaded', () => {
 

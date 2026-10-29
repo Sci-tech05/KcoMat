@@ -1,0 +1,17 @@
+{% comment %}Compte à rebours (static/js/webinaires.js). Paramètres : w (avec .etat), sombre{% endcomment %}
+{% if w.etat != 'termine' %}
+<div data-wb-countdown
+     data-cible="{% if w.etat == 'en_direct' %}{{ w.date_fin|date:'U' }}{% else %}{{ w.date_debut|date:'U' }}{% endif %}"
+     data-bascule="{% if w.etat == 'a_venir' %}{{ w.ouverture_salle|date:'U' }}{% elif w.etat == 'ouvert' %}{{ w.date_debut|date:'U' }}{% else %}{{ w.date_fin|date:'U' }}{% endif %}">
+  <span data-wb-now="{% now 'U' %}" hidden></span>
+  <p class="mb-2 text-[11px] font-bold uppercase tracking-[0.16em] {% if sombre %}text-slate-400{% else %}text-slate-500{% endif %}">
+    {% if w.etat == 'en_direct' %}En direct · se termine dans{% elif w.etat == 'ouvert' %}La salle est ouverte · début dans{% else %}Début dans{% endif %}
+  </p>
+  <div class="wb-count {% if sombre %}wb-count--dark{% endif %}" role="timer" aria-live="off">
+    <div class="wb-count__cell"><b data-u="j">0</b><span>Jours</span></div>
+    <div class="wb-count__cell"><b data-u="h">00</b><span>Heures</span></div>
+    <div class="wb-count__cell"><b data-u="m">00</b><span>Min</span></div>
+    <div class="wb-count__cell"><b data-u="s">00</b><span>Sec</span></div>
+  </div>
+</div>
+{% endif %}

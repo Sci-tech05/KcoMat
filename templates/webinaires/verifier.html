@@ -1,0 +1,38 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ title }}{% endblock %}
+{% block robots %}noindex, nofollow{% endblock %}
+
+{% block content %}
+<section class="py-16 sm:py-24 bg-slate-50">
+  <div class="max-w-xl mx-auto px-4">
+    <div class="wb-panel overflow-hidden text-center">
+      {% if participation %}
+      {% with w=participation.webinaire %}
+      <div class="bg-gradient-to-br from-emerald-500 to-teal-500 px-6 py-8 text-white">
+        <span class="mx-auto grid place-items-center w-16 h-16 rounded-2xl bg-white/20">{% include 'partials/icon.html' with name='badge-check' class='w-9 h-9' stroke='1.75' %}</span>
+        <h1 class="mt-4 text-2xl font-black">Attestation authentique</h1>
+        <p class="mt-1 text-sm text-emerald-50">Délivrée par KcoMat · N° {{ participation.numero_attestation }}</p>
+      </div>
+      <dl class="grid gap-4 p-6 sm:p-8 text-left text-sm">
+        <div><dt class="text-xs font-bold uppercase tracking-wider text-slate-400">Participant</dt><dd class="mt-1 text-lg font-extrabold text-slate-900">{{ participation.nom_complet }}</dd></div>
+        <div><dt class="text-xs font-bold uppercase tracking-wider text-slate-400">Webinaire</dt><dd class="mt-1 font-bold text-slate-900"><a href="{% url 'webinaires:detail' w.slug %}" class="hover:text-blue-700">{{ w.titre }}</a></dd></div>
+        <div class="grid grid-cols-2 gap-4">
+          <div><dt class="text-xs font-bold uppercase tracking-wider text-slate-400">Date</dt><dd class="mt-1 text-slate-700">{{ w.date_debut|date:"j F Y" }}</dd></div>
+          <div><dt class="text-xs font-bold uppercase tracking-wider text-slate-400">Durée</dt><dd class="mt-1 text-slate-700">{{ w.duree }}</dd></div>
+        </div>
+        <div><dt class="text-xs font-bold uppercase tracking-wider text-slate-400">Intervenant</dt><dd class="mt-1 text-slate-700">{{ w.intervenant }}</dd></div>
+      </dl>
+      {% endwith %}
+      {% else %}
+      <div class="px-6 py-12">
+        <span class="mx-auto grid place-items-center w-16 h-16 rounded-2xl bg-rose-50 text-rose-600">{% include 'partials/icon.html' with name='shield' class='w-9 h-9' stroke='1.75' %}</span>
+        <h1 class="mt-4 text-2xl font-black text-slate-900">Attestation introuvable</h1>
+        <p class="mt-2 text-sm text-slate-500">Le code « {{ code }} » ne correspond à aucune attestation délivrée par KcoMat. Vérifiez le lien ou contactez-nous.</p>
+        <a href="{% url 'core:contact' %}" class="mt-6 wb-btn wb-btn--primary">Nous contacter</a>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+</section>
+{% endblock %}

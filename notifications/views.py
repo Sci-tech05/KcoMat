@@ -10,7 +10,7 @@ from django.views.decorators.http import require_POST, require_safe
 
 from .models import AbonnementPush
 
-PREFERENCES = ('offres', 'formations', 'projets')
+PREFERENCES = ('offres', 'formations', 'projets', 'webinaires')
 
 
 def _appareil(request):

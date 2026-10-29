@@ -128,6 +128,7 @@ LOCAL_APPS = [
     'carrieres',
     'partenariats',
     'notifications',
+    'webinaires',
 ]
 
 INSTALLED_APPS = DJANGO_APPS + THIRD_PARTY_APPS + LOCAL_APPS
@@ -144,6 +145,8 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'django_htmx.middleware.HtmxMiddleware',
     'allauth.account.middleware.AccountMiddleware',
+    # Rappels « 20 min avant » des webinaires, déclenchés au fil des visites
+    'webinaires.middleware.RappelsWebinairesMiddleware',
 ]
 
 ROOT_URLCONF = 'kcomat.urls'

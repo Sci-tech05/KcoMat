@@ -1,7 +1,7 @@
 {% load kcomat_tags %}<fieldset>
   <legend class="text-xs font-bold uppercase tracking-wider text-slate-400">Je veux être prévenu(e) pour</legend>
   <div class="mt-3 grid gap-2">
-    {% for item in "offres|briefcase|Offres d'emploi & stages|Nouveaux stages encadrés, emplois et missions freelance#formations|graduation|Formations|Nouvelles sessions en électronique, IoT, IA, drones…#projets|rocket|Projets réalisés|Nos dernières réalisations et innovations"|split:"#" %}{% with p=item|split:"|" %}
+    {% for item in "offres|briefcase|Offres d'emploi & stages|Nouveaux stages encadrés, emplois et missions freelance#formations|graduation|Formations|Nouvelles sessions en électronique, IoT, IA, drones…#webinaires|video|Webinaires|Nouveaux webinaires gratuits et rappel 20 min avant le direct#projets|rocket|Projets réalisés|Nos dernières réalisations et innovations"|split:"#" %}{% with p=item|split:"|" %}
     <label class="push-pref">
       <input type="checkbox" data-push-pref="{{ p.0 }}" checked class="sr-only">
       <span class="push-pref__box">

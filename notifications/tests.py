@@ -48,7 +48,7 @@ class AbonnementViewsTests(TestCase):
     def test_validation(self):
         mauvais = {'endpoint': 'http://pas-https.example', 'keys': {'p256dh': 'x', 'auth': 'y'}}
         self.assertEqual(self.post('notifications:abonnement', {'subscription': mauvais}).status_code, 400)
-        aucun = {'subscription': SUB, 'preferences': {'offres': False, 'formations': False, 'projets': False}}
+        aucun = {'subscription': SUB, 'preferences': {'offres': False, 'formations': False, 'projets': False, 'webinaires': False}}
         self.assertEqual(self.post('notifications:abonnement', aucun).status_code, 400)
         self.assertEqual(self.client.post(reverse('notifications:abonnement'), 'pas du json', content_type='application/json').status_code, 400)
         self.assertEqual(AbonnementPush.objects.count(), 0)

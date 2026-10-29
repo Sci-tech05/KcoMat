@@ -1,0 +1,64 @@
+{% extends 'base.html' %}
+{% load static kcomat_tags %}
+
+{% block title %}Webinaires gratuits en direct — électronique, IoT, IA{% endblock %}
+{% block meta_description %}Webinaires gratuits et en direct de KcoMat : systèmes embarqués, ESP32, IoT, Edge AI, Python, domotique, robotique. Réservez votre place et recevez votre attestation de participation.{% endblock %}
+
+{% block content %}
+{% include 'partials/page_hero.html' with crumb='Webinaires' eyebrow='Webinaires en direct' icon='video' title='Apprenez en direct' highlight='avec nos formateurs' subtitle="Des séances gratuites d'une heure et demie, en ligne sur le site : démonstrations, questions-réponses et attestation de participation à la clé." accent='purple' chips='video|100 % en ligne;zap|Rappel 20 min avant;award|Attestation de participation' sats='video,cpu,wifi,sparkles,code,bot' %}
+
+<section class="py-14 sm:py-20 bg-slate-50">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    {% if a_la_une %}
+    <div class="mb-8">
+      <div class="section-tag">{% include 'partials/icon.html' with name='radio' class='w-3.5 h-3.5' stroke='2' %} Prochain direct</div>
+    </div>
+    {% include 'webinaires/_une.html' with w=a_la_une %}
+
+    {% if suivants %}
+    <h2 class="mt-16 mb-6 text-2xl font-black tracking-tight text-slate-900">Les rendez-vous suivants</h2>
+    <div class="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+      {% for w in suivants %}{% include 'webinaires/_carte.html' %}{% endfor %}
+    </div>
+    {% endif %}
+    {% else %}
+    <div class="wb-panel mx-auto max-w-2xl p-8 sm:p-10 text-center">
+      <span class="mx-auto grid place-items-center w-16 h-16 rounded-2xl bg-violet-50 text-violet-600">{% include 'partials/icon.html' with name='video' class='w-8 h-8' %}</span>
+      <h2 class="mt-5 text-2xl font-black text-slate-900">Les prochains webinaires arrivent bientôt</h2>
+      <p class="mt-3 text-slate-500">Activez les notifications : vous serez prévenu(e) dès qu'une nouvelle séance est programmée, puis 20 minutes avant le direct.</p>
+      <button type="button" data-push-open class="mt-6 wb-btn wb-btn--primary" aria-haspopup="dialog">
+        {% include 'partials/icon.html' with name='zap' class='w-4 h-4' stroke='2' %}Activer les notifications
+      </button>
+    </div>
+    {% endif %}
+
+    <!-- Déroulement -->
+    <div class="mt-20 grid gap-8 lg:grid-cols-[1fr_1.4fr] items-center">
+      <div>
+        <div class="section-tag">{% include 'partials/icon.html' with name='target' class='w-3.5 h-3.5' stroke='2' %} Mode d'emploi</div>
+        <h2 class="section-title">Quatre étapes, <span class="text-gradient">zéro installation</span></h2>
+        <p class="section-subtitle mt-3">La visioconférence s'ouvre directement dans votre navigateur, sur ordinateur comme sur téléphone. Un compte KcoMat gratuit suffit.</p>
+      </div>
+      <ol class="grid gap-4 sm:grid-cols-2">
+        {% for etape in "calendar-plus|Réservez|Créez votre compte ou connectez-vous, puis réservez votre place en un clic.#zap|Soyez prévenu(e)|Un e-mail et une notification vous rappellent la séance 20 minutes avant.#video|Participez|Le bouton « Participer » apparaît 10 minutes avant : il ouvre la salle en ligne.#award|Recevez votre attestation|À la fin, téléchargez votre attestation PDF nominative, vérifiable par QR code."|split:"#" %}{% with e=etape|split:"|" %}
+        <li class="wb-panel p-5" style="--wb-a:#8B5CF6;--wb-b:#0A84FF">
+          <div class="wb-step">
+            <span class="wb-step__n">{% include 'partials/icon.html' with name=e.0 class='w-4 h-4' stroke='2.25' %}</span>
+            <div><p class="font-extrabold text-slate-900">{{ forloop.counter }}. {{ e.1 }}</p><p class="mt-1 text-sm text-slate-500">{{ e.2 }}</p></div>
+          </div>
+        </li>
+        {% endwith %}{% endfor %}
+      </ol>
+    </div>
+
+    {% if passes %}
+    <h2 class="mt-20 mb-6 text-2xl font-black tracking-tight text-slate-900">Webinaires passés</h2>
+    <div class="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+      {% for w in passes %}{% include 'webinaires/_carte.html' %}{% endfor %}
+    </div>
+    {% endif %}
+  </div>
+</section>
+{% endblock %}
+
+{% block extra_js %}<script src="{% static 'js/webinaires.js' %}" defer></script>{% endblock %}
