@@ -161,6 +161,29 @@ CATALOGUE = [
             "Pistes pour aller plus loin : Bluetooth, caméra, compétitions"
         ),
     },
+    {
+        'slug': 'comprendre-l-algorithme-et-la-programmation',
+        'titre': "Comprendre l'Algorithme & la Programmation",
+        'theme': 'algorithmique',
+        'accroche': "Apprendre à penser comme un programmeur : découper un problème, l'écrire en étapes, puis le traduire en code.",
+        'description': (
+            "Avant d'écrire la moindre ligne de code, un bon programmeur sait décrire précisément ce que la machine "
+            "doit faire. C'est le rôle de l'algorithme : une suite d'instructions claires qui mène d'un problème "
+            "à sa solution, comme une recette de cuisine.\n\n"
+            "Ce webinaire pose des bases solides, sans prérequis : variables, conditions, boucles et fonctions, "
+            "expliquées avec des exemples du quotidien puis traduites en pseudo-code et en Python. Nous résolvons "
+            "ensemble de petits exercices en direct, et vous repartez avec une méthode pour aborder n'importe quel "
+            "langage, ainsi que la programmation des cartes électroniques."
+        ),
+        'points_cles': (
+            "Ce qu'est un algorithme et pourquoi il vient avant le code\n"
+            "Variables, conditions et boucles : les briques de tout programme\n"
+            "Écrire un algorithme en pseudo-code puis le représenter en organigramme\n"
+            "Passer du pseudo-code au langage Python, pas à pas\n"
+            "Méthode pour résoudre un problème : découper, tester, corriger\n"
+            "Les ressources pour continuer à progresser seul"
+        ),
+    },
 ]
 
 
