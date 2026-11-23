@@ -7,7 +7,7 @@ from core.notifications_admin import notifier_admin
 
 def partenariats(request):
     partenaires = Partenaire.objects.filter(actif=True)
-    form = DemandePartenariatForm(request.POST or None)
+    form = DemandePartenariatForm(request.POST or None, request.FILES or None)
     if request.method == 'POST' and form.is_valid():
         demande = form.save()
         notifier_admin(
@@ -16,7 +16,8 @@ def partenariats(request):
             intro=f"{demande.nom_organisation} souhaite devenir partenaire de KcoMat.",
             details=[('Organisation', demande.nom_organisation), ("Type d'organisation", demande.type_organisation),
                      ('Contact', demande.nom_contact), ('E-mail', demande.email), ('Téléphone', demande.telephone),
-                     ('Site web', demande.site_web), ('Partenariat souhaité', demande.type_partenariat_souhaite)],
+                     ('Site web', demande.site_web), ('Partenariat souhaité', demande.type_partenariat_souhaite),
+                     ('Logo', 'joint à la demande' if demande.logo else 'non fourni')],
             message=demande.description_projet, objet=demande, repondre_a=demande.email, request=request,
         )
         messages.success(request, "✅ Votre demande de partenariat a été transmise. Nous vous recontacterons très prochainement !")

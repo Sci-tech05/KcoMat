@@ -30,6 +30,7 @@ REGLAGES = {
     'core.teammember': {'cote_max': 800},
     'core.temoignage': {'cote_max': 600},
     'partenariats.partenaire': {'cote_max': 600},   # logos : transparence conservée
+    'partenariats.demandepartenariat': {'cote_max': 600},
 }
 
 

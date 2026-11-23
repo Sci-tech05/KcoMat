@@ -7,7 +7,7 @@ class DemandePartenariatForm(forms.ModelForm):
         model = DemandePartenariat
         fields = [
             'nom_organisation', 'email', 'telephone',
-            'site_web', 'type_partenariat_souhaite',
+            'site_web', 'type_partenariat_souhaite', 'logo',
         ]
         widgets = {
             'nom_organisation': forms.TextInput(attrs={'placeholder': 'Nom de votre organisation', 'class': 'form-input'}),
@@ -26,3 +26,13 @@ class DemandePartenariatForm(forms.ModelForm):
             self.fields[f].required = True
         self.fields['site_web'].required = False
         self.fields['type_partenariat_souhaite'].required = False
+        self.fields['logo'].required = False
+
+    def clean_logo(self):
+        logo = self.cleaned_data.get('logo')
+        if logo and logo.size > LOGO_TAILLE_MAX:
+            raise forms.ValidationError("Logo trop lourd : 5 Mo au maximum.")
+        return logo
+
+
+LOGO_TAILLE_MAX = 5 * 1024 * 1024
