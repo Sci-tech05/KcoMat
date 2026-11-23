@@ -5,6 +5,7 @@ from unittest.mock import patch
 from django.contrib.auth.models import User
 from django.core import mail
 from django.core.cache import cache
+from django.core.exceptions import ValidationError
 from django.test import TestCase, override_settings
 from django.urls import reverse
 from django.utils import timezone
@@ -42,6 +43,17 @@ class CalendrierTests(TestCase):
         self.assertFalse(w.salle_ouverte(w.date_fin + timedelta(minutes=31)))
         self.assertEqual(w.duree, '1 h 30')
         self.assertTrue(w.salle_jitsi.startswith('kcomat-webinaire-'))
+
+    def test_lien_youtube_quel_que_soit_le_format(self):
+        w = creer_webinaire(timedelta(days=1))
+        for lien in ('https://youtube.com/live/AbCdEfGhI_0?feature=share', 'https://youtu.be/AbCdEfGhI_0',
+                     'https://www.youtube.com/watch?si=x&v=AbCdEfGhI_0', 'AbCdEfGhI_0'):
+            w.youtube_direct = lien
+            self.assertEqual(w.youtube_id, 'AbCdEfGhI_0', lien)
+        w.youtube_direct = 'https://exemple.com/video'
+        self.assertEqual(w.youtube_id, '')
+        with self.assertRaises(ValidationError):
+            w.clean()
 
     def test_slug_unique(self):
         a, b = creer_webinaire(timedelta(days=1)), creer_webinaire(timedelta(days=2))
@@ -114,6 +126,21 @@ class ParcoursTests(TestCase):
         r = self.client.get(salle)
         self.assertContains(r, 'framatalk.org/external_api.js')
         self.assertContains(r, w.salle_jitsi)
+        self.assertIsNotNone(ParticipationWebinaire.objects.get(webinaire=w, utilisateur=self.user).rejoint_le)
+
+    def test_salle_avec_direct_youtube_sans_limite_de_places(self, webpush):
+        # webinaire complet : l'inscrit entre quand même, et suit le direct ; la visio n'est chargée qu'à la demande
+        w = creer_webinaire(timedelta(minutes=5), places=1, youtube_direct='https://youtube.com/live/AbCdEfGhI_0')
+        ParticipationWebinaire.objects.create(webinaire=w, utilisateur=self.user, prenom='Awa', nom='DOSSOU',
+                                              email='awa@example.com')
+        self.assertTrue(w.est_complet())
+        self.client.force_login(self.user)
+        r = self.client.get(reverse('webinaires:salle', args=[w.slug]))
+        self.assertContains(r, 'youtube-nocookie.com/embed/AbCdEfGhI_0')
+        self.assertContains(r, 'live_chat?v=AbCdEfGhI_0&embed_domain=testserver')
+        self.assertContains(r, 'Prendre la parole')
+        self.assertContains(r, '<div id="wb-salle" class="mt-3 rounded-3xl border border-white/10 bg-slate-900/60 p-2 sm:p-3 shadow-2xl" hidden>', html=False)
+        self.assertNotContains(r, '<script src="https://framatalk.org/external_api.js"')
         self.assertIsNotNone(ParticipationWebinaire.objects.get(webinaire=w, utilisateur=self.user).rejoint_le)
 
     def test_attestation_pour_les_presents_apres_la_fin(self, webpush):

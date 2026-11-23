@@ -14,7 +14,7 @@ from django.views.decorators.http import require_POST
 from .attestation import reponse_pdf
 from .forms import InscriptionWebinaireForm
 from .models import ParticipationWebinaire, Webinaire
-from .rappels import confirmer_inscription, invitation_ics
+from .rappels import confirmer_en_tache_de_fond, invitation_ics
 
 logger = logging.getLogger(__name__)
 
@@ -114,10 +114,7 @@ def inscrire(request, slug):
         return redirect(f"{page}#reserver")
     participation, cree = _creer_participation(webinaire, request.user, form.cleaned_data['prenom'], form.cleaned_data['nom'])
     if cree and participation.email:
-        try:
-            confirmer_inscription(participation)
-        except Exception:
-            logger.exception("Confirmation d'inscription au webinaire #%s non envoyée", webinaire.pk)
+        confirmer_en_tache_de_fond(participation)
     if webinaire.salle_ouverte():
         return redirect('webinaires:salle', slug=slug)
     messages.success(request, "C'est noté : votre place est réservée. Un rappel vous sera envoyé 20 minutes avant le début.")
@@ -164,7 +161,8 @@ def salle(request, slug):
         ParticipationWebinaire.objects.filter(pk=participation.pk, rejoint_le__isnull=True).update(rejoint_le=timezone.now())
 
     payload = _jitsi(webinaire, request.user, participation)
-    if not payload['jitsi_domain']:
+    youtube_id = webinaire.youtube_id
+    if not payload['jitsi_domain'] and not youtube_id:
         messages.error(request, "La salle de visioconférence n'est pas configurée. Contactez-nous.")
         return redirect(page)
     return render(request, 'webinaires/salle.html', {
@@ -172,6 +170,9 @@ def salle(request, slug):
         'etat': webinaire.statut(),
         'animateur': animateur,
         'title': f"En direct — {webinaire.titre}",
+        'youtube_id': youtube_id,
+        # le chat YouTube intégré n'accepte que le domaine de la page qui l'affiche
+        'youtube_chat_domaine': request.get_host().split(':')[0],
         **payload,
     })
 

@@ -86,6 +86,21 @@ def confirmer_inscription(participation):
     message.send(fail_silently=False)
 
 
+def _confirmer_sans_erreur(participation):
+    try:
+        confirmer_inscription(participation)
+    except Exception:
+        logger.exception("Confirmation d'inscription au webinaire #%s non envoyée", participation.webinaire_id)
+
+
+def confirmer_en_tache_de_fond(participation):
+    """L'envoi SMTP peut prendre plusieurs secondes : il ne doit pas bloquer la réponse à l'inscrit."""
+    if getattr(settings, 'PUSH_ASYNC', True):
+        threading.Thread(target=_confirmer_sans_erreur, args=(participation,), daemon=True).start()
+    else:
+        _confirmer_sans_erreur(participation)
+
+
 def _email_rappel(participation):
     webinaire = participation.webinaire
     debut = timezone.localtime(webinaire.date_debut)

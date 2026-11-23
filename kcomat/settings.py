@@ -175,6 +175,13 @@ DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.sqlite3',
         'NAME': BASE_DIR / 'db.sqlite3',
+        'OPTIONS': {
+            # Pic de trafic (ouverture d'un webinaire) : on attend que la base se libère au lieu
+            # de répondre « database is locked » au bout de 5 s ; IMMEDIATE réserve l'écriture
+            # dès le début de la transaction, ce qui évite les blocages entre deux requêtes.
+            'timeout': config('SQLITE_TIMEOUT', default=20, cast=int),
+            'transaction_mode': 'IMMEDIATE',
+        },
     }
 }
 

@@ -30,66 +30,148 @@
         </div>
         <div class="flex flex-wrap items-center gap-2 flex-shrink-0">
           <a href="{% url 'webinaires:detail' w.slug %}" class="wb-btn wb-btn--ghost-dark wb-btn--sm">Quitter la salle</a>
+          {% if youtube_id %}
+          <a href="https://www.youtube.com/watch?v={{ youtube_id }}" target="_blank" rel="noopener noreferrer" class="wb-btn wb-btn--primary wb-btn--sm">
+            {% include 'partials/icon.html' with name='external' class='w-4 h-4' stroke='2' %}Ouvrir sur YouTube
+          </a>
+          {% elif meet_url %}
           <a href="{{ meet_url }}" target="_blank" rel="noopener noreferrer" class="wb-btn wb-btn--primary wb-btn--sm">
             {% include 'partials/icon.html' with name='external' class='w-4 h-4' stroke='2' %}Ouvrir en plein écran
           </a>
+          {% endif %}
         </div>
       </div>
     </div>
 
-    <div class="mt-5 rounded-3xl border border-white/10 bg-slate-900/60 p-2 sm:p-3 shadow-2xl">
+    {% if youtube_id and jitsi_domain %}
+    <div class="mt-5 flex flex-wrap gap-2" role="tablist">
+      <button type="button" id="wb-onglet-direct" class="wb-btn wb-btn--sm {% if animateur %}wb-btn--ghost-dark{% else %}wb-btn--primary{% endif %}" role="tab">Suivre le direct</button>
+      <button type="button" id="wb-onglet-salle" class="wb-btn wb-btn--sm {% if animateur %}wb-btn--primary{% else %}wb-btn--ghost-dark{% endif %}" role="tab">{% if animateur %}Salle d'animation{% else %}Prendre la parole (visio, places limitées){% endif %}</button>
+    </div>
+    {% endif %}
+
+    {% if youtube_id %}
+    <div id="wb-direct" class="mt-3"{% if animateur and jitsi_domain %} hidden{% endif %}>
+     <div class="grid gap-3 lg:grid-cols-[minmax(0,1fr)_360px]">
+      <div class="rounded-3xl border border-white/10 bg-slate-900/60 p-2 sm:p-3 shadow-2xl">
+        <div class="relative w-full overflow-hidden rounded-2xl bg-slate-950" style="aspect-ratio:16/9">
+          <iframe class="absolute inset-0 h-full w-full" src="https://www.youtube-nocookie.com/embed/{{ youtube_id }}?autoplay=1&rel=0&playsinline=1"
+                  title="Direct : {{ w.titre }}" allow="autoplay; encrypted-media; picture-in-picture; fullscreen" allowfullscreen></iframe>
+        </div>
+        <p class="mt-2 px-1 text-xs text-slate-400">Le direct ne démarre pas ? Rechargez la page quelques instants après l'heure de début, ou utilisez « Ouvrir sur YouTube ».</p>
+      </div>
+      <div class="hidden lg:block rounded-3xl border border-white/10 bg-slate-900/60 p-2 shadow-2xl">
+        <iframe class="h-full min-h-[420px] w-full rounded-2xl bg-white" title="Questions et discussion"
+                src="https://www.youtube.com/live_chat?v={{ youtube_id }}&embed_domain={{ youtube_chat_domaine|urlencode }}"></iframe>
+      </div>
+     </div>
+    </div>
+    {% endif %}
+
+    {% if jitsi_domain %}
+    <div id="wb-salle" class="mt-3 rounded-3xl border border-white/10 bg-slate-900/60 p-2 sm:p-3 shadow-2xl"{% if youtube_id and not animateur %} hidden{% endif %}>
       <div id="wb-status" class="mb-2 rounded-xl bg-white/5 px-3 py-2 text-xs sm:text-sm font-medium text-slate-300">Connexion à la salle…</div>
       <div id="wb-jitsi" class="h-[72vh] min-h-[440px] rounded-2xl bg-slate-950"></div>
     </div>
+    {% endif %}
 
     <div class="mt-5 grid gap-3 sm:grid-cols-3 text-sm text-slate-300">
       <p class="flex items-start gap-2 rounded-2xl border border-white/10 bg-white/[0.04] p-4">{% include 'partials/icon.html' with name='user-check' class='w-5 h-5 flex-shrink-0 text-emerald-300' %}<span>Votre présence est enregistrée : votre attestation sera téléchargeable sur la page du webinaire dès {{ w.date_fin|date:"H:i" }}.</span></p>
-      <p class="flex items-start gap-2 rounded-2xl border border-white/10 bg-white/[0.04] p-4">{% include 'partials/icon.html' with name='message' class='w-5 h-5 flex-shrink-0 text-sky-300' %}<span>Posez vos questions dans la discussion de la salle : l'intervenant y répond en fin de séance.</span></p>
+      <p class="flex items-start gap-2 rounded-2xl border border-white/10 bg-white/[0.04] p-4">{% include 'partials/icon.html' with name='message' class='w-5 h-5 flex-shrink-0 text-sky-300' %}<span>{% if youtube_id %}Posez vos questions dans le chat du direct (compte Google) ou demandez la parole via « Prendre la parole » : l'intervenant y répond en fin de séance.{% else %}Posez vos questions dans la discussion de la salle : l'intervenant y répond en fin de séance.{% endif %}</span></p>
       <p class="flex items-start gap-2 rounded-2xl border border-white/10 bg-white/[0.04] p-4">{% include 'partials/icon.html' with name='wifi' class='w-5 h-5 flex-shrink-0 text-amber-300' %}<span>Connexion faible ? Coupez votre caméra pour garder un son fluide.</span></p>
     </div>
   </div>
 </section>
 
-<script src="{{ jitsi_external_api_url }}"></script>
+{% if jitsi_domain %}
 <script>
   (function () {
     var statut = document.getElementById('wb-status');
+    var direct = document.getElementById('wb-direct');
+    var salle = document.getElementById('wb-salle');
+    var ongletDirect = document.getElementById('wb-onglet-direct');
+    var ongletSalle = document.getElementById('wb-onglet-salle');
+    var demarree = false;
     function afficher(texte, ton) {
       var tons = { ok: 'bg-emerald-500/15 text-emerald-200', alerte: 'bg-amber-500/15 text-amber-200', erreur: 'bg-rose-500/15 text-rose-200', neutre: 'bg-white/5 text-slate-300' };
       statut.textContent = texte;
       statut.className = 'mb-2 rounded-xl px-3 py-2 text-xs sm:text-sm font-medium ' + (tons[ton] || tons.neutre);
     }
-    if (!window.JitsiMeetExternalAPI) {
-      afficher("Impossible de charger la visioconférence. Vérifiez votre connexion, rechargez la page ou utilisez « Ouvrir en plein écran ».", 'erreur');
-      return;
+    // La visio n'est chargée qu'à l'ouverture de son onglet : les spectateurs du direct YouTube n'occupent pas de place
+    function demarrer() {
+      if (demarree) { return; }
+      demarree = true;
+      if (window.JitsiMeetExternalAPI) { connecter(); return; }
+      var script = document.createElement('script');
+      script.src = "{{ jitsi_external_api_url|escapejs }}";
+      script.onload = connecter;
+      script.onerror = function () {
+        afficher("Impossible de charger la visioconférence. Vérifiez votre connexion, rechargez la page{% if youtube_id %} ou suivez le direct{% else %} ou utilisez « Ouvrir en plein écran »{% endif %}.", 'erreur');
+      };
+      document.body.appendChild(script);
     }
-    var api;
-    try {
-      api = new window.JitsiMeetExternalAPI("{{ jitsi_domain|escapejs }}", {
-        roomName: "{{ jitsi_room_name|escapejs }}",
-        parentNode: document.getElementById('wb-jitsi'),
-        width: '100%', height: '100%', lang: 'fr',
-        userInfo: { displayName: "{{ jitsi_display_name|escapejs }}", email: "{{ jitsi_user_email|escapejs }}" },
-        configOverwrite: {
-          subject: "{{ webinaire.titre|escapejs }}",
-          prejoinPageEnabled: true,
-          startWithAudioMuted: {% if animateur %}false{% else %}true{% endif %},
-          startWithVideoMuted: {% if animateur %}false{% else %}true{% endif %},
-          disableDeepLinking: true
-        },
-        interfaceConfigOverwrite: { MOBILE_APP_PROMO: false }
+    function montrer(versSalle) {
+      if (direct) { direct.hidden = versSalle; }
+      salle.hidden = !versSalle;
+      if (ongletDirect && ongletSalle) {
+        ongletDirect.className = 'wb-btn wb-btn--sm ' + (versSalle ? 'wb-btn--ghost-dark' : 'wb-btn--primary');
+        ongletSalle.className = 'wb-btn wb-btn--sm ' + (versSalle ? 'wb-btn--primary' : 'wb-btn--ghost-dark');
+      }
+      if (versSalle) { demarrer(); }
+    }
+    if (ongletDirect) { ongletDirect.addEventListener('click', function () { montrer(false); }); }
+    if (ongletSalle) { ongletSalle.addEventListener('click', function () { montrer(true); }); }
+    if (!salle.hidden) { demarrer(); }
+
+    function connecter() {
+      if (!window.JitsiMeetExternalAPI) {
+        afficher("Impossible de charger la visioconférence. Vérifiez votre connexion, rechargez la page ou utilisez « Ouvrir en plein écran ».", 'erreur');
+        return;
+      }
+      var api;
+      try {
+        api = new window.JitsiMeetExternalAPI("{{ jitsi_domain|escapejs }}", {
+          roomName: "{{ jitsi_room_name|escapejs }}",
+          parentNode: document.getElementById('wb-jitsi'),
+          width: '100%', height: '100%', lang: 'fr',
+          userInfo: { displayName: "{{ jitsi_display_name|escapejs }}", email: "{{ jitsi_user_email|escapejs }}" },
+          configOverwrite: {
+            subject: "{{ webinaire.titre|escapejs }}",
+            prejoinPageEnabled: true,
+            startWithAudioMuted: {% if animateur %}false{% else %}true{% endif %},
+            startWithVideoMuted: {% if animateur %}false{% else %}true{% endif %},
+            disableDeepLinking: true,
+            // Grand nombre de participants : chacun ne reçoit que les 3 vidéos les plus actives,
+            // en 360p au plus, sans pair-à-pair ni indicateurs sonores (moins de bande passante et de CPU)
+            channelLastN: 3,
+            resolution: 360,
+            constraints: { video: { height: { ideal: 360, max: 360, min: 180 } } },
+            p2p: { enabled: false },
+            disableAudioLevels: true,
+            enableNoAudioDetection: false,
+            enableNoisyMicDetection: false
+          },
+          interfaceConfigOverwrite: { MOBILE_APP_PROMO: false }
+        });
+      } catch (e) {
+        afficher("Erreur au chargement de la salle. Utilisez « Ouvrir en plein écran ».", 'erreur');
+        return;
+      }
+      afficher({% if animateur %}"Salle prête. En tant qu'animateur, entrez avant les participants pour en être le modérateur."{% else %}"Salle chargée : vérifiez votre micro, puis cliquez sur « Rejoindre la réunion ». Votre micro et votre caméra sont coupés par défaut."{% endif %}, 'alerte');
+      api.addEventListener('videoConferenceJoined', function () { afficher('Vous êtes connecté(e) à la séance. Bon webinaire !', 'ok'); });
+      api.addEventListener('readyToClose', function () {
+        afficher('Vous avez quitté la séance. Votre attestation sera disponible sur la page du webinaire à la fin.', 'neutre');
+        {% if youtube_id %}
+        api.dispose();
+        demarree = false;   // un nouveau clic sur « Prendre la parole » relance la visio
+        setTimeout(function () { montrer(false); }, 1500);
+        {% else %}
+        setTimeout(function () { window.location.href = "{% url 'webinaires:detail' webinaire.slug %}"; }, 2500);
+        {% endif %}
       });
-    } catch (e) {
-      afficher("Erreur au chargement de la salle. Utilisez « Ouvrir en plein écran ».", 'erreur');
-      return;
     }
-    afficher({% if animateur %}"Salle prête. En tant qu'animateur, entrez avant les participants pour en être le modérateur."{% else %}"Salle chargée : vérifiez votre micro, puis cliquez sur « Rejoindre la réunion ». Votre micro et votre caméra sont coupés par défaut."{% endif %}, 'alerte');
-    api.addEventListener('videoConferenceJoined', function () { afficher('Vous êtes connecté(e) à la séance. Bon webinaire !', 'ok'); });
-    api.addEventListener('readyToClose', function () {
-      afficher('Vous avez quitté la séance. Votre attestation sera disponible sur la page du webinaire à la fin.', 'neutre');
-      setTimeout(function () { window.location.href = "{% url 'webinaires:detail' webinaire.slug %}"; }, 2500);
-    });
   })();
 </script>
+{% endif %}
 {% endwith %}
 {% endblock %}

@@ -77,8 +77,10 @@ class WebinaireAdmin(admin.ModelAdmin):
         ('Publication', {'fields': ('actif',)}),
         ('Séance en ligne', {
             'description': "Entrez dans la salle quelques minutes avant les participants : la première personne connectée "
-                           "devient modératrice de la visioconférence.",
-            'fields': ('salle_animateur', 'rappel_envoye_le'),
+                           "devient modératrice de la visioconférence. Au-delà d'une trentaine de participants, la visio "
+                           "seule sature : lancez un direct sur la chaîne YouTube KcoMat (YouTube Studio → Passer en direct, "
+                           "webcam ou OBS) et collez son lien ci-dessous ; les inscrits le suivent dans la salle du site.",
+            'fields': ('youtube_direct', 'salle_animateur', 'rappel_envoye_le'),
         }),
     )
     inlines = [ParticipationInline]

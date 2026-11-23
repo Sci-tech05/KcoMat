@@ -1,3 +1,4 @@
+import re
 import secrets
 import uuid
 from datetime import timedelta
@@ -14,6 +15,10 @@ from django.utils.text import slugify
 RAPPEL_AVANT = timedelta(minutes=20)        # notification push + e-mail aux inscrits
 OUVERTURE_SALLE = timedelta(minutes=10)     # le bouton « Participer » apparaît
 PROLONGATION_SALLE = timedelta(minutes=30)  # la salle reste ouverte si la séance déborde
+
+YOUTUBE_ID = re.compile(r'[A-Za-z0-9_-]{11}')
+YOUTUBE_LIEN = re.compile(r'(?:youtube(?:-nocookie)?\.com/(?:watch\?(?:.*&)?v=|live/|embed/|shorts/)|youtu\.be/)'
+                          r'([A-Za-z0-9_-]{11})')
 
 # Thème : libellé, icône (partials/icon.html), dégradé de la couverture
 THEMES = {
@@ -62,6 +67,11 @@ class Webinaire(models.Model):
     places = models.PositiveIntegerField("Places", default=0, help_text="0 = places illimitées.")
     actif = models.BooleanField("Publié", default=False,
                                 help_text="Publier envoie aussitôt une notification aux abonnés du site.")
+    youtube_direct = models.CharField(
+        "Direct YouTube", max_length=200, blank=True,
+        help_text="Lien du direct YouTube (youtube.com/live/…, youtu.be/…, watch?v=…). Renseigné, il est diffusé dans la "
+                  "salle du site pour tous les inscrits, sans limite de nombre ; la visio Jitsi reste réservée à "
+                  "l'animation et aux personnes qui veulent prendre la parole.")
     salle_jitsi = models.CharField("Salle de visioconférence", max_length=120, blank=True, editable=False)
     rappel_envoye_le = models.DateTimeField("Rappel envoyé le", null=True, blank=True, editable=False)
     created_at = models.DateTimeField(auto_now_add=True)
@@ -91,6 +101,9 @@ class Webinaire(models.Model):
     def clean(self):
         if self.date_debut and self.date_fin and self.date_fin <= self.date_debut:
             raise ValidationError({'date_fin': "La fin doit être postérieure au début."})
+        if self.youtube_direct and not self.youtube_id:
+            raise ValidationError({'youtube_direct': "Lien YouTube non reconnu : copiez l'adresse du direct "
+                                                     "(par exemple https://youtube.com/live/XXXXXXXXXXX)."})
 
     def get_absolute_url(self):
         return reverse('webinaires:detail', args=[self.slug])
@@ -166,6 +179,15 @@ class Webinaire(models.Model):
 
     def paragraphes(self):
         return [p.strip() for p in (self.description or '').replace('\r\n', '\n').split('\n\n') if p.strip()]
+
+    @property
+    def youtube_id(self):
+        """Identifiant (11 caractères) de la vidéo YouTube, quel que soit le format du lien collé."""
+        valeur = (self.youtube_direct or '').strip()
+        if YOUTUBE_ID.fullmatch(valeur):
+            return valeur
+        trouve = YOUTUBE_LIEN.search(valeur)
+        return trouve.group(1) if trouve else ''
 
     def get_salle_url(self):
         base_url = (getattr(settings, 'JITSI_BASE_URL', '') or '').rstrip('/')
