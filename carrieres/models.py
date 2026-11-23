@@ -1,5 +1,6 @@
 import os
 import re
+import secrets
 import uuid
 
 from django.core.exceptions import ValidationError
@@ -7,6 +8,13 @@ from django.core.validators import FileExtensionValidator, MaxValueValidator, Mi
 from django.db import models
 from django.utils import timezone
 from django.utils.text import slugify
+
+from core.relances import RelancePaiementMixin
+from core import tranches
+
+
+def _code_paiement():
+    return secrets.token_urlsafe(18)
 
 
 def _lignes(texte):
@@ -201,7 +209,7 @@ def lettre_upload_to(instance, filename):
 DOCUMENT_VALIDATORS = [FileExtensionValidator(DOCUMENT_EXTENSIONS), validate_document_size]
 
 
-class Candidature(models.Model):
+class Candidature(RelancePaiementMixin):
     STATUT_NOUVELLE = 'nouvelle'
     STATUT_EN_REVUE = 'en_revue'
     STATUT_PRESELECTIONNEE = 'preselectionnee'
@@ -245,6 +253,16 @@ class Candidature(models.Model):
     statut_modifie_le = models.DateTimeField(null=True, blank=True, editable=False)
     reponse_envoyee_le = models.DateTimeField("Réponse envoyée le", null=True, blank=True, editable=False)
     traite = models.BooleanField(default=False, editable=False)  # = statut clos (compatibilité)
+    # Frais de stage (offres payantes) : payés une fois la candidature retenue, en 1 ou 2 tranches,
+    # via un lien personnel envoyé au candidat (pas de compte nécessaire)
+    code_paiement = models.CharField(max_length=32, unique=True, default=_code_paiement, editable=False)
+    mode_paiement = models.CharField("Mode de paiement", max_length=20, choices=tranches.CHOIX, blank=True)
+    montant_frais = models.PositiveIntegerField("Frais à payer (FCFA)", null=True, blank=True,
+                                                help_text="Montant de la formule figé au premier paiement.")
+    fedapay_tranche1_id = models.CharField(max_length=100, blank=True)
+    tranche1_payee_le = models.DateTimeField("1er paiement reçu le", null=True, blank=True)
+    fedapay_solde_id = models.CharField(max_length=100, blank=True)
+    solde_paye_le = models.DateTimeField("Solde payé le", null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True, db_index=True)
 
     class Meta:
@@ -257,6 +275,47 @@ class Candidature(models.Model):
     @property
     def nom_complet(self):
         return f"{self.prenom} {self.nom}".strip()
+
+    # -- Frais de stage -------------------------------------------------------
+    @property
+    def frais_formule(self):
+        """Montant des frais de la formule choisie, ou None si l'offre n'est pas payante."""
+        if self.offre.nature_montant != 'frais' or not self.formule_id or self.formule.montant is None:
+            return None
+        return self.formule.montant
+
+    @property
+    def frais_a_payer(self):
+        return self.montant_frais if self.montant_frais is not None else self.frais_formule
+
+    @property
+    def paiement_ouvert(self):
+        """Lien de paiement actif : candidature retenue, offre payante, montant non nul."""
+        return self.statut == self.STATUT_RETENUE and bool(self.frais_a_payer)
+
+    @property
+    def en_deux_tranches(self):
+        return self.mode_paiement == tranches.DEUX_TRANCHES
+
+    @property
+    def montant_premier_paiement(self):
+        return tranches.premiere_tranche(self.frais_a_payer) if self.en_deux_tranches else int(self.frais_a_payer or 0)
+
+    @property
+    def montant_solde(self):
+        return tranches.solde(self.frais_a_payer) if self.en_deux_tranches else 0
+
+    @property
+    def reste_a_payer(self):
+        if not self.frais_a_payer:
+            return 0
+        if self.tranche1_payee_le is None:
+            return int(self.frais_a_payer)
+        return self.montant_solde if self.en_deux_tranches and self.solde_paye_le is None else 0
+
+    @property
+    def montant_paye(self):
+        return int(self.frais_a_payer) - self.reste_a_payer if self.tranche1_payee_le else 0
 
     # -- Pré-score automatique ------------------------------------------------
     def score_details(self):

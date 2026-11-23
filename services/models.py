@@ -1,5 +1,7 @@
 from django.db import models
 
+from core.relances import RelancePaiementMixin
+
 # Service à procédure propre (consultation payante → matériels → réalisation sur devis)
 ACCOMPAGNEMENT_SLUG = 'accompagnement-de-projet'
 FRAIS_CONSULTATION = 2000
@@ -34,7 +36,7 @@ class Service(models.Model):
         return self.slug == ACCOMPAGNEMENT_SLUG
 
 
-class DemandeService(models.Model):
+class DemandeService(RelancePaiementMixin):
     service = models.ForeignKey(Service, on_delete=models.SET_NULL, null=True, related_name='demandes')
     nom = models.CharField(max_length=100)
     email = models.EmailField()

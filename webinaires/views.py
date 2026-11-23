@@ -199,6 +199,9 @@ def attestation(request, slug):
         messages.warning(request, "L'attestation est réservée aux personnes ayant rejoint la séance en direct. "
                                   "Contactez-nous si vous pensez qu'il s'agit d'une erreur.")
         return redirect(page)
+    if not participation.attestation_reglee:
+        # webinaire à attestation payante : paiement obligatoire avant le téléchargement
+        return redirect('webinaires:paiement_attestation', slug=slug)
     return reponse_pdf(participation)
 
 

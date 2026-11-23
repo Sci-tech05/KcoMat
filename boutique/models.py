@@ -3,6 +3,7 @@ from django.utils import timezone
 from django.contrib.auth.models import User
 from django.utils.text import slugify
 
+from core.relances import RelancePaiementMixin
 from core import tranches
 
 
@@ -151,7 +152,7 @@ class PanierItem(models.Model):
         return f"{self.quantite}x {self.produit.nom}"
 
 
-class Commande(models.Model):
+class Commande(RelancePaiementMixin):
     STATUT_CHOICES = [
         ('en_attente', 'En attente de paiement'),
         ('payee', 'Payée'),

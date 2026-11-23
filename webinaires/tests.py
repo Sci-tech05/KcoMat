@@ -274,3 +274,70 @@ class CatalogueEtAdminTests(TestCase):
         csv = self.client.post(reverse('admin:webinaires_webinaire_changelist'),
                                {'action': 'exporter_participants', '_selected_action': [w.pk]})
         self.assertIn('Chef', csv.content.decode('utf-8'))
+
+
+@override_settings(**PUSH)
+@patch('pywebpush.webpush')
+class AttestationPayanteTests(TestCase):
+    FETCH = 'api.fedapay_service.fetch_fedapay_transaction'
+    CREATE = 'webinaires.paiement.create_fedapay_transaction'
+
+    def setUp(self):
+        cache.clear()
+        self.user = User.objects.create_user('awa', 'awa@example.com', 'pw-awa-12345')
+        self.client.force_login(self.user)
+        self.w = creer_webinaire(timedelta(minutes=5), prix_attestation=1500)
+        self.p = ParticipationWebinaire.objects.create(webinaire=self.w, utilisateur=self.user, prenom='Awa',
+                                                       nom='DOSSOU', email='awa@example.com',
+                                                       rejoint_le=timezone.now())
+        Webinaire.objects.filter(pk=self.w.pk).update(date_debut=timezone.now() - timedelta(hours=2),
+                                                      date_fin=timezone.now() - timedelta(minutes=30))
+
+    def tx(self, montant):
+        return {'id': 41, 'status': 'approved', 'amount': montant, 'currency': {'iso': 'XOF'},
+                'custom_metadata': {'type': 'webinaire_attestation', 'participation_id': str(self.p.pk)}}
+
+    def test_participation_gratuite_attestation_apres_paiement(self, webpush):
+        detail = self.client.get(reverse('webinaires:detail', args=[self.w.slug]))
+        self.assertContains(detail, 'Obtenir mon attestation (1500 F)')
+        telechargement = reverse('webinaires:attestation', args=[self.w.slug])
+        paiement = reverse('webinaires:paiement_attestation', args=[self.w.slug])
+        self.assertRedirects(self.client.get(telechargement), paiement, fetch_redirect_response=False)
+        # non vérifiable tant que l'attestation n'est pas payée
+        self.assertEqual(self.client.get(reverse('webinaires:verifier', args=[self.p.code_verification])).status_code, 404)
+
+        with patch(self.CREATE, return_value={'success': True, 'transaction_id': 41, 'token': 't',
+                                              'checkout_url': 'https://checkout.fedapay.com/checkout/t'}) as create:
+            self.client.get(paiement)
+        payload = create.call_args.args[0]
+        self.assertEqual((payload['amount'], payload['metadata']['type']), (1500, 'webinaire_attestation'))
+
+        mail.outbox.clear()
+        with patch(self.FETCH, return_value=self.tx(1500)):
+            self.client.get(reverse('webinaires:callback_attestation', args=[self.p.pk]))
+        self.p.refresh_from_db()
+        self.assertIsNotNone(self.p.attestation_payee_le)
+        recu = [m for m in mail.outbox if m.to == ['awa@example.com']]
+        self.assertEqual(len(recu), 1)
+        self.assertEqual(len(recu[0].attachments), 2)          # attestation + facture
+        r = self.client.get(telechargement)
+        self.assertEqual(r['Content-Type'], 'application/pdf')
+        self.assertEqual(self.client.get(reverse('webinaires:verifier', args=[self.p.code_verification])).status_code, 200)
+
+    def test_montant_incorrect_refuse(self, webpush):
+        ParticipationWebinaire.objects.filter(pk=self.p.pk).update(fedapay_attestation_id='41', montant_attestation=1500)
+        with patch(self.FETCH, return_value=self.tx(100)):
+            self.client.get(reverse('webinaires:paiement_attestation', args=[self.w.slug]) + '?id=41')
+        self.p.refresh_from_db()
+        self.assertIsNone(self.p.attestation_payee_le)
+
+    def test_absent_ne_peut_pas_payer(self, webpush):
+        ParticipationWebinaire.objects.filter(pk=self.p.pk).update(rejoint_le=None)
+        with patch(self.CREATE) as create:
+            self.client.get(reverse('webinaires:paiement_attestation', args=[self.w.slug]))
+        create.assert_not_called()
+
+    def test_webinaire_gratuit_inchange(self, webpush):
+        Webinaire.objects.filter(pk=self.w.pk).update(prix_attestation=0)
+        r = self.client.get(reverse('webinaires:attestation', args=[self.w.slug]))
+        self.assertEqual(r['Content-Type'], 'application/pdf')

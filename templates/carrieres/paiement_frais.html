@@ -1,0 +1,81 @@
+{% extends 'base.html' %}
+{% load humanize %}
+
+{% block title %}{{ title }}{% endblock %}
+{% block robots %}noindex, nofollow{% endblock %}
+
+{% block content %}
+{% with c=candidature %}
+<section class="relative overflow-hidden bg-slate-950 py-12 sm:py-16 min-h-[calc(100vh-4rem)]">
+    <div class="absolute inset-0 pointer-events-none">
+        <div class="absolute -top-24 -left-20 w-80 h-80 rounded-full bg-emerald-400/20 blur-3xl"></div>
+        <div class="absolute top-1/3 -right-24 w-96 h-96 rounded-full bg-blue-500/20 blur-3xl"></div>
+    </div>
+
+    <div class="relative max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+        {% for message in messages %}
+        <div class="mb-5 rounded-2xl border border-amber-300/30 bg-amber-400/15 px-4 py-3 text-sm text-amber-100">{{ message }}</div>
+        {% endfor %}
+
+        <p class="text-xs uppercase tracking-[0.22em] text-emerald-300 font-semibold">Candidature retenue · Frais de stage</p>
+        <h1 class="mt-2 text-3xl sm:text-4xl font-black text-white">{{ c.offre.titre }}</h1>
+        <p class="mt-2 text-slate-300">{{ c.nom_complet }}{% if c.formule %} · formule {{ c.formule.duree }}{% endif %} · {{ c.frais_a_payer|intcomma }} FCFA</p>
+
+        {% if etape == 'choix' %}
+        <div class="mt-8 grid gap-5 md:grid-cols-2">
+            <a href="?option=total" class="group flex flex-col rounded-3xl border border-white/10 bg-white/[0.06] p-6 backdrop-blur-xl transition hover:-translate-y-0.5 hover:border-emerald-300/50">
+                <span class="inline-flex w-fit items-center rounded-full bg-emerald-400/15 px-3 py-1 text-xs font-bold text-emerald-200">En une fois</span>
+                <span class="mt-4 text-3xl font-black text-white">{{ frais|intcomma }} <span class="text-base font-semibold text-slate-300">FCFA</span></span>
+                <span class="mt-2 text-sm text-slate-300">Frais entièrement réglés : plus rien à payer ensuite.</span>
+                <span class="mt-6 inline-flex items-center justify-center rounded-xl bg-emerald-500 px-5 py-3 font-black text-emerald-950 transition group-hover:bg-emerald-400">Payer {{ frais|intcomma }} FCFA</span>
+            </a>
+            <a href="?option=moitie" class="group flex flex-col rounded-3xl border border-white/10 bg-white/[0.06] p-6 backdrop-blur-xl transition hover:-translate-y-0.5 hover:border-cyan-300/50">
+                <span class="inline-flex w-fit items-center rounded-full bg-cyan-400/15 px-3 py-1 text-xs font-bold text-cyan-200">En 2 tranches</span>
+                <span class="mt-4 text-3xl font-black text-white">{{ premiere_tranche|intcomma }} <span class="text-base font-semibold text-slate-300">FCFA maintenant</span></span>
+                <span class="mt-2 text-sm text-slate-300">Puis {{ solde|intcomma }} FCFA avant le début du stage, depuis ce même lien.</span>
+                <span class="mt-6 inline-flex items-center justify-center rounded-xl bg-cyan-500 px-5 py-3 font-black text-cyan-950 transition group-hover:bg-cyan-400">Payer la 1re tranche</span>
+            </a>
+        </div>
+
+        {% elif etape == 'redirection' %}
+        <div class="mt-8 rounded-3xl border border-white/10 bg-white/[0.06] p-6 text-center backdrop-blur-xl">
+            <div class="mx-auto w-10 h-10 rounded-full border-2 border-emerald-300/60 border-t-transparent animate-spin"></div>
+            <p class="mt-4 font-semibold text-white">{{ libelle }} : {{ montant|intcomma }} FCFA</p>
+            <p class="mt-1 text-sm text-slate-400">Redirection vers la page de paiement FedaPay…</p>
+            <a id="lien-paiement" href="#" class="mt-5 inline-flex items-center justify-center rounded-xl bg-emerald-500 px-5 py-3 font-black text-emerald-950 hover:bg-emerald-400">Payer maintenant</a>
+        </div>
+        <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            var token = "{{ token|escapejs }}";
+            var url = "{{ checkout_url|default:''|escapejs }}";
+            var sandbox = "{{ sandbox|default_if_none:'false'|lower }}" === "true";
+            if (!url && token) { url = (sandbox ? 'https://sandbox-checkout.fedapay.com/checkout/' : 'https://checkout.fedapay.com/checkout/') + token; }
+            if (!url) { return; }
+            document.getElementById('lien-paiement').href = url;
+            window.setTimeout(function () { window.location.href = url; }, 900);
+        });
+        </script>
+
+        {% else %}
+        <div class="mt-8 rounded-3xl border border-white/10 bg-white/[0.06] p-6 backdrop-blur-xl">
+            <dl class="grid gap-4 sm:grid-cols-3 text-sm">
+                <div><dt class="text-slate-400">Total des frais</dt><dd class="mt-1 text-xl font-black text-white">{{ c.frais_a_payer|intcomma }} FCFA</dd></div>
+                <div><dt class="text-slate-400">Déjà payé</dt><dd class="mt-1 text-xl font-black text-emerald-300">{{ c.montant_paye|intcomma }} FCFA</dd></div>
+                <div><dt class="text-slate-400">Reste à payer</dt><dd class="mt-1 text-xl font-black {% if c.reste_a_payer %}text-amber-300{% else %}text-emerald-300{% endif %}">{{ c.reste_a_payer|intcomma }} FCFA</dd></div>
+            </dl>
+            <div class="mt-6 flex flex-col sm:flex-row gap-3">
+                {% if etape == 'solde' %}
+                <a href="?option=solde" class="inline-flex items-center justify-center rounded-xl bg-amber-400 px-5 py-3 font-black text-amber-950 hover:bg-amber-300">Payer le solde ({{ c.reste_a_payer|intcomma }} FCFA)</a>
+                {% else %}
+                <p class="font-semibold text-emerald-200">Vos frais de stage sont entièrement réglés. Merci !</p>
+                {% endif %}
+                <a href="{% url 'carrieres:facture_frais' c.code_paiement %}" target="_blank" class="inline-flex items-center justify-center rounded-xl border border-white/20 bg-white/5 px-5 py-3 font-semibold text-white hover:bg-white/10">Facture (PDF)</a>
+            </div>
+        </div>
+        {% endif %}
+
+        <p class="mt-6 text-center text-xs text-slate-400">Paiement sécurisé via FedaPay (MTN, Moov Money). Ce lien est personnel : ne le partagez pas.</p>
+    </div>
+</section>
+{% endwith %}
+{% endblock %}

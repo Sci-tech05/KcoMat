@@ -11,6 +11,8 @@ from django.urls import reverse
 from django.utils import timezone
 from django.utils.text import slugify
 
+from core.relances import RelancePaiementMixin
+
 # Calendrier d'une séance (par rapport à date_debut / date_fin)
 RAPPEL_AVANT = timedelta(minutes=20)        # notification push + e-mail aux inscrits
 OUVERTURE_SALLE = timedelta(minutes=10)     # le bouton « Participer » apparaît
@@ -65,6 +67,10 @@ class Webinaire(models.Model):
     date_debut = models.DateTimeField("Début")
     date_fin = models.DateTimeField("Fin")
     places = models.PositiveIntegerField("Places", default=0, help_text="0 = places illimitées.")
+    prix_attestation = models.PositiveIntegerField(
+        "Prix de l'attestation (FCFA)", default=0,
+        help_text="0 = attestation gratuite. Sinon, la participation reste gratuite mais l'attestation ne se "
+                  "télécharge qu'après paiement en ligne de ce montant.")
     actif = models.BooleanField("Publié", default=False,
                                 help_text="Publier envoie aussitôt une notification aux abonnés du site.")
     youtube_direct = models.CharField(
@@ -159,6 +165,10 @@ class Webinaire(models.Model):
     def est_complet(self):
         return bool(self.places) and self.places_restantes() == 0
 
+    @property
+    def attestation_payante(self):
+        return self.prix_attestation > 0
+
     # ------------------------------------------------------------------ présentation
     @property
     def theme_libelle(self):
@@ -198,7 +208,7 @@ def _code_verification():
     return secrets.token_hex(8)
 
 
-class ParticipationWebinaire(models.Model):
+class ParticipationWebinaire(RelancePaiementMixin):
     webinaire = models.ForeignKey(Webinaire, on_delete=models.CASCADE, related_name='participations')
     utilisateur = models.ForeignKey(User, on_delete=models.CASCADE, related_name='participations_webinaires',
                                     verbose_name="Compte")
@@ -210,6 +220,10 @@ class ParticipationWebinaire(models.Model):
                                       help_text="Renseigné à l'entrée dans la salle : ouvre le droit à l'attestation.")
     code_verification = models.CharField("Code de vérification", max_length=32, unique=True,
                                          default=_code_verification, editable=False)
+    # Attestation payante : montant figé au lancement du paiement
+    montant_attestation = models.PositiveIntegerField("Attestation : montant (FCFA)", null=True, blank=True)
+    fedapay_attestation_id = models.CharField(max_length=100, blank=True)
+    attestation_payee_le = models.DateTimeField("Attestation payée le", null=True, blank=True)
 
     class Meta:
         ordering = ['-inscrit_le']
@@ -234,5 +248,14 @@ class ParticipationWebinaire(models.Model):
     def a_participe(self):
         return self.rejoint_le is not None
 
+    @property
+    def montant_attestation_du(self):
+        return self.montant_attestation if self.montant_attestation is not None else self.webinaire.prix_attestation
+
+    @property
+    def attestation_reglee(self):
+        """Attestation gratuite, ou payée."""
+        return not self.webinaire.attestation_payante or self.attestation_payee_le is not None
+
     def attestation_disponible(self, maintenant=None):
-        return self.a_participe and self.webinaire.statut(maintenant) == 'termine'
+        return self.a_participe and self.attestation_reglee and self.webinaire.statut(maintenant) == 'termine'

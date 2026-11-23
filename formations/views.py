@@ -17,6 +17,7 @@ from django.db.models import Count, Prefetch, Q
 from django.utils.text import slugify
 from .models import AttestationFormateur, Formation, FormationSessionPassee, Inscription, CategorieFormation
 from core import tranches
+from core.acces import acces_autorise
 from core.avis import resume as resume_avis
 from core.notifications_admin import notifier_admin
 from .forms import InscriptionForm
@@ -128,6 +129,8 @@ def _check_inscription_access(request, inscription):
     if user.is_authenticated and (user.is_staff or inscription.utilisateur_id == user.pk):
         return
     if inscription.utilisateur_id is None and inscription.pk in request.session.get(SESSION_INSCRIPTIONS_KEY, []):
+        return
+    if acces_autorise(request, inscription):       # lien signé d'un e-mail de relance
         return
     raise PermissionDenied("Acces refuse a cette inscription.")
 

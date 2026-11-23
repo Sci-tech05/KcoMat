@@ -291,3 +291,82 @@ class CandidatureUniqueTests(TestCase):
         self.assertContains(r, 'déjà postulé à cette offre')
         self.assertEqual(Candidature.objects.filter(offre=self.offre).count(), 1)
         self.assertEqual(self.postuler(self.autre, 'awa@example.com').status_code, 302)   # autre offre : autorisé
+
+
+@override_settings(MEDIA_ROOT=TEMP_MEDIA, EMAIL_BACKEND='django.core.mail.backends.locmem.EmailBackend')
+class FraisDeStageDeuxTranchesTests(TestCase):
+    FETCH = 'api.fedapay_service.fetch_fedapay_transaction'
+    CREATE = 'carrieres.paiement.create_fedapay_transaction'
+
+    def setUp(self):
+        from unittest.mock import patch
+        from carrieres.models import FormuleOffre
+        self.patch = patch
+        self.offre = Offre.objects.create(titre='Stage IoT', type_offre='stage', domaine='IoT', description='desc',
+                                          competences_requises='ESP32', nature_montant='frais')
+        formule = FormuleOffre.objects.create(offre=self.offre, duree='1 mois', montant=30001)
+        self.candidature = Candidature.objects.create(offre=self.offre, formule=formule, nom='DOSSOU', prenom='Awa',
+                                                      email='awa@example.com', telephone='0196000000', cv=fichier())
+        self.url = reverse('carrieres:paiement_frais', args=[self.candidature.code_paiement])
+
+    def tx(self, tx_id, montant, type_):
+        return {'id': tx_id, 'status': 'approved', 'amount': montant, 'currency': {'iso': 'XOF'},
+                'custom_metadata': {'type': type_, 'candidature_id': str(self.candidature.pk)}}
+
+    def creer(self, tx_id):
+        return self.patch(self.CREATE, return_value={'success': True, 'transaction_id': tx_id, 'token': 't',
+                                                     'checkout_url': 'https://checkout.fedapay.com/checkout/t'})
+
+    def retenir(self):
+        self.candidature.statut = Candidature.STATUT_RETENUE
+        self.candidature.save()
+        from carrieres.notifications import envoyer_reponse
+        envoyer_reponse(self.candidature)
+
+    def test_lien_ferme_tant_que_la_candidature_n_est_pas_retenue(self):
+        self.assertEqual(self.client.get(self.url).status_code, 404)
+
+    def test_mail_retenue_puis_deux_tranches(self):
+        self.retenir()
+        self.assertIn(self.candidature.code_paiement, mail.outbox[-1].body)
+        self.assertIn('2 tranches', mail.outbox[-1].body)
+        r = self.client.get(self.url)
+        self.assertContains(r, 'En 2 tranches')
+        with self.creer(31) as create:
+            self.client.get(self.url + '?option=moitie')
+        payload = create.call_args.args[0]
+        self.assertEqual((payload['amount'], payload['metadata']['type']), (15001, 'stage_frais'))
+        with self.patch(self.FETCH, return_value=self.tx(31, 15001, 'stage_frais')):
+            r = self.client.get(self.url)
+        self.candidature.refresh_from_db()
+        self.assertEqual((self.candidature.montant_paye, self.candidature.reste_a_payer), (15001, 15000))
+        self.assertContains(r, 'Payer le solde')
+
+        with self.creer(32) as create:
+            self.client.get(self.url + '?option=solde')
+        payload = create.call_args.args[0]
+        self.assertEqual((payload['amount'], payload['metadata']['type']), (15000, 'stage_solde'))
+        with self.patch(self.FETCH, side_effect=lambda tx: {'31': self.tx(31, 15001, 'stage_frais'),
+                                                           '32': self.tx(32, 15000, 'stage_solde')}.get(str(tx), {})):
+            r = self.client.get(reverse('carrieres:callback_frais', args=[self.candidature.code_paiement]), follow=True)
+        self.candidature.refresh_from_db()
+        self.assertEqual(self.candidature.reste_a_payer, 0)
+        self.assertContains(r, 'entièrement réglés')
+        self.assertTrue(self.client.get(reverse('carrieres:facture_frais', args=[self.candidature.code_paiement]))
+                        .content.startswith(b'%PDF'))
+
+    def test_montant_incorrect_refuse(self):
+        self.retenir()
+        with self.creer(33):
+            self.client.get(self.url + '?option=total')
+        with self.patch(self.FETCH, return_value=self.tx(33, 100, 'stage_frais')):
+            self.client.get(self.url)
+        self.candidature.refresh_from_db()
+        self.assertIsNone(self.candidature.tranche1_payee_le)
+
+    def test_offre_remuneree_sans_paiement(self):
+        Offre.objects.filter(pk=self.offre.pk).update(nature_montant='remuneration')
+        self.candidature.refresh_from_db()
+        self.retenir()
+        self.assertNotIn('paiement', mail.outbox[-1].body)
+        self.assertEqual(self.client.get(self.url).status_code, 404)

@@ -7,7 +7,11 @@ Paramètres : w (avec .etat et .ma_participation, cf. views.contexte_cartes), so
     {% include 'partials/icon.html' with name='video' class='w-4 h-4' stroke='2.25' %}Participer
   </a>
 {% elif w.etat == 'termine' %}
-  {% if w.ma_participation.a_participe %}
+  {% if w.ma_participation.a_participe and not w.ma_participation.attestation_reglee %}
+  <a href="{% url 'webinaires:paiement_attestation' w.slug %}" class="wb-btn wb-btn--primary {{ taille }} {{ largeur }}">
+    {% include 'partials/icon.html' with name='award' class='w-4 h-4' stroke='2.25' %}Obtenir mon attestation ({{ w.ma_participation.montant_attestation_du }} F)
+  </a>
+  {% elif w.ma_participation.a_participe %}
   <a href="{% url 'webinaires:attestation' w.slug %}" class="wb-btn wb-btn--success {{ taille }} {{ largeur }}">
     {% include 'partials/icon.html' with name='download' class='w-4 h-4' stroke='2.25' %}Télécharger mon attestation
   </a>

@@ -35,12 +35,21 @@ class ParticipationInline(admin.TabularInline):
     model = ParticipationWebinaire
     extra = 0
     can_delete = True
-    fields = ['prenom', 'nom', 'email', 'inscrit_le', 'rejoint_le', 'attestation']
-    readonly_fields = ['inscrit_le', 'attestation']
+    fields = ['prenom', 'nom', 'email', 'inscrit_le', 'rejoint_le', 'paiement', 'attestation']
+    readonly_fields = ['inscrit_le', 'paiement', 'attestation']
     verbose_name_plural = "Participants inscrits"
 
     def has_add_permission(self, request, obj=None):
         return False   # les inscriptions se font depuis le site (compte obligatoire)
+
+    @admin.display(description='Attestation payée')
+    def paiement(self, obj):
+        if not obj.pk or not obj.webinaire.attestation_payante:
+            return 'Gratuite'
+        if obj.attestation_payee_le:
+            return format_html('<span style="color:#047857;font-weight:700">Oui · {}</span>',
+                               timezone.localtime(obj.attestation_payee_le).strftime('%d/%m/%Y'))
+        return format_html('<span style="color:#B45309">Non</span>')
 
     @admin.display(description='Attestation')
     def attestation(self, obj):
@@ -72,7 +81,7 @@ class WebinaireAdmin(admin.ModelAdmin):
         ('Date et heure (heure du Bénin)', {
             'description': "Rappel push + e-mail aux inscrits 20 min avant le début ; bouton « Participer » 10 min avant ; "
                            "attestations téléchargeables dès l'heure de fin.",
-            'fields': ('jour', ('heure_debut', 'heure_fin'), 'places'),
+            'fields': ('jour', ('heure_debut', 'heure_fin'), ('places', 'prix_attestation')),
         }),
         ('Publication', {'fields': ('actif',)}),
         ('Séance en ligne', {
@@ -206,11 +215,13 @@ class WebinaireAdmin(admin.ModelAdmin):
 
 @admin.register(ParticipationWebinaire)
 class ParticipationWebinaireAdmin(admin.ModelAdmin):
-    list_display = ['nom_complet', 'email', 'webinaire', 'inscrit_le', 'presence', 'lien_attestation']
-    list_filter = ['webinaire', ('rejoint_le', admin.EmptyFieldListFilter)]
+    list_display = ['nom_complet', 'email', 'webinaire', 'inscrit_le', 'presence', 'paiement_attestation', 'lien_attestation']
+    list_filter = ['webinaire', ('rejoint_le', admin.EmptyFieldListFilter), ('attestation_payee_le', admin.EmptyFieldListFilter)]
     search_fields = ['prenom', 'nom', 'email', 'code_verification', 'webinaire__titre']
-    readonly_fields = ['webinaire', 'utilisateur', 'inscrit_le', 'code_verification']
-    fields = ['webinaire', 'utilisateur', ('prenom', 'nom'), 'email', 'inscrit_le', 'rejoint_le', 'code_verification']
+    list_select_related = ['webinaire']
+    readonly_fields = ['webinaire', 'utilisateur', 'inscrit_le', 'code_verification', 'montant_attestation', 'fedapay_attestation_id']
+    fields = ['webinaire', 'utilisateur', ('prenom', 'nom'), 'email', 'inscrit_le', 'rejoint_le', 'code_verification',
+              ('montant_attestation', 'fedapay_attestation_id', 'attestation_payee_le')]
     actions = ['marquer_present']
 
     def has_add_permission(self, request):
@@ -225,6 +236,14 @@ class ParticipationWebinaireAdmin(admin.ModelAdmin):
         if obj.a_participe:
             return _pastille(f"Présent · {timezone.localtime(obj.rejoint_le):%H:%M}", '#047857', '#ECFDF5')
         return _pastille('Absent', '#64748B', '#F1F5F9')
+
+    @admin.display(description='Paiement', ordering='attestation_payee_le')
+    def paiement_attestation(self, obj):
+        if not obj.webinaire.attestation_payante:
+            return 'Gratuite'
+        if obj.attestation_payee_le:
+            return _pastille('Payée', '#047857', '#ECFDF5')
+        return _pastille(f"À payer · {obj.montant_attestation_du} F", '#B45309', '#FFF7E6')
 
     @admin.display(description='Attestation')
     def lien_attestation(self, obj):

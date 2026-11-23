@@ -317,3 +317,97 @@ class PagesLegalesTests(TestCase):
         self.assertContains(accueil, reverse('core:mentions_legales'))
         self.assertContains(accueil, reverse('core:confidentialite'))
         self.assertContains(self.client.get('/sitemap.xml'), reverse('core:mentions_legales'))
+
+
+@override_settings(EMAIL_BACKEND='django.core.mail.backends.locmem.EmailBackend')
+class RelancesPaiementTests(TestCase):
+    def setUp(self):
+        from datetime import timedelta
+        from django.utils import timezone
+        from formations.models import Formation, Inscription
+        self.maintenant = timezone.now()
+        self.jours = lambda n: self.maintenant - timedelta(days=n)
+        self.formation = Formation.objects.create(titre='Arduino', description_courte='c', description='d', prix=40000)
+        self.insc = Inscription.objects.create(formation=self.formation, nom='DOSSOU', prenom='Awa', email='awa@example.com',
+                                               telephone='0196000000')
+        Inscription.objects.filter(pk=self.insc.pk).update(created_at=self.jours(4))
+
+    def relancer(self, decalage_jours=0):
+        from datetime import timedelta
+        from core.relances import envoyer_relances
+        mail.outbox.clear()
+        return envoyer_relances(self.maintenant + timedelta(days=decalage_jours))
+
+    def test_tous_les_3_jours_puis_lien_signe_utilisable(self):
+        from unittest.mock import patch
+        self.assertEqual(self.relancer(), 1)
+        message = mail.outbox[0]
+        self.assertIn('Finalisez votre inscription', message.subject)
+        self.assertEqual(self.relancer(), 0)               # déjà relancé : rien avant 3 jours
+        self.assertEqual(self.relancer(2), 0)
+        self.assertEqual(self.relancer(3), 1)
+        lien = next(l for l in message.body.split() if 'acces=' in l)
+        chemin = lien.split('kcomat0.pythonanywhere.com', 1)[-1] if 'kcomat0' in lien else lien[lien.index('/formations'):]
+        self.client.logout()
+        with patch('formations.views.create_fedapay_transaction',
+                   return_value={'success': True, 'transaction_id': 9, 'token': 't', 'checkout_url': 'https://x/t'}):
+            self.assertEqual(self.client.get(chemin).status_code, 200)
+            self.assertEqual(self.client.get(chemin.split('?')[0]).status_code, 200)  # accès mémorisé en session
+        autre = self.client_class()
+        self.assertEqual(autre.get(chemin.split('?')[0]).status_code, 403)          # sans jeton : refusé
+        self.assertEqual(autre.get(chemin.split('?')[0] + '?acces=faux').status_code, 403)
+
+    def test_vieille_inscription_abandonnee_jamais_relancee(self):
+        from formations.models import Inscription
+        Inscription.objects.filter(pk=self.insc.pk).update(created_at=self.jours(60))
+        self.assertEqual(self.relancer(), 0)
+
+    def test_plafond_puis_nouvelle_etape(self):
+        from formations.models import Inscription
+        Inscription.objects.filter(pk=self.insc.pk).update(relances_paiement=10, derniere_relance_le=self.jours(3))
+        self.assertEqual(self.relancer(), 0)                # 10 relances : plafond atteint
+        Inscription.objects.filter(pk=self.insc.pk).update(statut='frais_payes', frais_payes_le=self.jours(2.5))
+        self.assertEqual(self.relancer(), 0)                # étape toute récente
+        self.assertEqual(self.relancer(1), 1)               # 3 jours après le paiement des frais
+        self.assertIn('Réglez votre formation', mail.outbox[0].subject)
+        self.insc.refresh_from_db()
+        self.assertEqual(self.insc.relances_paiement, 1)    # compteur repart pour la nouvelle étape
+
+    def test_solde_boutique_et_consultation(self):
+        from boutique.models import Commande
+        from services.models import ACCOMPAGNEMENT_SLUG, DemandeService, Service
+        from formations.models import Inscription
+        Inscription.objects.all().delete()
+        commande = Commande.objects.create(nom='D', prenom='Ali', email='ali@example.com', telephone='01',
+                                           adresse_livraison='r', ville='Lokossa', montant_total=10000,
+                                           mode_paiement='deux_tranches', statut='payee')
+        Commande.objects.filter(pk=commande.pk).update(payee_le=self.jours(3))
+        demande = DemandeService.objects.create(service=Service.objects.get(slug=ACCOMPAGNEMENT_SLUG), nom='Kofi',
+                                                email='kofi@example.com', telephone='01', localite='L',
+                                                intitule_projet='Serre', description_besoin='x')
+        DemandeService.objects.filter(pk=demande.pk).update(created_at=self.jours(3))
+        self.assertEqual(self.relancer(), 2)
+        sujets = sorted(m.subject for m in mail.outbox)
+        self.assertIn('Solde de votre commande', sujets[0])
+        self.assertIn('Serre', sujets[1])
+
+    def test_attestation_webinaire_chaque_semaine(self):
+        from django.contrib.auth.models import User
+        from webinaires.models import ParticipationWebinaire, Webinaire
+        from formations.models import Inscription
+        Inscription.objects.all().delete()
+        user = User.objects.create_user('ami', 'ami@example.com', 'pw-ami-12345')
+        w = Webinaire.objects.create(titre='ESP32', accroche='a', description='d', date_debut=self.jours(4),
+                                     date_fin=self.jours(4) + timezone_heure(), prix_attestation=1000)
+        ParticipationWebinaire.objects.create(webinaire=w, utilisateur=user, prenom='Ami', nom='K',
+                                              email='ami@example.com', rejoint_le=self.jours(4))
+        self.assertEqual(self.relancer(), 0)                # 4 jours seulement après la séance
+        self.assertEqual(self.relancer(4), 1)
+        self.assertIn('Votre attestation', mail.outbox[0].subject)
+        self.assertEqual(self.relancer(8), 0)               # la suivante, une semaine après
+        self.assertEqual(self.relancer(11), 1)
+
+
+def timezone_heure():
+    from datetime import timedelta
+    return timedelta(hours=2)

@@ -40,12 +40,16 @@ class WebinaireAdminForm(forms.ModelForm):
         self.fields['jour'].widget = AdminDateWidget()
         self.fields['heure_debut'].widget = AdminTimeWidget(format='%H:%M')
         self.fields['heure_fin'].widget = AdminTimeWidget(format='%H:%M')
+        self.fields['prix_attestation'].required = False   # vide = attestation gratuite
         if self.instance.pk:
             debut = timezone.localtime(self.instance.date_debut)
             self.initial.update(jour=debut.date(), heure_debut=debut.time().replace(second=0, microsecond=0),
                                 heure_fin=timezone.localtime(self.instance.date_fin).time().replace(second=0, microsecond=0))
         else:
             self.initial.update(heure_debut=HEURE_DEBUT, heure_fin=HEURE_FIN)
+
+    def clean_prix_attestation(self):
+        return self.cleaned_data.get('prix_attestation') or 0
 
     def clean(self):
         donnees = super().clean()

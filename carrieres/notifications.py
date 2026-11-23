@@ -117,6 +117,14 @@ def envoyer_reponse(candidature):
     if candidature.statut == candidature.STATUT_ENTRETIEN and notes:
         # Le message saisi dans « Notes internes » (date, heure, lieu…) remplace la suite du texte type
         texte = f"Votre candidature a retenu notre attention et nous souhaitons vous rencontrer en entretien.\n\n{notes}"
+    if candidature.paiement_ouvert and candidature.reste_a_payer:
+        from core import tranches
+        from .paiement import url_paiement
+        frais = candidature.frais_a_payer
+        texte += (f"\n\nPour confirmer votre place, réglez les frais de stage ({tranches.fcfa(frais)}) en ligne, "
+                  f"en une fois ou en 2 tranches ({tranches.fcfa(tranches.premiere_tranche(frais))} maintenant, "
+                  f"{tranches.fcfa(tranches.solde(frais))} avant le début du stage), via votre lien personnel :\n"
+                  f"{url_paiement(candidature)}")
     body = (
         f"Bonjour {candidature.prenom},\n\n"
         f"Merci pour votre candidature au poste « {candidature.offre.titre} ».\n\n{texte}\n\n"

@@ -18,6 +18,7 @@ from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt
 
 from api.fedapay_service import create_fedapay_transaction, verify_fedapay_payment
+from core.acces import acces_autorise
 from core.notifications_admin import notifier_admin
 from core.pdf_invoices import build_invoice_response
 
@@ -39,7 +40,8 @@ def memoriser_demande(request, demande):
 def _demande(request, pk):
     demande = get_object_or_404(DemandeService.objects.select_related('service'), pk=pk,
                                 service__slug=ACCOMPAGNEMENT_SLUG)
-    if not (request.user.is_staff or pk in request.session.get(SESSION_DEMANDES_KEY, [])):
+    if not (request.user.is_staff or pk in request.session.get(SESSION_DEMANDES_KEY, [])
+            or acces_autorise(request, demande)):   # lien signé d'un e-mail de relance
         raise PermissionDenied("Accès refusé à cette demande.")
     return demande
 

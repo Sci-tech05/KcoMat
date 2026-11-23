@@ -15,6 +15,8 @@ from .catalogue import DOMAINES, charger_catalogue
 from .exports import STATUT_COLORS, rapport_pdf, zip_dossiers
 from .models import Candidature, FormuleOffre, Offre
 from .notifications import REPONSES, document_filename, envoyer_reponse
+from .paiement import url_paiement
+from core import tranches
 from notifications.admin import notifier_abonnes
 from notifications.push import notifier_publication
 
@@ -179,7 +181,7 @@ def _changer_statut(statut):
 @admin.register(Candidature)
 class CandidatureAdmin(admin.ModelAdmin):
     change_list_template = 'admin/carrieres/candidature/change_list.html'
-    list_display = ['candidat', 'offre_badge', 'statut', 'note', 'pre_score', 'documents', 'created_at']
+    list_display = ['candidat', 'offre_badge', 'statut', 'note', 'pre_score', 'documents', 'frais_stage', 'created_at']
     list_display_links = ['candidat']
     list_editable = ['statut', 'note']
     list_filter = ['statut', PotentielFilter, 'offre__type_offre', 'offre']
@@ -188,7 +190,9 @@ class CandidatureAdmin(admin.ModelAdmin):
     date_hierarchy = 'created_at'
     list_per_page = 50
     ordering = ['-created_at']
-    readonly_fields = ['documents_detail', 'score_detail', 'created_at', 'statut_modifie_le', 'reponse_envoyee_le']
+    readonly_fields = ['documents_detail', 'score_detail', 'created_at', 'statut_modifie_le', 'reponse_envoyee_le',
+                       'frais_stage', 'lien_paiement', 'mode_paiement', 'montant_frais', 'tranche1_payee_le', 'solde_paye_le',
+                       'fedapay_tranche1_id', 'fedapay_solde_id']
     fieldsets = (
         ('Évaluation', {'fields': ('statut', 'note', 'score_detail', 'notes_internes'),
                         'description': "Changer le statut prévient le candidat par e-mail : « Entretien » lui envoie "
@@ -196,8 +200,34 @@ class CandidatureAdmin(admin.ModelAdmin):
                                        "un message adapté."}),
         ('Candidat', {'fields': ('offre', 'formule', 'prenom', 'nom', 'email', 'telephone', 'message')}),
         ('Documents', {'fields': ('documents_detail', 'cv', 'lettre_motivation')}),
+        ('Frais de stage (offres payantes)', {
+            'description': "Le lien de paiement part avec l'e-mail « Retenue » ; le candidat paie en une fois ou en "
+                           "2 tranches (50 % + 50 %).",
+            'fields': ('frais_stage', 'lien_paiement', ('mode_paiement', 'montant_frais'),
+                       ('tranche1_payee_le', 'fedapay_tranche1_id'), ('solde_paye_le', 'fedapay_solde_id')),
+        }),
         ('Historique', {'fields': ('created_at', 'statut_modifie_le', 'reponse_envoyee_le')}),
     )
+
+    @admin.display(description='Frais de stage')
+    def frais_stage(self, obj):
+        if not obj.frais_a_payer:
+            return '—'
+        if obj.tranche1_payee_le is None:
+            if obj.statut != Candidature.STATUT_RETENUE:
+                return format_html('<span style="color:#64748B">{}</span>', tranches.fcfa(obj.frais_a_payer))
+            return format_html('<b style="color:#B45309">À payer : {}</b>', tranches.fcfa(obj.frais_a_payer))
+        if obj.reste_a_payer:
+            return format_html('<b style="color:#B45309">1re tranche payée · reste {}</b>', tranches.fcfa(obj.reste_a_payer))
+        return format_html('<span style="color:#047857;font-weight:700">Payés</span>')
+
+    @admin.display(description='Lien de paiement')
+    def lien_paiement(self, obj):
+        if not obj.pk or not obj.paiement_ouvert:
+            return "Disponible une fois la candidature « Retenue » (offre payante avec formule chiffrée)."
+        url = url_paiement(obj)
+        return format_html('<a href="{}" target="_blank">{}</a>', url, url)
+
     actions = [
         _changer_statut(Candidature.STATUT_EN_REVUE),
         _changer_statut(Candidature.STATUT_PRESELECTIONNEE),

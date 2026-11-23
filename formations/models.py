@@ -6,6 +6,7 @@ from django.utils import timezone
 from django.utils.text import slugify
 from django.core.exceptions import ValidationError
 
+from core.relances import RelancePaiementMixin
 from core.video import analyser, normaliser_lien_video, valider_lien_video
 
 
@@ -180,7 +181,7 @@ class Formateur(models.Model):
         return f"{self.prenom} {self.nom}".strip()
 
 
-class Inscription(models.Model):
+class Inscription(RelancePaiementMixin):
     MODE_PREFERENCE_CHOICES = [
         ('presentiel', 'Présentiel'),
         ('en_ligne', 'En ligne'),

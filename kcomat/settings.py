@@ -147,6 +147,8 @@ MIDDLEWARE = [
     'allauth.account.middleware.AccountMiddleware',
     # Rappels « 20 min avant » des webinaires, déclenchés au fil des visites
     'webinaires.middleware.RappelsWebinairesMiddleware',
+    # Relances de paiement par e-mail (3 jours ; 1 semaine pour les attestations de webinaires)
+    'core.middleware.RelancesPaiementMiddleware',
 ]
 
 ROOT_URLCONF = 'kcomat.urls'
@@ -458,6 +460,9 @@ VAPID_PUBLIC_KEY = env_value('VAPID_PUBLIC_KEY', default='')
 VAPID_PRIVATE_KEY = env_value('VAPID_PRIVATE_KEY', default='')
 VAPID_CLAIM_EMAIL = env_value('VAPID_CLAIM_EMAIL', default='kcomat0@gmail.com')
 PUSH_ASYNC = env_bool('PUSH_ASYNC', default=True)  # envoi en tâche de fond après publication
+# Relances de paiement par e-mail déclenchées au fil des visites (désactivées pendant les tests ;
+# la commande « envoyer_relances_paiement » reste utilisable partout)
+RELANCES_AU_FIL_DES_VISITES = env_bool('RELANCES_AU_FIL_DES_VISITES', default='test' not in sys.argv[1:2])
 
 FEDAPAY_SECRET_KEY = FEDAPAY_CONFIG['api_key']
 FEDAPAY_PUBLIC_KEY = FEDAPAY_CONFIG['public_key']

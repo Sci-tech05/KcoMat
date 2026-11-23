@@ -15,6 +15,7 @@ from django.views.decorators.http import require_POST
 from django.utils import timezone
 from .models import Produit, CategorieProduit, Panier, PanierItem, Commande, CommandeItem
 from core import tranches
+from core.acces import acces_autorise
 from core.avis import resume as resume_avis
 from core.notifications_admin import notifier_admin
 from .forms import CommandeForm
@@ -57,6 +58,8 @@ def _check_commande_access(request, commande):
     if user.is_authenticated and (user.is_staff or commande.utilisateur_id == user.pk):
         return
     if commande.utilisateur_id is None and commande.pk in request.session.get(SESSION_COMMANDES_KEY, []):
+        return
+    if acces_autorise(request, commande):          # lien signé d'un e-mail de relance
         return
     raise PermissionDenied("Acces refuse a cette commande.")
 

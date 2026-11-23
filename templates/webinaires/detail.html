@@ -1,5 +1,5 @@
 {% extends 'base.html' %}
-{% load static kcomat_tags %}
+{% load static humanize kcomat_tags %}
 
 {% block title %}{{ webinaire.titre }} — Webinaire gratuit{% endblock %}
 {% block meta_description %}{{ webinaire.accroche }} Webinaire gratuit en direct, {{ webinaire.date_debut|date:"l j F Y à H:i" }}.{% endblock %}
@@ -93,7 +93,7 @@
           <li class="wb-step"><span class="wb-step__n">1</span><div><p class="font-bold text-slate-900">Réservation</p><p class="text-sm text-slate-500">Avec votre compte KcoMat, jusqu'à la fin de la séance. Une confirmation et une invitation agenda vous sont envoyées par e-mail.</p></div></li>
           <li class="wb-step"><span class="wb-step__n">2</span><div><p class="font-bold text-slate-900">Rappel · {{ w.heure_rappel|date:"H:i" }}</p><p class="text-sm text-slate-500">20 minutes avant, par e-mail et par notification si vous les avez activées.</p></div></li>
           <li class="wb-step"><span class="wb-step__n">3</span><div><p class="font-bold text-slate-900">Ouverture de la salle · {{ w.ouverture_salle|date:"H:i" }}</p><p class="text-sm text-slate-500">Le bouton « Participer » apparaît sur cette page 10 minutes avant le début. Prévoyez un casque ou des écouteurs.</p></div></li>
-          <li class="wb-step"><span class="wb-step__n">4</span><div><p class="font-bold text-slate-900">Attestation · dès {{ w.date_fin|date:"H:i" }}</p><p class="text-sm text-slate-500">À la fin, téléchargez ici votre attestation de participation nominative, avec QR code de vérification.</p></div></li>
+          <li class="wb-step"><span class="wb-step__n">4</span><div><p class="font-bold text-slate-900">Attestation · dès {{ w.date_fin|date:"H:i" }}</p><p class="text-sm text-slate-500">À la fin, téléchargez ici votre attestation de participation nominative, avec QR code de vérification.{% if w.attestation_payante %} Participation gratuite ; attestation : {{ w.prix_attestation|intcomma }} FCFA, payable en ligne après la séance.{% endif %}</p></div></li>
         </ol>
       </div>
     </div>
@@ -108,7 +108,11 @@
             {% if participation.a_participe %}
             <div class="rounded-2xl bg-emerald-50 p-4 text-sm text-emerald-800">
               <p class="font-bold">Merci pour votre participation, {{ participation.prenom }} !</p>
+              {% if participation.attestation_reglee %}
               <p class="mt-1">Votre attestation N° {{ participation.numero_attestation }} est prête.</p>
+              {% else %}
+              <p class="mt-1">Votre attestation N° {{ participation.numero_attestation }} est prête : réglez {{ participation.montant_attestation_du|intcomma }} FCFA en ligne pour la télécharger. Elle vous sera aussi envoyée par e-mail.</p>
+              {% endif %}
             </div>
             {% include 'webinaires/_action.html' with bloc=1 %}
             {% elif participation %}
@@ -156,7 +160,7 @@
         </div>
 
         <dl class="grid grid-cols-2 border-t border-slate-100 text-center text-sm">
-          <div class="p-4 border-r border-slate-100"><dt class="text-xs text-slate-500">Tarif</dt><dd class="mt-1 font-black text-emerald-600">Gratuit</dd></div>
+          <div class="p-4 border-r border-slate-100"><dt class="text-xs text-slate-500">Tarif</dt><dd class="mt-1 font-black text-emerald-600">Gratuit</dd>{% if w.attestation_payante %}<dd class="text-xs text-slate-500">Attestation : {{ w.prix_attestation|intcomma }} F</dd>{% endif %}</div>
           <div class="p-4"><dt class="text-xs text-slate-500">Places</dt><dd class="mt-1 font-black text-slate-900">{% if w.places %}{{ w.places_restantes }} restante{{ w.places_restantes|pluralize }}{% else %}Illimitées{% endif %}</dd></div>
         </dl>
         <ul class="grid gap-2 border-t border-slate-100 p-5 text-xs text-slate-500">
