@@ -110,6 +110,20 @@ class CandidatureAdminTests(TestCase):
         self.assertEqual(response.context['mois_stats']['total'], 2)
         self.assertEqual(response.context['mois_stats']['retenues'], 1)
 
+    def test_synthese_compte_les_statuts_changes_ce_mois(self):
+        # Candidature reçue il y a deux mois, refusée aujourd'hui : elle doit apparaître dans le pipeline du mois
+        ancienne = Candidature.objects.create(offre=self.offre, nom='Dossou', prenom='Ali', email='ali@example.com',
+                                              telephone='0197000002', cv=fichier())
+        Candidature.objects.filter(pk=ancienne.pk).update(created_at=timezone.now() - timedelta(days=62))
+        ancienne.refresh_from_db()
+        ancienne.statut = 'refusee'
+        ancienne.save()
+        response = self.client.get(reverse('admin:carrieres_candidature_changelist'))
+        pipeline = {code: n for code, _, n, _ in response.context['mois_statuts']}
+        self.assertEqual(pipeline['refusee'], 2)
+        self.assertEqual(pipeline['retenue'], 1)
+        self.assertEqual(response.context['mois_stats']['total'], 2)  # reçues ce mois-ci
+
     def test_zip_des_retenus_du_mois(self):
         today = timezone.localdate()
         response = self.client.get(reverse('admin:carrieres_candidature_export_retenues'),

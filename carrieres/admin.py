@@ -327,9 +327,16 @@ class CandidatureAdmin(admin.ModelAdmin):
         return Candidature.objects.select_related('offre').filter(
             created_at__date__gte=debut, created_at__date__lte=fin)
 
+    def _candidatures_actives(self, debut, fin):
+        """Reçues OU dont le statut a changé sur la période : une candidature d'un mois précédent
+        refusée ou retenue ce mois-ci compte dans le pipeline du mois."""
+        return Candidature.objects.select_related('offre').filter(
+            Q(created_at__date__gte=debut, created_at__date__lte=fin)
+            | Q(statut_modifie_le__date__gte=debut, statut_modifie_le__date__lte=fin))
+
     def export_retenues_view(self, request):
         debut, fin, libelle, year, month = self._periode(request)
-        qs = self._candidatures_periode(debut, fin).filter(statut=Candidature.STATUT_RETENUE).order_by('nom')
+        qs = self._candidatures_actives(debut, fin).filter(statut=Candidature.STATUT_RETENUE).order_by('nom')
         return zip_dossiers(qs, f"KcoMat_candidatures_retenues_{year}-{month:02d}" if month else f"KcoMat_candidatures_retenues_{year}")
 
     def export_rapport_view(self, request):
@@ -343,10 +350,11 @@ class CandidatureAdmin(admin.ModelAdmin):
     def changelist_view(self, request, extra_context=None):
         debut, fin, libelle, year, month = self._periode(request)
         qs = self._candidatures_periode(debut, fin)
-        stats = qs.aggregate(total=Count('id'), score=Avg('score_auto'), note=Avg('note'),
-                             a_traiter=Count('id', filter=Q(statut__in=['nouvelle', 'en_revue'])),
-                             retenues=Count('id', filter=Q(statut='retenue')))
-        par_statut = dict(qs.values_list('statut').annotate(n=Count('id')))
+        actives = self._candidatures_actives(debut, fin)
+        stats = qs.aggregate(total=Count('id'), score=Avg('score_auto'), note=Avg('note'))
+        stats.update(actives.aggregate(a_traiter=Count('id', filter=Q(statut__in=['nouvelle', 'en_revue'])),
+                                       retenues=Count('id', filter=Q(statut='retenue'))))
+        par_statut = dict(actives.values_list('statut').annotate(n=Count('id')).order_by())
         par_type = dict(qs.values_list('offre__type_offre').annotate(n=Count('id')))
         query = f"?year={year}&month={month}"
         extra_context = {
