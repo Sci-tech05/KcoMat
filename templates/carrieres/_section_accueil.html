@@ -1,5 +1,5 @@
 {% load humanize kcomat_tags %}{% comment %}
-Accueil : offres de carrière ouvertes (à la une d'abord), en carrousel qui avance d'une carte toutes les 1,5 s.
+Accueil : offres de carrière ouvertes (à la une d'abord), en carrousel à défilement continu (comme les services).
 Paramètre : offres_accueil
 {% endcomment %}
 {% if offres_accueil %}
@@ -23,7 +23,7 @@ Paramètre : offres_accueil
     </div>
   </div>
 
-  <div id="offres-track" class="svc-track crl-light" data-carrousel data-toujours data-intervalle="1500" tabindex="0" role="region" aria-roledescription="carrousel" aria-label="Offres de carrière">
+  <div id="offres-track" class="svc-track crl-light" data-carrousel data-toujours tabindex="0" role="region" aria-roledescription="carrousel" aria-label="Offres de carrière">
     {% for pass in "123" %}{% for offre in offres_accueil %}
     <a href="{% url 'carrieres:detail' offre.slug %}" class="car-card car-slide group" {% if not forloop.parentloop.first %}data-clone hidden aria-hidden="true" tabindex="-1"{% endif %}>
       <span class="car-card__media block">

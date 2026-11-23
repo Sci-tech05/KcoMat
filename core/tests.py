@@ -441,7 +441,7 @@ class ALaUneEtCarrouselsTests(TestCase):
         accueil = self.client.get('/')
         avant(accueil, 'ZZZ à la une', 'AAA classique')
 
-    def test_carrousels_offres_puis_webinaires_a_1_5_s(self):
+    def test_carrousels_offres_puis_webinaires_defilement_continu(self):
         from carrieres.models import Offre
         from webinaires.models import Webinaire
         debut = timezone.now() + timedelta(days=2)
@@ -457,8 +457,13 @@ class ALaUneEtCarrouselsTests(TestCase):
         self.assertIn('id="offres-track"', contenu)
         self.assertIn('id="webinaires-track"', contenu)
         self.assertLess(contenu.index('id="offres-track"'), contenu.index('id="webinaires-track"'))
+        # même défilement continu que le bloc services, sur tous les carrousels de l'accueil
+        self.assertNotIn('data-intervalle', contenu)
+        self.assertNotIn('data-vitesse', contenu)
         for piste in ('offres-track', 'webinaires-track'):
             balise = contenu[contenu.index(f'id="{piste}"'):].split('>', 1)[0]
-            self.assertIn('data-intervalle="1500"', balise)
+            self.assertIn('data-toujours', balise)
+        self.assertNotIn('Apprenants formés', contenu)
+        self.assertNotIn('À propos de KcoMat', contenu)
         self.assertLess(contenu.index('Stage vedette'), contenu.index('Stage classique'))
         self.assertNotIn('Offre close', contenu)

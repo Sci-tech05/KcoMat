@@ -1,4 +1,4 @@
-{% comment %}Accueil : les prochains webinaires, en carrousel qui avance d'une carte toutes les 1,5 s. Paramètre : webinaires_accueil{% endcomment %}
+{% comment %}Accueil : les prochains webinaires, en carrousel à défilement continu (comme les services). Paramètre : webinaires_accueil{% endcomment %}
 {% if webinaires_accueil %}
 <section id="webinaires" class="py-14 sm:py-16 bg-slate-50 border-b border-slate-100 overflow-hidden" aria-labelledby="webinaires-title">
   <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -20,7 +20,7 @@
     </div>
   </div>
 
-  <div id="webinaires-track" class="svc-track crl-light" data-carrousel data-toujours data-intervalle="1500" tabindex="0" role="region" aria-roledescription="carrousel" aria-label="Prochains webinaires">
+  <div id="webinaires-track" class="svc-track crl-light" data-carrousel data-toujours tabindex="0" role="region" aria-roledescription="carrousel" aria-label="Prochains webinaires">
       {% for pass in "123" %}{% for w in webinaires_accueil %}
       <article class="wb-tile wb-slide group" style="{{ w.theme_style }}" {% if not forloop.parentloop.first %}data-clone hidden aria-hidden="true"{% endif %}>
         <a href="{% url 'webinaires:detail' w.slug %}" class="block" tabindex="-1" aria-hidden="true">{% include 'webinaires/_couverture.html' with largeur=800 %}</a>

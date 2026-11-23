@@ -1592,3 +1592,16 @@ a.kx-credit-photo:hover { color: #0F172A; text-decoration: underline; }
 .car-slide, .wb-slide { flex: 0 0 auto; width: 17.5rem; user-select: none; -webkit-user-drag: none; }
 @media (min-width: 640px) { .car-slide, .wb-slide { width: 21rem; } }
 .svc-track.is-dragging .car-slide, .svc-track.is-dragging .wb-slide { pointer-events: none; }
+
+/* Accueil : image des services dans le carrousel (comme les formations) ; l'icône chevauche le bas du visuel */
+.svc-slide__media {
+    position: relative; display: block; margin: -1.6rem -1.5rem 0; aspect-ratio: 16 / 9; overflow: hidden; background: #0F172A;
+}
+.svc-slide__media img { display: block; width: 100%; height: 100%; object-fit: cover; transition: transform .7s cubic-bezier(.22, 1, .36, 1); }
+.svc-slide__media::after { content: ''; position: absolute; inset: 0; background: linear-gradient(180deg, transparent 45%, rgba(2, 6, 23, .7)); }
+.svc-slide:hover .svc-slide__media img { transform: scale(1.06); }
+.svc-slide--image .svc-slide__icon { margin-top: -1.75rem; margin-left: .25rem; width: 3.25rem; height: 3.25rem; z-index: 1; }
+.svc-slide--image .svc-slide__num {
+    z-index: 2; padding: .15rem .45rem; border-radius: .5rem; color: #E2E8F0; background: rgba(2, 6, 23, .55);
+}
+.svc-slide--image h3 { margin-top: 1rem; }

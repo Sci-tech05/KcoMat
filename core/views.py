@@ -8,7 +8,7 @@ from django.views.decorators.http import require_GET
 from django.conf import settings
 from django.db.models import Q
 from django.utils import timezone
-from .models import TeamMember, Temoignage, Statistique
+from .models import TeamMember, Temoignage
 from .forms import ContactForm
 from .notifications_admin import notifier_admin
 from formations.models import Formation
@@ -29,7 +29,6 @@ def accueil(request):
     projets_vedette = (Projet.objects.filter(actif=True).select_related('categorie')
                        .order_by('-en_vedette', '-date_realisation', '-created_at')[:10])
     temoignages = Temoignage.objects.filter(actif=True)[:6]
-    statistiques = Statistique.objects.all()[:6]
     # webinaires à venir (ou en direct), en carrousel sous le héros
     webinaires_accueil = contexte_cartes(request, list(avec_inscrits(Webinaire.objects.a_venir())[:10]))
     # offres de carrière ouvertes (à la une d'abord), en carrousel au-dessus des webinaires
@@ -44,7 +43,6 @@ def accueil(request):
         'produits_vedette': produits_vedette,
         'projets_vedette': projets_vedette,
         'temoignages': temoignages,
-        'statistiques': statistiques,
         'title': 'Accueil',
     }
     return render(request, 'core/accueil.html', ctx)
