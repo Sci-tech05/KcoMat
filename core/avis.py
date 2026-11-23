@@ -40,7 +40,7 @@ def achat_verifie(objet, utilisateur):
         ).exists()
     from formations.models import Inscription
     return Inscription.objects.filter(
-        formation=objet, utilisateur=utilisateur, statut__in=['frais_payes', 'complet', 'termine'],
+        formation=objet, utilisateur=utilisateur, statut__in=['frais_payes', 'acompte', 'complet', 'termine'],
     ).exists()
 
 

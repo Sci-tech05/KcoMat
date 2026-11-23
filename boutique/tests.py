@@ -528,3 +528,63 @@ class ComposantsRetiresTests(TestCase):
         from boutique.models import ProduitRetire
         Produit.objects.create(nom='Article perso', description_courte='x', description='x', prix=100).delete()
         self.assertFalse(ProduitRetire.objects.exists())
+
+
+@override_settings(EMAIL_BACKEND='django.core.mail.backends.locmem.EmailBackend')
+class PaiementDeuxTranchesCommandeTests(TestCase):
+    FETCH = 'api.fedapay_service.fetch_fedapay_transaction'
+    CREATE = 'boutique.views.create_fedapay_transaction'
+
+    def setUp(self):
+        self.user = User.objects.create_user('ami', 'ami@example.com', 'pw-ami-12345')
+        self.client.force_login(self.user)
+        self.commande = Commande.objects.create(
+            utilisateur=self.user, nom='DOSSOU', prenom='Awa', email='ami@example.com', telephone='0196000000',
+            adresse_livraison='Rue 1', ville='Lokossa', montant_total=10001, mode_paiement='deux_tranches')
+
+    def transaction(self, tx_id, montant, type_):
+        return {'id': tx_id, 'status': 'approved', 'amount': montant, 'currency': {'iso': 'XOF'},
+                'custom_metadata': {'type': type_, 'commande_id': str(self.commande.pk)}}
+
+    def creer(self, tx_id):
+        return patch(self.CREATE, return_value={'success': True, 'transaction_id': tx_id, 'token': 't',
+                                                'checkout_url': 'https://checkout.fedapay.com/checkout/t'})
+
+    def test_premiere_tranche_puis_solde(self):
+        with self.creer(11) as create:
+            r = self.client.get(reverse('boutique:paiement', args=[self.commande.pk]))
+        self.assertEqual(create.call_args.args[0]['amount'], 5001)       # moitié arrondie au franc supérieur
+        self.assertContains(r, '1re tranche (50 %)')
+        with patch(self.FETCH, return_value=self.transaction(11, 5001, 'commande')):
+            self.client.get(reverse('boutique:succes_commande', args=[self.commande.pk]))
+        self.commande.refresh_from_db()
+        self.assertEqual((self.commande.statut, self.commande.montant_paye, self.commande.reste_a_payer), ('payee', 5001, 5000))
+        self.assertContains(self.client.get(reverse('boutique:suivi_commande', args=[self.commande.pk])), 'Payer le solde')
+
+        with self.creer(12) as create:
+            self.client.get(reverse('boutique:paiement_solde', args=[self.commande.pk]))
+        payload = create.call_args.args[0]
+        self.assertEqual((payload['amount'], payload['metadata']['type']), (5000, 'commande_solde'))
+        transactions = {'11': self.transaction(11, 5001, 'commande'), '12': self.transaction(12, 5000, 'commande_solde')}
+        with patch(self.FETCH, side_effect=lambda tx: transactions.get(str(tx), {})):
+            r = self.client.get(reverse('boutique:suivi_commande', args=[self.commande.pk]))
+        self.commande.refresh_from_db()
+        self.assertIsNotNone(self.commande.solde_paye_le)
+        self.assertEqual(self.commande.reste_a_payer, 0)
+        self.assertNotContains(r, 'Payer le solde')
+
+    def test_solde_d_un_mauvais_montant_refuse(self):
+        from django.utils import timezone
+        Commande.objects.filter(pk=self.commande.pk).update(statut='payee', payee_le=timezone.now(), fedapay_solde_id='12')
+        with patch(self.FETCH, return_value=self.transaction(12, 100, 'commande_solde')):
+            self.client.get(reverse('boutique:suivi_commande', args=[self.commande.pk]))
+        self.commande.refresh_from_db()
+        self.assertIsNone(self.commande.solde_paye_le)
+
+    def test_paiement_total_inchange(self):
+        Commande.objects.filter(pk=self.commande.pk).update(mode_paiement='total')
+        with self.creer(13) as create:
+            self.client.get(reverse('boutique:paiement', args=[self.commande.pk]))
+        self.assertEqual(create.call_args.args[0]['amount'], 10001)
+        self.commande.refresh_from_db()
+        self.assertEqual(self.commande.montant_solde, 0)

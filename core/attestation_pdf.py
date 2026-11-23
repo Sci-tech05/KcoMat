@@ -1,0 +1,244 @@
+"""Gabarit commun des attestations KcoMat (PDF A4 paysage) : webinaires, formations, formateurs.
+
+Cadre, en-tête entreprise, titre, nom du bénéficiaire, intitulé, QR de vérification, cachet et signature.
+"""
+from dataclasses import dataclass
+from io import BytesIO
+from pathlib import Path
+
+from django.conf import settings
+from django.http import HttpResponse
+from reportlab.graphics import renderPDF
+from reportlab.graphics.barcode.qr import QrCodeWidget
+from reportlab.graphics.shapes import Drawing
+from reportlab.lib import colors
+from reportlab.lib.pagesizes import A4, landscape
+from reportlab.lib.utils import ImageReader, simpleSplit
+from reportlab.pdfgen import canvas
+
+from core.pdf_invoices import _company_info, _logo_path
+
+NAVY = colors.HexColor('#0B1F4D')
+BLEU = colors.HexColor('#0A84FF')
+CYAN = colors.HexColor('#22D3EE')
+OR = colors.HexColor('#C9A227')
+GRIS = colors.HexColor('#5B6475')
+FILET = colors.HexColor('#D6DCE5')
+
+
+# Cachet et signature : dossier non versionné (le dépôt GitHub est public), à déposer sur le serveur
+DOSSIER_PRIVE = Path(settings.BASE_DIR) / 'prive'
+
+
+@dataclass
+class Attestation:
+    titre: str                  # « ATTESTATION DE PARTICIPATION »
+    numero: str                 # « KCO-WEB-2026-00012 »
+    beneficiaire: str           # nom complet, imprimé en capitales
+    action: str                 # « a pris part au webinaire »
+    intitule: str               # titre du webinaire / de la formation (imprimé entre guillemets)
+    details: str                # phrase de contexte sous l'intitulé
+    fait_le: str                # « 7 novembre 2026 »
+    url_verification: str       # encodée dans le QR
+    chemin_verification: str    # affiché sous le QR
+    mention_cachet: str = 'ATTESTATION'   # bas du cachet dessiné (sans image de cachet)
+
+
+def _image_privee(nom):
+    chemin = DOSSIER_PRIVE / nom
+    return str(chemin) if chemin.exists() else None
+
+
+def site_url():
+    return (getattr(settings, 'FEDAPAY_APP_URL', '') or 'https://kcomat0.pythonanywhere.com').rstrip('/')
+
+
+def _texte_centre(pdf, texte, x, y, police, taille, largeur_max, interligne=None):
+    """Texte centré sur plusieurs lignes si besoin ; renvoie le y sous le bloc."""
+    lignes = simpleSplit(texte, police, taille, largeur_max)
+    pdf.setFont(police, taille)
+    for ligne in lignes:
+        pdf.drawCentredString(x, y, ligne)
+        y -= interligne or taille * 1.25
+    return y
+
+
+def _qr(pdf, donnees, x, y, taille):
+    widget = QrCodeWidget(donnees)
+    widget.barFillColor = NAVY
+    x0, y0, x1, y1 = widget.getBounds()
+    dessin = Drawing(taille, taille, transform=[taille / (x1 - x0), 0, 0, taille / (y1 - y0), 0, 0])
+    dessin.add(widget)
+    renderPDF.draw(dessin, pdf, x, y)
+
+
+def _cachet(pdf, cx, cy, nom, mention):
+    """Cachet dessiné, utilisé seulement si prive/cachet_kcomat.png est absent."""
+    pdf.saveState()
+    pdf.setStrokeColor(BLEU)
+    pdf.setFillColor(BLEU)
+    pdf.setLineWidth(1.6)
+    pdf.circle(cx, cy, 38, stroke=1, fill=0)
+    pdf.setLineWidth(0.7)
+    pdf.circle(cx, cy, 32, stroke=1, fill=0)
+    pdf.setFont('Helvetica-Bold', 11)
+    pdf.drawCentredString(cx, cy + 2, nom.upper())
+    pdf.setFont('Helvetica', 6.2)
+    pdf.drawCentredString(cx, cy - 8, 'LOKOSSA · BÉNIN')
+    pdf.setFont('Helvetica-Bold', 5.6)
+    pdf.drawCentredString(cx, cy + 17, '★ CERTIFIÉ ★')
+    pdf.drawCentredString(cx, cy - 21, mention)
+    pdf.restoreState()
+
+
+def generer_pdf(attestation):
+    a = attestation
+    entreprise = _company_info()
+    largeur, hauteur = landscape(A4)
+    tampon = BytesIO()
+    pdf = canvas.Canvas(tampon, pagesize=(largeur, hauteur))
+    pdf.setTitle(f"{a.titre.capitalize()} — {a.beneficiaire}")
+    pdf.setAuthor(entreprise['name'])
+    pdf.setSubject(a.intitule)
+
+    # Fond et encadrements
+    pdf.setFillColor(colors.HexColor('#FBFCFF'))
+    pdf.rect(0, 0, largeur, hauteur, stroke=0, fill=1)
+    pdf.setFillColor(NAVY)
+    pdf.rect(0, hauteur - 14, largeur, 14, stroke=0, fill=1)
+    pdf.rect(0, 0, largeur, 14, stroke=0, fill=1)
+    pdf.setFillColor(CYAN)
+    pdf.rect(0, hauteur - 18, largeur * 0.42, 4, stroke=0, fill=1)
+    pdf.setFillColor(BLEU)
+    pdf.rect(largeur * 0.58, 14, largeur * 0.42, 4, stroke=0, fill=1)
+    pdf.setStrokeColor(OR)
+    pdf.setLineWidth(1.2)
+    pdf.roundRect(30, 34, largeur - 60, hauteur - 68, 10, stroke=1, fill=0)
+    pdf.setStrokeColor(FILET)
+    pdf.setLineWidth(0.6)
+    pdf.roundRect(37, 41, largeur - 74, hauteur - 82, 7, stroke=1, fill=0)
+
+    # Filigrane
+    pdf.saveState()
+    pdf.setFillColor(colors.HexColor('#EEF3FB'))
+    pdf.setFont('Helvetica-Bold', 120)
+    pdf.translate(largeur / 2, hauteur / 2 - 30)
+    pdf.rotate(18)
+    pdf.drawCentredString(0, 0, entreprise['name'].upper())
+    pdf.restoreState()
+
+    # En-tête : logo + entreprise / numéro
+    haut = hauteur - 62
+    logo = _logo_path()
+    if logo:
+        try:
+            pdf.drawImage(ImageReader(str(logo)), 58, haut - 40, width=50, height=50, preserveAspectRatio=True, mask='auto')
+        except Exception:
+            pass
+    pdf.setFillColor(NAVY)
+    pdf.setFont('Helvetica-Bold', 17)
+    pdf.drawString(118, haut - 8, entreprise['name'])
+    pdf.setFillColor(GRIS)
+    pdf.setFont('Helvetica', 8.5)
+    pdf.drawString(118, haut - 21, "Formations · Composants électroniques · Solutions technologiques")
+    pdf.drawString(118, haut - 32, entreprise['address'])
+
+    pdf.setFont('Helvetica', 8.5)
+    pdf.drawRightString(largeur - 58, haut - 8, "Attestation N°")
+    pdf.setFillColor(NAVY)
+    pdf.setFont('Helvetica-Bold', 11)
+    pdf.drawRightString(largeur - 58, haut - 22, a.numero)
+
+    # Titre
+    centre = largeur / 2
+    y = hauteur - 150
+    pdf.setFillColor(NAVY)
+    pdf.setFont('Helvetica-Bold', 30 if len(a.titre) <= 30 else 26)
+    pdf.drawCentredString(centre, y, a.titre)
+    pdf.setStrokeColor(OR)
+    pdf.setLineWidth(1.4)
+    pdf.line(centre - 70, y - 13, centre + 70, y - 13)
+    pdf.setFillColor(OR)
+    pdf.circle(centre, y - 13, 2.6, stroke=0, fill=1)
+
+    y -= 46
+    pdf.setFillColor(GRIS)
+    pdf.setFont('Helvetica', 12)
+    pdf.drawCentredString(centre, y, f"L'Entreprise {entreprise['name']} atteste que")
+
+    y -= 40
+    pdf.setFillColor(NAVY)
+    y = _texte_centre(pdf, a.beneficiaire.upper(), centre, y, 'Helvetica-Bold', 28, largeur - 200)
+    pdf.setStrokeColor(FILET)
+    pdf.setLineWidth(0.8)
+    pdf.line(centre - 180, y + 18, centre + 180, y + 18)
+
+    y -= 8
+    pdf.setFillColor(GRIS)
+    pdf.setFont('Helvetica', 12)
+    pdf.drawCentredString(centre, y, a.action)
+    y -= 28
+    pdf.setFillColor(BLEU)
+    y = _texte_centre(pdf, f"« {a.intitule} »", centre, y, 'Helvetica-Bold', 18, largeur - 220, 23)
+
+    y -= 6
+    pdf.setFillColor(colors.HexColor('#334155'))
+    _texte_centre(pdf, a.details, centre, y, 'Helvetica', 11, largeur - 260, 15)
+
+    # Bas : QR de vérification | lieu et date | signature + cachet
+    bas = 66
+    _qr(pdf, a.url_verification, 60, bas, 74)
+    pdf.setFillColor(GRIS)
+    pdf.setFont('Helvetica', 7.5)
+    pdf.drawString(142, bas + 54, "Authenticité vérifiable en scannant")
+    pdf.drawString(142, bas + 44, "le QR code, ou sur :")
+    pdf.setFillColor(NAVY)
+    pdf.setFont('Helvetica-Bold', 7.5)
+    pdf.drawString(142, bas + 31, site_url().replace('https://', ''))
+    pdf.drawString(142, bas + 20, a.chemin_verification)
+
+    pdf.setFillColor(colors.HexColor('#334155'))
+    pdf.setFont('Helvetica-Oblique', 10.5)
+    pdf.drawCentredString(centre, bas + 112, f"Fait à Lokossa, le {a.fait_le}")
+
+    # Signataire : titre, puis cachet et signature superposés comme sur un document tamponné
+    signature_cx = largeur - 165
+    pdf.setFillColor(NAVY)
+    pdf.setFont('Helvetica-Bold', 10.5)
+    pdf.drawCentredString(signature_cx, bas + 118, f"Pour {entreprise['name']},")
+    pdf.setFont('Helvetica', 9.5)
+    pdf.setFillColor(GRIS)
+    pdf.drawCentredString(signature_cx, bas + 105, "Le Directeur")
+    cachet, signature = _image_privee('cachet_kcomat.png'), _image_privee('signature_kcomat.png')
+    if cachet:
+        pdf.drawImage(cachet, signature_cx - 92, bas - 8, width=96, height=96, preserveAspectRatio=True, mask='auto')
+    else:
+        _cachet(pdf, signature_cx - 44, bas + 40, entreprise['name'], a.mention_cachet)
+    if signature:
+        pdf.drawImage(signature, signature_cx - 30, bas - 2, width=96, height=90, preserveAspectRatio=True, mask='auto')
+    else:
+        pdf.setStrokeColor(NAVY)
+        pdf.setLineWidth(0.8)
+        pdf.line(signature_cx - 10, bas + 18, signature_cx + 70, bas + 18)
+
+    # Pied de page légal
+    legal = [entreprise['name']]
+    if entreprise['ifu']:
+        legal.append(f"IFU : {entreprise['ifu']}")
+    if entreprise['rccm']:
+        legal.append(f"RCCM : {entreprise['rccm']}")
+    legal += [entreprise['phone'], entreprise['email'], site_url().replace('https://', '')]
+    pdf.setFillColor(GRIS)
+    pdf.setFont('Helvetica', 7.5)
+    pdf.drawCentredString(centre, 46, '  ·  '.join(legal))
+
+    pdf.showPage()
+    pdf.save()
+    return tampon.getvalue()
+
+
+def reponse_pdf(contenu, nom_fichier, telechargement=True):
+    response = HttpResponse(contenu, content_type='application/pdf')
+    mode = 'attachment' if telechargement else 'inline'
+    response['Content-Disposition'] = f'{mode}; filename="{nom_fichier}"'
+    return response

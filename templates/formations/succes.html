@@ -52,7 +52,11 @@
                     {% if inscription %}
                     {% if inscription.statut == 'frais_payes' %}
                     <a href="{% url 'formations:paiement_formation' inscription.pk %}" class="inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-emerald-950 font-black px-5 py-3 transition-colors">
-                        Payer la formation - {{ inscription.formation.prix|intcomma }} FCFA
+                        Payer la formation - {{ inscription.formation.prix|intcomma }} FCFA (en 1 ou 2 fois)
+                    </a>
+                    {% elif inscription.statut == 'acompte' %}
+                    <a href="{% url 'formations:paiement_formation' inscription.pk %}" class="inline-flex items-center justify-center gap-2 rounded-xl bg-amber-400 hover:bg-amber-300 text-amber-950 font-black px-5 py-3 transition-colors">
+                        Payer le solde - {{ inscription.reste_formation|intcomma }} FCFA
                     </a>
                     {% endif %}
                     <a href="{% url 'formations:facture_frais' inscription.pk %}" target="_blank" class="inline-flex items-center justify-center gap-2 rounded-xl border border-white/20 bg-white/5 hover:bg-white/10 text-white font-semibold px-5 py-3 transition-colors">

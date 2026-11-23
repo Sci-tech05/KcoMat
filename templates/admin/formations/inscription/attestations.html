@@ -1,0 +1,49 @@
+{% extends "admin/base_site.html" %}
+
+{% block content %}
+<div class="card card-primary card-outline">
+  <div class="card-body">
+    <p>
+      Les attestations indiquent la période de la session suivie. Renseignez-la une fois pour
+      <b>{{ inscriptions|length }} inscrit{{ inscriptions|length|pluralize }}</b> ; elle est enregistrée sur chaque inscription.
+    </p>
+    {% if ignorees %}
+    <p class="text-warning"><i class="fas fa-exclamation-triangle mr-1"></i>
+      {{ ignorees }} inscription{{ ignorees|pluralize }} sélectionnée{{ ignorees|pluralize }} ignorée{{ ignorees|pluralize }} : formation pas entièrement payée.</p>
+    {% endif %}
+
+    <form method="post">
+      {% csrf_token %}
+      <input type="hidden" name="action" value="{{ action }}">
+      <input type="hidden" name="appliquer_dates" value="1">
+      {% for pk in selection %}<input type="hidden" name="{{ action_checkbox_name }}" value="{{ pk }}">{% endfor %}
+
+      <div class="form-row">
+        {% for field in form %}
+        <div class="form-group col-sm-4">
+          <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+          <input type="date" name="{{ field.html_name }}" id="{{ field.id_for_label }}" class="form-control"
+                 value="{{ field.value|date:'Y-m-d'|default:field.value|default:'' }}" required>
+          {% for erreur in field.errors %}<small class="text-danger">{{ erreur }}</small>{% endfor %}
+        </div>
+        {% endfor %}
+      </div>
+
+      {% if inscriptions %}
+      <table class="table table-sm table-striped mt-2">
+        <thead><tr><th>Inscrit</th><th>Formation</th><th>Mode</th><th>E-mail</th></tr></thead>
+        <tbody>
+          {% for i in inscriptions %}
+          <tr><td>{{ i.prenom }} {{ i.nom }}</td><td>{{ i.formation.titre }}</td><td>{{ i.get_mode_preference_display }}</td><td>{{ i.email }}</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      <button type="submit" class="btn btn-primary"><i class="fas fa-certificate mr-1"></i> {{ libelle }}</button>
+      {% else %}
+      <p>Aucune inscription payée dans la sélection.</p>
+      {% endif %}
+      <a href="{% url 'admin:formations_inscription_changelist' %}" class="btn btn-default ml-2">Annuler</a>
+    </form>
+  </div>
+</div>
+{% endblock %}

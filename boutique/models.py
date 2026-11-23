@@ -3,6 +3,8 @@ from django.utils import timezone
 from django.contrib.auth.models import User
 from django.utils.text import slugify
 
+from core import tranches
+
 
 class CategorieProduit(models.Model):
     nom = models.CharField(max_length=100)
@@ -168,8 +170,12 @@ class Commande(models.Model):
     notes = models.TextField(blank=True)
     statut = models.CharField(max_length=20, choices=STATUT_CHOICES, default='en_attente')
     montant_total = models.DecimalField(max_digits=12, decimal_places=0)
+    mode_paiement = models.CharField("Mode de paiement", max_length=20, choices=tranches.CHOIX, default=tranches.TOTAL)
     fedapay_transaction_id = models.CharField(max_length=100, blank=True)
     payee_le = models.DateTimeField(null=True, blank=True)
+    # 2e tranche (paiement en deux fois)
+    fedapay_solde_id = models.CharField("Transaction FedaPay du solde", max_length=100, blank=True)
+    solde_paye_le = models.DateTimeField("Solde payé le", null=True, blank=True)
     # Suivi visible par le client : dates remplies automatiquement au changement de statut
     preparee_le = models.DateTimeField('Mise en préparation le', null=True, blank=True)
     expediee_le = models.DateTimeField('Expédiée le', null=True, blank=True)
@@ -203,6 +209,34 @@ class Commande(models.Model):
         instance = super().from_db(db, field_names, values)
         instance._statut_initial = instance.__dict__.get('statut')
         return instance
+
+    # ------------------------------------------------------------------ paiement en deux tranches
+    @property
+    def en_deux_tranches(self):
+        return self.mode_paiement == tranches.DEUX_TRANCHES
+
+    @property
+    def montant_premier_paiement(self):
+        """Montant demandé à la commande : la moitié en deux tranches, sinon le total."""
+        return tranches.premiere_tranche(self.montant_total) if self.en_deux_tranches else int(self.montant_total)
+
+    @property
+    def montant_solde(self):
+        return tranches.solde(self.montant_total) if self.en_deux_tranches else 0
+
+    @property
+    def premier_paiement_recu(self):
+        return self.payee_le is not None
+
+    @property
+    def reste_a_payer(self):
+        if not self.premier_paiement_recu:
+            return int(self.montant_total)
+        return self.montant_solde if self.en_deux_tranches and self.solde_paye_le is None else 0
+
+    @property
+    def montant_paye(self):
+        return int(self.montant_total) - self.reste_a_payer if self.premier_paiement_recu else 0
 
     @property
     def statut_a_change(self):

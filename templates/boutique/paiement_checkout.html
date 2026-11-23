@@ -57,8 +57,18 @@
                 </div>
 
                 <div class="mt-5 rounded-2xl bg-blue-50 border border-blue-100 p-4">
+                    {% if montant_a_payer %}
+                    <p class="text-xs uppercase tracking-[0.16em] text-blue-600 font-bold">{{ libelle_paiement }}</p>
+                    <p class="mt-2 text-3xl font-black text-blue-900">{{ montant_a_payer|intcomma }} <span class="text-sm font-semibold">FCFA</span></p>
+                    <p class="mt-1 text-xs text-blue-700">Sur un total de {{ commande.montant_total|intcomma }} FCFA</p>
+                    {% elif commande.en_deux_tranches %}
+                    <p class="text-xs uppercase tracking-[0.16em] text-blue-600 font-bold">1re tranche (50 %)</p>
+                    <p class="mt-2 text-3xl font-black text-blue-900">{{ commande.montant_premier_paiement|intcomma }} <span class="text-sm font-semibold">FCFA</span></p>
+                    <p class="mt-1 text-xs text-blue-700">Total {{ commande.montant_total|intcomma }} FCFA · solde de {{ commande.montant_solde|intcomma }} FCFA à régler avant l'expédition</p>
+                    {% else %}
                     <p class="text-xs uppercase tracking-[0.16em] text-blue-600 font-bold">Montant total</p>
                     <p class="mt-2 text-3xl font-black text-blue-900">{{ commande.montant_total|intcomma }} <span class="text-sm font-semibold">FCFA</span></p>
+                    {% endif %}
                 </div>
 
                 {% if commande.items.all %}

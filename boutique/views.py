@@ -14,6 +14,7 @@ from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST
 from django.utils import timezone
 from .models import Produit, CategorieProduit, Panier, PanierItem, Commande, CommandeItem
+from core import tranches
 from core.avis import resume as resume_avis
 from core.notifications_admin import notifier_admin
 from .forms import CommandeForm
@@ -32,7 +33,7 @@ def _verify_commande_payment(commande, candidate_id=None):
     validated_id = verify_fedapay_payment(
         stored_transaction_id=commande.fedapay_transaction_id,
         candidate_transaction_id=candidate_id,
-        expected_amount=int(commande.montant_total),
+        expected_amount=commande.montant_premier_paiement,
         expected_type='commande',
         ref_key='commande_id',
         expected_ref=commande.pk,
@@ -138,11 +139,30 @@ def _build_commande_invoice_response(commande):
         customer_email=commande.email,
         customer_phone=commande.telephone,
         customer_address=commande.adresse_livraison,
-        status_label=commande.get_statut_display(),
+        status_label=_libelle_paiement(commande),
         items=items,
         total_amount=commande.montant_total,
-        note='Merci pour votre achat chez KcoMat.',
+        note=_note_paiement(commande),
     )
+
+
+def _libelle_paiement(commande):
+    if not commande.premier_paiement_recu:
+        return 'En attente de paiement'
+    if commande.reste_a_payer:
+        return '1re tranche payee (50 %)'
+    return 'Payee'
+
+
+def _note_paiement(commande):
+    if not commande.en_deux_tranches:
+        return 'Merci pour votre achat chez KcoMat.'
+    note = (f"Paiement en 2 tranches - 1re tranche : {tranches.fcfa(commande.montant_premier_paiement)}, "
+            f"solde : {tranches.fcfa(commande.montant_solde)}.")
+    if commande.premier_paiement_recu:
+        note += (f" Reste a payer : {tranches.fcfa(commande.reste_a_payer)}." if commande.reste_a_payer
+                 else " Commande entierement reglee.")
+    return note
 
 
 def _send_commande_invoice_email(commande):
@@ -158,7 +178,11 @@ def _send_commande_invoice_email(commande):
         f"Votre paiement a ete confirme.\n"
         f"Veuillez trouver votre facture en piece jointe.\n\n"
         f"Commande: #{commande.pk}\n"
-        f"Montant: {commande.montant_total} FCFA\n\n"
+        f"Montant total: {tranches.fcfa(commande.montant_total)}\n"
+        f"Deja paye: {tranches.fcfa(commande.montant_paye)}\n"
+        + (f"Reste a payer (2e tranche): {tranches.fcfa(commande.reste_a_payer)}, a regler depuis la page de suivi "
+           f"de votre commande avant l'expedition.\n" if commande.reste_a_payer else "")
+        + "\n"
         "Merci pour votre confiance.\n"
         "KcoMat"
     )
@@ -181,9 +205,14 @@ def _notifier_admin_commande(commande, request=None):
     notifier_admin(
         type_evenement='commande', sujet=f"Commande payée #{commande.pk} — {commande.prenom} {commande.nom}",
         titre=f'Nouvelle commande payée #{commande.pk}',
-        intro=f"{commande.prenom} {commande.nom} a payé sa commande : elle est à préparer et à expédier.",
+        intro=(f"{commande.prenom} {commande.nom} a payé la 1re tranche (50 %) de sa commande : elle est à préparer ; "
+               f"le solde ({tranches.fcfa(commande.reste_a_payer)}) est dû avant l'expédition."
+               if commande.reste_a_payer else
+               f"{commande.prenom} {commande.nom} a payé sa commande : elle est à préparer et à expédier."),
         details=[
-            ('Montant', f"{commande.montant_total:,} FCFA".replace(',', ' ')), ('Articles', articles),
+            ('Montant', f"{commande.montant_total:,} FCFA".replace(',', ' ')),
+            ('Déjà payé', tranches.fcfa(commande.montant_paye)), ('Reste à payer', tranches.fcfa(commande.reste_a_payer)),
+            ('Articles', articles),
             ('Client', f"{commande.prenom} {commande.nom}"), ('E-mail', commande.email), ('Téléphone', commande.telephone),
             ('Livraison', f"{commande.adresse_livraison}\n{commande.ville}"), ('Transaction FedaPay', commande.fedapay_transaction_id),
         ],
@@ -383,9 +412,12 @@ def checkout(request):
             )
         # Initier paiement Fedapay
         return redirect('boutique:paiement', pk=commande.pk)
+    total = panier.total()
     ctx = {
         'panier': panier,
         'form': form,
+        'premiere_tranche': tranches.premiere_tranche(total),
+        'solde': tranches.solde(total),
         'title': 'Finaliser ma commande',
     }
     return render(request, 'boutique/checkout.html', ctx)
@@ -405,8 +437,8 @@ def paiement_commande(request, pk):
     cancel_url = settings.FEDAPAY_CANCEL_URL or f"{app_url}/boutique/panier/"
 
     transaction_payload = {
-        'amount': int(commande.montant_total),
-        'description': f"Commande KcoMat #{commande.pk}",
+        'amount': commande.montant_premier_paiement,
+        'description': f"Commande KcoMat #{commande.pk}" + (" - 1re tranche (50 %)" if commande.en_deux_tranches else ""),
         'currency': settings.PAYMENT_CONFIG['currency'],
         'country': settings.PAYMENT_CONFIG['country'],
         'customer': {
@@ -552,10 +584,109 @@ def facture_panier_pdf(request):
     )
 
 
+def _verify_solde_payment(commande, candidate_id=None):
+    """Valide la 2e tranche : transaction de CETTE commande, montant du solde exact."""
+    validated_id = verify_fedapay_payment(
+        stored_transaction_id=commande.fedapay_solde_id,
+        candidate_transaction_id=candidate_id,
+        expected_amount=commande.montant_solde,
+        expected_type='commande_solde',
+        ref_key='commande_id',
+        expected_ref=commande.pk,
+    )
+    if validated_id and validated_id != commande.fedapay_solde_id:
+        commande.fedapay_solde_id = validated_id
+        commande.save(update_fields=['fedapay_solde_id'])
+    return bool(validated_id)
+
+
+def _solde_en_attente(commande):
+    return commande.reste_a_payer > 0 and commande.premier_paiement_recu and commande.statut != 'annulee'
+
+
+def _mark_solde_paid(commande, request=None):
+    """Une seule fois, même si le webhook et le retour navigateur arrivent ensemble."""
+    if not Commande.objects.filter(pk=commande.pk, solde_paye_le__isnull=True).update(solde_paye_le=timezone.now()):
+        return
+    commande.refresh_from_db()
+    notifier_admin(
+        type_evenement='commande', sujet=f"Solde payé — commande #{commande.pk} ({commande.prenom} {commande.nom})",
+        titre=f'Commande #{commande.pk} entièrement réglée',
+        intro=f"{commande.prenom} {commande.nom} a payé la 2e tranche : la commande peut être expédiée.",
+        details=[('Montant total', tranches.fcfa(commande.montant_total)), ('Solde reçu', tranches.fcfa(commande.montant_solde)),
+                 ('Transaction FedaPay', commande.fedapay_solde_id)],
+        objet=commande, repondre_a=commande.email, request=request,
+    )
+    _send_commande_invoice_email(commande)
+
+
+def paiement_solde_commande(request, pk):
+    """2e tranche d'une commande payée en deux fois."""
+    commande = get_object_or_404(Commande, pk=pk)
+    _check_commande_access(request, commande)
+    if not _solde_en_attente(commande):
+        messages.info(request, "Il n'y a rien à payer pour cette commande.")
+        return redirect('boutique:suivi_commande', pk=commande.pk)
+
+    app_url = settings.FEDAPAY_APP_URL or request.build_absolute_uri('/').rstrip('/')
+    suivi_url = f"{app_url}{reverse('boutique:suivi_commande', args=[commande.pk])}"
+    try:
+        data = create_fedapay_transaction({
+            'amount': commande.montant_solde,
+            'description': f"Commande KcoMat #{commande.pk} - solde (2e tranche)",
+            'currency': settings.PAYMENT_CONFIG['currency'],
+            'country': settings.PAYMENT_CONFIG['country'],
+            'customer': {'firstname': commande.prenom, 'lastname': commande.nom,
+                         'email': commande.email, 'phone': commande.telephone},
+            'callback_url': f"{app_url}{reverse('boutique:callback_solde', args=[commande.pk])}",
+            'metadata': {'source': 'KcoMat', 'type': 'commande_solde', 'commande_id': str(commande.pk),
+                         'success_url': suivi_url, 'cancel_url': suivi_url},
+        })
+    except Exception:
+        logger.exception("Création de la transaction du solde de la commande #%s impossible", commande.pk)
+        data = {}
+    if not data.get('success') or not data.get('transaction_id'):
+        messages.error(request, "Le paiement en ligne n'a pas pu démarrer : " + str(data.get('error', 'erreur inconnue')))
+        return redirect('boutique:suivi_commande', pk=commande.pk)
+    commande.fedapay_solde_id = str(data['transaction_id'])
+    commande.save(update_fields=['fedapay_solde_id'])
+    return render(request, 'boutique/paiement_checkout.html', {
+        'commande': commande,
+        'montant_a_payer': commande.montant_solde,
+        'libelle_paiement': 'Solde de la commande (2e tranche)',
+        'title': 'Paiement du solde',
+        'token': data.get('token', ''),
+        'checkout_url': data.get('checkout_url', ''),
+        'sandbox': settings.FEDAPAY_SANDBOX,
+    })
+
+
+@csrf_exempt
+def callback_solde(request, pk):
+    commande = get_object_or_404(Commande, pk=pk)
+    if request.method == 'GET':
+        if _solde_en_attente(commande) and _verify_solde_payment(commande, request.GET.get('id')):
+            _mark_solde_paid(commande)
+        return redirect('boutique:suivi_commande', pk=commande.pk)
+    if request.method == 'POST':
+        try:
+            data = json.loads(request.body)
+            transaction = data.get('data', {}).get('transaction', {})
+            if (data.get('name') == 'transaction.approved' and _solde_en_attente(commande)
+                    and _verify_solde_payment(commande, transaction.get('id'))):
+                _mark_solde_paid(commande)
+        except Exception as e:
+            logger.exception("Erreur callback solde commande #%s: %s", commande.pk, e)
+    return HttpResponse(status=200)
+
+
 def suivi_commande(request, pk):
     """Page de suivi : frise des étapes, articles, adresse et message de l'équipe."""
     commande = get_object_or_404(Commande.objects.prefetch_related('items__produit'), pk=pk)
     _check_commande_access(request, commande)
+    # retour de FedaPay après le paiement du solde
+    if _solde_en_attente(commande) and commande.fedapay_solde_id and _verify_solde_payment(commande, request.GET.get('id')):
+        _mark_solde_paid(commande, request=request)
     return render(request, 'boutique/suivi_commande.html', {
         'commande': commande,
         'etapes': commande.etapes_suivi(),

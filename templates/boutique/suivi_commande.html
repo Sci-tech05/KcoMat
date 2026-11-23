@@ -61,6 +61,13 @@
             </ol>
             {% endif %}
 
+            {% if commande.premier_paiement_recu and commande.reste_a_payer and commande.statut != 'annulee' %}
+            <div class="mt-6 flex flex-col gap-3 rounded-2xl bg-amber-50 p-4 text-sm text-amber-900 ring-1 ring-inset ring-amber-200 sm:flex-row sm:items-center sm:justify-between">
+                <p><strong>2e tranche à régler : {{ commande.reste_a_payer|intcomma }} FCFA.</strong> Votre colis est expédié dès réception du solde.</p>
+                <a href="{% url 'boutique:paiement_solde' commande.pk %}" class="inline-flex flex-shrink-0 items-center justify-center rounded-xl bg-amber-500 px-4 py-2.5 font-black text-amber-950 transition hover:bg-amber-400">Payer le solde</a>
+            </div>
+            {% endif %}
+
             {% if commande.message_suivi %}
             <div class="mt-6 flex gap-3 rounded-2xl bg-blue-50 p-4 text-sm text-blue-900 ring-1 ring-inset ring-blue-100">
                 {% include 'partials/icon.html' with name='message' class='w-5 h-5 flex-shrink-0 text-blue-600' %}
@@ -89,6 +96,10 @@
                     {% endfor %}
                 </ul>
                 <p class="mt-3 flex justify-between border-t border-slate-100 pt-4 text-base font-black text-slate-900"><span>Total</span><span>{{ commande.montant_total|intcomma }} FCFA</span></p>
+                {% if commande.en_deux_tranches and commande.premier_paiement_recu %}
+                <p class="mt-1 flex justify-between text-sm text-slate-500"><span>Déjà payé</span><span>{{ commande.montant_paye|intcomma }} FCFA</span></p>
+                <p class="flex justify-between text-sm font-bold {% if commande.reste_a_payer %}text-amber-700{% else %}text-emerald-700{% endif %}"><span>Reste à payer</span><span>{{ commande.reste_a_payer|intcomma }} FCFA</span></p>
+                {% endif %}
                 {% if commande.statut == 'livree' %}
                 <p class="mt-4 rounded-2xl bg-amber-50 p-4 text-sm text-amber-900 ring-1 ring-inset ring-amber-100">⭐ Satisfait ? Laissez un avis sur vos composants depuis leur page : cela aide les autres makers.</p>
                 {% endif %}

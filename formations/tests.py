@@ -213,3 +213,151 @@ class OrdreAffichageTests(TestCase):
         html = self.client.get(reverse('formations:liste')).content.decode()
         positions = [html.index(f'>{t}<') if f'>{t}<' in html else html.index(t) for t in ('Zèbre', 'Milieu', 'Alpha')]
         self.assertEqual(positions, sorted(positions))
+
+
+@override_settings(EMAIL_BACKEND='django.core.mail.backends.locmem.EmailBackend')
+class AttestationsTests(TestCase):
+    def setUp(self):
+        from datetime import date
+
+        from formations.models import Formateur
+        self.formation = Formation.objects.create(titre='Arduino pour débutants', description_courte='Bases',
+                                                  description='Desc', prix=50000, duree='2 semaines')
+        self.formateur = Formateur.objects.create(prenom='Koffi', nom='AGBO', fonction='Ingénieur en électronique',
+                                                  email='koffi@example.com')
+        self.formation.formateurs.add(self.formateur)
+        self.payee = Inscription.objects.create(formation=self.formation, nom='DOSSOU', prenom='Awa', email='awa@example.com',
+                                                telephone='0196000000', statut='complet')
+        self.non_payee = Inscription.objects.create(formation=self.formation, nom='HOUNSA', prenom='Paul',
+                                                    email='paul@example.com', telephone='0196000001', statut='en_attente')
+        self.debut, self.fin = date(2026, 11, 2), date(2026, 11, 14)
+        self.admin = User.objects.create_superuser('chef', 'chef@example.com', 'pw-chef-12345')
+        self.client.force_login(self.admin)
+        session = self.client.session
+        session['admin_2fa_verified_user_id'] = self.admin.pk
+        session.save()
+
+    def action(self, nom, pks, **extra):
+        return self.client.post(reverse('admin:formations_inscription_changelist'),
+                                {'action': nom, '_selected_action': pks, **extra})
+
+    def test_textes_de_l_attestation(self):
+        from formations.attestation import periode
+        from datetime import date
+        self.assertEqual(periode(self.debut, self.fin), 'du 2 au 14 novembre 2026')
+        self.assertEqual(periode(date(2026, 10, 28), self.fin), 'du 28 octobre au 14 novembre 2026')
+        self.assertEqual(periode(self.fin, self.fin), 'le 14 novembre 2026')
+        self.assertNotEqual(self.payee.code_verification, self.non_payee.code_verification)
+
+    def test_dates_demandees_puis_zip_des_inscrits_payes(self):
+        pks = [self.payee.pk, self.non_payee.pk]
+        page = self.action('attestations_telecharger', pks)
+        self.assertContains(page, 'Dates de la session')       # page intermédiaire
+        r = self.action('attestations_telecharger', pks, appliquer_dates='1',
+                        session_debut='2026-11-02', session_fin='2026-11-14')
+        self.assertEqual(r['Content-Type'], 'application/pdf')  # un seul inscrit payé → PDF direct
+        self.assertTrue(r.content.startswith(b'%PDF'))
+        self.payee.refresh_from_db()
+        self.assertEqual((self.payee.session_debut, self.payee.statut), (self.debut, 'termine'))
+        self.non_payee.refresh_from_db()
+        self.assertIsNone(self.non_payee.session_debut)
+        # vérification publique par le QR code
+        verif = self.client.get(reverse('formations:verifier_attestation', args=[self.payee.code_verification]))
+        self.assertContains(verif, 'Attestation authentique')
+        self.assertContains(verif, 'Awa DOSSOU')
+        self.assertEqual(self.client.get(reverse('formations:verifier_attestation',
+                                                 args=[self.non_payee.code_verification])).status_code, 404)
+
+    def test_zip_et_envoi_par_email(self):
+        from django.core import mail
+        autre = Inscription.objects.create(formation=self.formation, nom='DOSSOU', prenom='Awa', email='awa2@example.com',
+                                           telephone='0196000002', statut='termine',
+                                           session_debut=self.debut, session_fin=self.fin)
+        Inscription.objects.filter(pk=self.payee.pk).update(session_debut=self.debut, session_fin=self.fin)
+        r = self.action('attestations_telecharger', [self.payee.pk, autre.pk])
+        self.assertEqual(r['Content-Type'], 'application/zip')
+        import zipfile
+        from io import BytesIO
+        noms = zipfile.ZipFile(BytesIO(r.content)).namelist()
+        self.assertEqual(len(set(noms)), 2)                       # homonymes : deux fichiers distincts
+        self.action('attestations_envoyer', [self.payee.pk, autre.pk])
+        self.assertEqual(sorted(m.to[0] for m in mail.outbox), ['awa2@example.com', 'awa@example.com'])
+        self.assertEqual(mail.outbox[0].attachments[0][2], 'application/pdf')
+        self.payee.refresh_from_db()
+        self.assertIsNotNone(self.payee.attestation_envoyee_le)
+
+    def test_attestation_du_formateur(self):
+        from django.core import mail
+        from formations.models import AttestationFormateur
+        a = AttestationFormateur.objects.create(formateur=self.formateur, formation=self.formation,
+                                                session_debut=self.debut, session_fin=self.fin, volume_horaire=40)
+        r = self.client.get(reverse('admin:formations_attestationformateur_pdf', args=[a.pk]))
+        self.assertTrue(r.content.startswith(b'%PDF'))
+        self.client.post(reverse('admin:formations_attestationformateur_changelist'),
+                         {'action': 'envoyer', '_selected_action': [a.pk]})
+        self.assertEqual(mail.outbox[0].to, ['koffi@example.com'])
+        verif = self.client.get(reverse('formations:verifier_attestation', args=[a.code_verification]))
+        self.assertContains(verif, 'Koffi AGBO')
+        self.assertContains(verif, '40 h')
+
+
+@override_settings(EMAIL_BACKEND='django.core.mail.backends.locmem.EmailBackend')
+class PaiementFormationDeuxTranchesTests(TestCase):
+    FETCH = 'api.fedapay_service.fetch_fedapay_transaction'
+    CREATE = 'formations.views.create_fedapay_transaction'
+
+    def setUp(self):
+        self.user = User.objects.create_user('awa', 'awa@example.com', 'pw-awa-12345')
+        self.client.force_login(self.user)
+        formation = Formation.objects.create(titre='IoT', description_courte='c', description='d', prix=45001)
+        self.insc = Inscription.objects.create(formation=formation, utilisateur=self.user, nom='DOSSOU', prenom='Awa',
+                                               email='awa@example.com', telephone='0196000000', statut='frais_payes')
+
+    def tx(self, tx_id, montant, type_):
+        return {'id': tx_id, 'status': 'approved', 'amount': montant, 'currency': {'iso': 'XOF'},
+                'custom_metadata': {'type': type_, 'inscription_id': str(self.insc.pk)}}
+
+    def creer(self, tx_id):
+        return patch(self.CREATE, return_value={'success': True, 'transaction_id': tx_id, 'token': 't',
+                                                'checkout_url': 'https://checkout.fedapay.com/checkout/t'})
+
+    def test_moitie_puis_solde(self):
+        url = reverse('formations:paiement_formation', args=[self.insc.pk])
+        r = self.client.get(url)
+        self.assertContains(r, 'En 2 tranches')
+        self.assertContains(r, '?option=moitie')
+        with self.creer(21) as create:
+            self.client.get(url + '?option=moitie')
+        payload = create.call_args.args[0]
+        self.assertEqual((payload['amount'], payload['metadata']['type']), (22501, 'inscription_acompte'))
+        with patch(self.FETCH, return_value=self.tx(21, 22501, 'inscription_acompte')):
+            self.client.get(reverse('formations:succes_formation', args=[self.insc.pk]))
+        self.insc.refresh_from_db()
+        self.assertEqual((self.insc.statut, self.insc.reste_formation), ('acompte', 22500))
+        self.assertFalse(self.insc.attestation_possible)
+        self.assertContains(self.client.get(reverse('formations:mes_inscriptions')), 'Payer le solde')
+
+        with self.creer(22) as create:
+            self.client.get(url)
+        payload = create.call_args.args[0]
+        self.assertEqual((payload['amount'], payload['metadata']['type']), (22500, 'inscription_solde'))
+        with patch(self.FETCH, return_value=self.tx(22, 22500, 'inscription_solde')):
+            self.client.get(reverse('formations:callback_formation', args=[self.insc.pk]))
+        self.insc.refresh_from_db()
+        self.assertEqual((self.insc.statut, self.insc.reste_formation), ('complet', 0))
+
+    def test_paiement_total(self):
+        with self.creer(23) as create:
+            self.client.get(reverse('formations:paiement_formation', args=[self.insc.pk]) + '?option=total')
+        self.assertEqual(create.call_args.args[0]['amount'], 45001)
+        with patch(self.FETCH, return_value=self.tx(23, 45001, 'inscription_formation')):
+            self.client.get(reverse('formations:succes_formation', args=[self.insc.pk]))
+        self.insc.refresh_from_db()
+        self.assertEqual(self.insc.statut, 'complet')
+
+    def test_acompte_avec_transaction_d_un_autre_type_refuse(self):
+        Inscription.objects.filter(pk=self.insc.pk).update(montant_acompte=22501, fedapay_acompte_id='24')
+        with patch(self.FETCH, return_value=self.tx(24, 22501, 'commande')):
+            self.client.get(reverse('formations:succes_formation', args=[self.insc.pk]))
+        self.insc.refresh_from_db()
+        self.assertEqual(self.insc.statut, 'frais_payes')

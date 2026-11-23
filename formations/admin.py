@@ -12,16 +12,25 @@ from reportlab.lib.pagesizes import A4, landscape
 from reportlab.lib import colors
 from reportlab.pdfgen import canvas
 
+from django import forms
 from django.contrib import messages
-from django.db.models import Q
-from django.shortcuts import redirect
+from django.contrib.admin import helpers
+from django.db.models import Count, Q
+from django.shortcuts import get_object_or_404, redirect
+from django.template.response import TemplateResponse
 
 from notifications.push import notifier_publication
 from projets.admin import apercu_video
 
+from .attestation import (
+    envoyer_apprenant, envoyer_formateur, envoyer_lot, nom_fichier_apprenant, nom_fichier_formateur,
+    pdf_apprenant, pdf_formateur, periode, reponse_pdf, reponse_zip,
+)
 from .catalogue import CATALOGUE, charger_catalogue
 from .models import (
+    AttestationFormateur,
     CategorieFormation,
+    Formateur,
     Formation,
     FormationSessionPassee,
     Inscription,
@@ -59,13 +68,14 @@ class FormationAdmin(admin.ModelAdmin):
     ordering = ['ordre', 'titre']
     search_fields = ['titre', 'description']
     prepopulated_fields = {'slug': ('titre',)}
+    filter_horizontal = ['formateurs']
     fieldsets = (
         ('Informations principales', {
             'description': "Une image est obligatoire pour publier la formation (format paysage conseillé, 1600 × 1000 px).",
             'fields': ('titre', 'slug', 'categorie', 'description_courte', 'description', 'image')
         }),
         ('Détails', {
-            'fields': ('duree', 'niveau', 'prix', 'prix_avec_base', 'places_disponibles')
+            'fields': ('duree', 'niveau', 'prix', 'prix_avec_base', 'places_disponibles', 'formateurs')
         }),
         ('Contenu pédagogique', {
             'fields': ('objectifs', 'programme', 'prerequis', 'public_cible', 'debouches', 'materiel_fourni')
@@ -127,9 +137,159 @@ class FormationAdmin(admin.ModelAdmin):
         return super().changelist_view(request, extra_context=extra_context)
 
 
+class SessionAttestationForm(forms.Form):
+    session_debut = forms.DateField(label="Début de la session", widget=forms.DateInput(attrs={'type': 'date'}))
+    session_fin = forms.DateField(label="Fin de la session", widget=forms.DateInput(attrs={'type': 'date'}))
+
+    def clean(self):
+        donnees = super().clean()
+        if donnees.get('session_debut') and donnees.get('session_fin') and donnees['session_fin'] < donnees['session_debut']:
+            self.add_error('session_fin', "La fin doit être postérieure au début.")
+        return donnees
+
+
+def _lien_pdf(url):
+    return format_html('<a href="{}" target="_blank" class="btn btn-sm btn-outline-primary">'
+                       '<i class="fas fa-file-pdf mr-1"></i>PDF</a>', url)
+
+
+@admin.register(Formateur)
+class FormateurAdmin(admin.ModelAdmin):
+    list_display = ['nom_complet', 'fonction', 'email', 'telephone', 'nb_formations', 'actif']
+    list_display_links = ['nom_complet']
+    list_editable = ['actif']
+    list_filter = ['actif']
+    search_fields = ['nom', 'prenom', 'fonction', 'email']
+
+    def get_queryset(self, request):
+        return super().get_queryset(request).annotate(n_formations=Count('formations', distinct=True))
+
+    @admin.display(description='Nom', ordering='nom')
+    def nom_complet(self, obj):
+        return obj.nom_complet
+
+    @admin.display(description='Formations', ordering='n_formations')
+    def nb_formations(self, obj):
+        return obj.n_formations
+
+
+@admin.register(AttestationFormateur)
+class AttestationFormateurAdmin(admin.ModelAdmin):
+    actions = ['telecharger', 'envoyer']
+    list_display = ['formateur', 'formation', 'periode', 'volume_horaire', 'pdf', 'envoyee_le']
+    list_filter = ['formation', 'formateur']
+    list_select_related = ['formateur', 'formation']
+    search_fields = ['formateur__nom', 'formateur__prenom', 'formation__titre']
+    autocomplete_fields = ['formateur', 'formation']
+    date_hierarchy = 'session_debut'
+    fields = ['formateur', 'formation', ('session_debut', 'session_fin'), ('volume_horaire', 'nb_apprenants'),
+              'delivree_le', 'pdf', 'envoyee_le']
+    readonly_fields = ['pdf', 'envoyee_le']
+
+    @admin.display(description='Session', ordering='session_debut')
+    def periode(self, obj):
+        return periode(obj.session_debut, obj.session_fin)
+
+    @admin.display(description='Attestation')
+    def pdf(self, obj):
+        if not obj.pk:
+            return "Enregistrez pour générer l'attestation."
+        return _lien_pdf(reverse('admin:formations_attestationformateur_pdf', args=[obj.pk]))
+
+    def get_urls(self):
+        return [path('<int:pk>/attestation.pdf', self.admin_site.admin_view(self.pdf_view),
+                     name='formations_attestationformateur_pdf')] + super().get_urls()
+
+    def pdf_view(self, request, pk):
+        attestation = get_object_or_404(AttestationFormateur.objects.select_related('formateur', 'formation'), pk=pk)
+        return reponse_pdf(pdf_formateur(attestation), nom_fichier_formateur(attestation))
+
+    @admin.action(description="Télécharger les attestations sélectionnées (PDF / ZIP)")
+    def telecharger(self, request, queryset):
+        attestations = list(queryset.select_related('formateur', 'formation'))
+        if len(attestations) == 1:
+            return reponse_pdf(pdf_formateur(attestations[0]), nom_fichier_formateur(attestations[0]))
+        return reponse_zip([(nom_fichier_formateur(a), pdf_formateur(a)) for a in attestations],
+                           f"KcoMat_attestations_formateurs_{timezone.localdate():%Y-%m-%d}")
+
+    @admin.action(description="Envoyer les attestations sélectionnées par e-mail aux formateurs")
+    def envoyer(self, request, queryset):
+        avec_email = queryset.select_related('formateur', 'formation').exclude(formateur__email='')
+        sans_email = queryset.filter(formateur__email='').count()
+        envoyees, echecs = envoyer_lot(avec_email, envoyer_formateur)
+        _bilan_envoi(self, request, envoyees, echecs, sans_email, "formateur(s) sans adresse e-mail")
+
+
+def _bilan_envoi(model_admin, request, envoyees, echecs, ignores, libelle_ignores):
+    if envoyees:
+        model_admin.message_user(request, f"{envoyees} attestation(s) envoyée(s) par e-mail.", messages.SUCCESS)
+    if echecs:
+        model_admin.message_user(request, f"Envoi impossible pour : {', '.join(echecs)}. Vérifiez la configuration e-mail.",
+                                 messages.ERROR)
+    if ignores:
+        model_admin.message_user(request, f"{ignores} ignorée(s) : {libelle_ignores}.", messages.WARNING)
+
+
 @admin.register(Inscription)
 class InscriptionAdmin(admin.ModelAdmin):
-    actions = ['marquer_terminee']
+    actions = ['marquer_terminee', 'attestations_telecharger', 'attestations_envoyer']
+
+    def _preparer_attestations(self, request, queryset, action, libelle):
+        """Retient les inscriptions payées ; demande les dates de session si elles manquent ou sur demande.
+        Renvoie (inscriptions prêtes, None) ou (None, page intermédiaire)."""
+        payees = queryset.filter(statut__in=Inscription.STATUTS_PAYES).select_related('formation')
+        ignorees = queryset.exclude(statut__in=Inscription.STATUTS_PAYES).count()
+        form = None
+        if 'appliquer_dates' in request.POST:
+            form = SessionAttestationForm(request.POST)
+            if form.is_valid():
+                payees.update(**form.cleaned_data)
+                form = None
+        elif payees.filter(Q(session_debut__isnull=True) | Q(session_fin__isnull=True)).exists():
+            dates = set(payees.exclude(session_debut__isnull=True).values_list('session_debut', 'session_fin'))
+            initial = dict(zip(('session_debut', 'session_fin'), dates.pop())) if len(dates) == 1 else {}
+            form = SessionAttestationForm(initial=initial)
+        if form is not None:
+            return None, TemplateResponse(request, 'admin/formations/inscription/attestations.html', {
+                **self.admin_site.each_context(request),
+                'title': "Dates de la session pour les attestations",
+                'opts': self.model._meta,
+                'form': form,
+                'inscriptions': payees,
+                'ignorees': ignorees,
+                'action': action,
+                'libelle': libelle,
+                'action_checkbox_name': helpers.ACTION_CHECKBOX_NAME,
+                'selection': queryset.values_list('pk', flat=True),
+            })
+        if ignorees:
+            self.message_user(request, f"{ignorees} inscription(s) ignorée(s) : seule une formation entièrement payée "
+                                       "donne droit à une attestation.", messages.WARNING)
+        inscriptions = list(payees.prefetch_related('formation__formateurs'))
+        # attestation délivrée : la formation est terminée (une nouvelle inscription redevient possible)
+        payees.filter(statut='complet').update(statut='termine')
+        return inscriptions, None
+
+    @admin.action(description="Attestations : télécharger (PDF / ZIP)")
+    def attestations_telecharger(self, request, queryset):
+        inscriptions, page = self._preparer_attestations(request, queryset, 'attestations_telecharger', "Télécharger")
+        if page is not None:
+            return page
+        if not inscriptions:
+            return None
+        if len(inscriptions) == 1:
+            return reponse_pdf(pdf_apprenant(inscriptions[0]), nom_fichier_apprenant(inscriptions[0]))
+        return reponse_zip([(nom_fichier_apprenant(i), pdf_apprenant(i)) for i in inscriptions],
+                           f"KcoMat_attestations_formation_{timezone.localdate():%Y-%m-%d}")
+
+    @admin.action(description="Attestations : envoyer par e-mail à chaque inscrit")
+    def attestations_envoyer(self, request, queryset):
+        inscriptions, page = self._preparer_attestations(request, queryset, 'attestations_envoyer', "Envoyer par e-mail")
+        if page is not None:
+            return page
+        envoyees, echecs = envoyer_lot(inscriptions or [], envoyer_apprenant)
+        _bilan_envoi(self, request, envoyees, echecs, 0, '')
+        return None
 
     @admin.action(description="Marquer la formation comme terminée (permet une nouvelle inscription)")
     def marquer_terminee(self, request, queryset):
@@ -139,10 +299,12 @@ class InscriptionAdmin(admin.ModelAdmin):
                           + (f" {ignores} ignorée(s) : seule une formation entièrement payée peut être terminée." if ignores else ""),
                           messages.SUCCESS if n else messages.WARNING)
 
-    list_display = ['prenom', 'nom', 'email', 'formation', 'mode_preference', 'statut', 'lien_meet', 'created_at']
+    list_display = ['prenom', 'nom', 'email', 'formation', 'mode_preference', 'statut', 'lien_meet', 'attestation', 'created_at']
     list_filter = ['statut', 'mode_preference', 'formation']
     search_fields = ['nom', 'prenom', 'email', 'telephone']
-    readonly_fields = ['created_at', 'frais_payes_le', 'formation_payee_le', 'jitsi_room_created_at', 'lien_meet']
+    readonly_fields = ['created_at', 'frais_payes_le', 'formation_payee_le', 'jitsi_room_created_at', 'lien_meet',
+                       'montant_acompte', 'fedapay_acompte_id', 'acompte_paye_le',
+                       'attestation', 'attestation_envoyee_le']
     date_hierarchy = 'created_at'
     list_select_related = ['formation']
     change_list_template = 'admin/formations/inscription/change_list.html'
@@ -164,10 +326,19 @@ class InscriptionAdmin(admin.ModelAdmin):
             )
         }),
         ('Paiements', {
-            'fields': ('fedapay_frais_id', 'frais_payes_le', 'fedapay_formation_id', 'formation_payee_le')
+            'description': "Paiement en 2 tranches : la 1re tranche (50 %) figure ci-dessous ; le solde, comme un "
+                           "paiement total, dans « fedapay formation id / formation payée le ».",
+            'fields': ('fedapay_frais_id', 'frais_payes_le', ('montant_acompte', 'fedapay_acompte_id', 'acompte_paye_le'),
+                       'fedapay_formation_id', 'formation_payee_le')
         }),
         ('Formation en ligne (Jitsi)', {
             'fields': ('jitsi_room_name', 'jitsi_room_created_at', 'lien_meet')
+        }),
+        ('Attestation de formation', {
+            'description': "Disponible une fois la formation payée et les dates de la session renseignées. Pour toute "
+                           "une session : cochez les inscrits dans la liste, puis action « Attestations : télécharger » "
+                           "ou « envoyer par e-mail ».",
+            'fields': (('session_debut', 'session_fin'), 'attestation', 'attestation_envoyee_le')
         }),
         ('Meta', {
             'fields': ('created_at',)
@@ -186,6 +357,22 @@ class InscriptionAdmin(admin.ModelAdmin):
             launch_url,
         )
 
+    @admin.display(description='Attestation')
+    def attestation(self, obj):
+        if not obj.pk or obj.statut not in Inscription.STATUTS_PAYES:
+            return '—'
+        if not obj.attestation_possible:
+            return format_html('<span style="color:#B45309;font-size:.8rem">Dates de session à renseigner</span>')
+        return _lien_pdf(reverse('admin:formations_inscription_attestation', args=[obj.pk]))
+
+    def attestation_view(self, request, pk):
+        inscription = get_object_or_404(Inscription.objects.select_related('formation'), pk=pk)
+        if not inscription.attestation_possible:
+            self.message_user(request, "Attestation indisponible : formation non payée ou dates de session manquantes.",
+                              messages.WARNING)
+            return redirect('admin:formations_inscription_change', pk)
+        return reponse_pdf(pdf_apprenant(inscription), nom_fichier_apprenant(inscription))
+
     def get_urls(self):
         urls = super().get_urls()
         custom_urls = [
@@ -194,6 +381,8 @@ class InscriptionAdmin(admin.ModelAdmin):
                 self.admin_site.admin_view(self.report_pdf_view),
                 name='formations_inscription_report_pdf',
             ),
+            path('<int:pk>/attestation.pdf', self.admin_site.admin_view(self.attestation_view),
+                 name='formations_inscription_attestation'),
         ]
         return custom_urls + urls
 
@@ -212,6 +401,8 @@ class InscriptionAdmin(admin.ModelAdmin):
         formation_price = Decimal(inscription.formation.prix or 0)
         if inscription.statut in ('complet', 'termine') or inscription.formation_payee_le is not None:
             return frais + formation_price
+        if inscription.acompte_paye_le is not None:
+            return frais + Decimal(inscription.montant_acompte or 0)
         return frais
 
     def report_pdf_view(self, request):
@@ -219,7 +410,7 @@ class InscriptionAdmin(admin.ModelAdmin):
         start_date, period_label = self._period_config(period)
 
         queryset = Inscription.objects.select_related('formation').filter(
-            statut__in=['frais_payes', 'complet', 'termine'],
+            statut__in=['frais_payes', 'acompte', 'complet', 'termine'],
             created_at__gte=start_date,
         ).order_by('-created_at')
 
@@ -473,13 +664,15 @@ class PaiementFormationAdmin(admin.ModelAdmin):
 
     def get_queryset(self, request):
         qs = super().get_queryset(request)
-        return qs.filter(statut__in=['frais_payes', 'complet', 'termine'])
+        return qs.filter(statut__in=['frais_payes', 'acompte', 'complet', 'termine'])
 
     @admin.display(description='Montant encaissé')
     def montant_encaisse(self, obj):
         frais = Decimal(settings.KCOMAT_INFO.get('frais_inscription', 2000))
         if obj.statut in ('complet', 'termine') or obj.formation_payee_le is not None:
             montant = frais + Decimal(obj.formation.prix or 0)
+        elif obj.acompte_paye_le is not None:
+            montant = frais + Decimal(obj.montant_acompte or 0)
         else:
             montant = frais
         return f"{int(montant):,} FCFA".replace(',', ' ')
@@ -686,4 +879,6 @@ class PaiementFormationAdmin(admin.ModelAdmin):
         frais = Decimal(settings.KCOMAT_INFO.get('frais_inscription', 2000))
         if obj.statut in ('complet', 'termine') or obj.formation_payee_le is not None:
             return frais + Decimal(obj.formation.prix or 0)
+        if obj.acompte_paye_le is not None:
+            return frais + Decimal(obj.montant_acompte or 0)
         return frais

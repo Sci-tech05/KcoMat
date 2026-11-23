@@ -15,7 +15,8 @@ from django.contrib.auth.decorators import login_required
 from django.utils import timezone
 from django.db.models import Count, Prefetch, Q
 from django.utils.text import slugify
-from .models import Formation, FormationSessionPassee, Inscription, CategorieFormation
+from .models import AttestationFormateur, Formation, FormationSessionPassee, Inscription, CategorieFormation
+from core import tranches
 from core.avis import resume as resume_avis
 from core.notifications_admin import notifier_admin
 from .forms import InscriptionForm
@@ -46,12 +47,13 @@ def _verify_frais_payment(inscription, candidate_id=None):
 
 
 def _verify_formation_payment(inscription, candidate_id=None):
-    """Valide le paiement de la formation : transaction de CETTE inscription, prix de la formation."""
+    """Valide le paiement total (après les frais) ou le solde (après la 1re tranche) de CETTE inscription."""
+    solde = inscription.statut == 'acompte'
     validated_id = verify_fedapay_payment(
         stored_transaction_id=inscription.fedapay_formation_id,
         candidate_transaction_id=candidate_id,
-        expected_amount=int(inscription.formation.prix),
-        expected_type='inscription_formation',
+        expected_amount=inscription.montant_solde if solde else inscription.prix_formation,
+        expected_type='inscription_solde' if solde else 'inscription_formation',
         ref_key='inscription_id',
         expected_ref=inscription.pk,
     )
@@ -59,6 +61,39 @@ def _verify_formation_payment(inscription, candidate_id=None):
         inscription.fedapay_formation_id = validated_id
         inscription.save(update_fields=['fedapay_formation_id'])
     return bool(validated_id)
+
+
+def _verify_acompte_payment(inscription, candidate_id=None):
+    """Valide la 1re tranche (50 %) de CETTE inscription, au montant demandé au départ."""
+    if not inscription.montant_acompte:
+        return False
+    validated_id = verify_fedapay_payment(
+        stored_transaction_id=inscription.fedapay_acompte_id,
+        candidate_transaction_id=candidate_id,
+        expected_amount=inscription.montant_acompte,
+        expected_type='inscription_acompte',
+        ref_key='inscription_id',
+        expected_ref=inscription.pk,
+    )
+    if validated_id and validated_id != inscription.fedapay_acompte_id:
+        inscription.fedapay_acompte_id = validated_id
+        inscription.save(update_fields=['fedapay_acompte_id'])
+    return bool(validated_id)
+
+
+def _confirmer_paiement_formation(inscription, candidate_id=None):
+    """Après les frais : paiement total ou 1re tranche ; après la 1re tranche : solde. True si un paiement est validé."""
+    if inscription.statut == 'frais_payes':
+        if _verify_formation_payment(inscription, candidate_id):
+            _mark_inscription_formation_paid(inscription)
+            return True
+        if _verify_acompte_payment(inscription, candidate_id):
+            _mark_inscription_acompte_paid(inscription)
+            return True
+    elif inscription.statut == 'acompte' and _verify_formation_payment(inscription, candidate_id):
+        _mark_inscription_formation_paid(inscription)
+        return True
+    return False
 
 
 def _remember_inscription(request, inscription):
@@ -133,7 +168,18 @@ def _build_formation_invoice_response(inscription):
     }]
 
     is_paid = inscription.formation_payee_le is not None or inscription.statut in Inscription.STATUTS_PAYES
-    status_label = 'Payee' if is_paid else 'Non payee'
+    note = 'Formation professionnelle KcoMat.'
+    if is_paid:
+        status_label = 'Payee'
+    elif inscription.statut == 'acompte':
+        status_label = '1re tranche payee (50 %)'
+    else:
+        status_label = 'Non payee'
+    if inscription.acompte_paye_le:
+        note = (f"Paiement en 2 tranches - 1re tranche : {tranches.fcfa(inscription.montant_acompte)} "
+                f"(payee le {timezone.localtime(inscription.acompte_paye_le):%d/%m/%Y}), solde : "
+                f"{tranches.fcfa(inscription.montant_solde)}"
+                + (" (paye)." if is_paid else " (reste a payer)."))
 
     return build_invoice_response(
         filename=f'facture-formation-{inscription.pk}.pdf',
@@ -146,7 +192,7 @@ def _build_formation_invoice_response(inscription):
         status_label=status_label,
         items=items,
         total_amount=montant,
-        note='Formation professionnelle KcoMat.',
+        note=note,
     )
 
 
@@ -156,7 +202,8 @@ def _send_inscription_invoice_email(inscription):
         return
 
     has_frais_paid = inscription.frais_payes_le is not None or inscription.statut in ('frais_payes', *Inscription.STATUTS_PAYES)
-    has_formation_paid = inscription.formation_payee_le is not None or inscription.statut in Inscription.STATUTS_PAYES
+    has_formation_paid = (inscription.formation_payee_le is not None or inscription.acompte_paye_le is not None
+                          or inscription.statut in Inscription.STATUTS_PAYES)
 
     if not has_frais_paid and not has_formation_paid:
         return
@@ -198,10 +245,15 @@ def _notifier_admin_inscription(inscription, etape):
         sujet, titre = f"Nouvelle inscription : {formation.titre} — {inscription.prenom} {inscription.nom}", 'Nouvelle inscription confirmée'
         intro = f"{inscription.prenom} {inscription.nom} a payé ses frais d'inscription à « {formation.titre} »."
         montant = settings.KCOMAT_INFO['frais_inscription']
+    elif etape == 'acompte':
+        sujet, titre = f"1re tranche payée : {formation.titre} — {inscription.prenom} {inscription.nom}", '1re tranche de formation reçue'
+        intro = (f"{inscription.prenom} {inscription.nom} a réglé la 1re tranche (50 %) de « {formation.titre} ». "
+                 f"Solde restant : {tranches.fcfa(inscription.montant_solde)}.")
+        montant = inscription.montant_acompte
     else:
         sujet, titre = f"Formation payée : {formation.titre} — {inscription.prenom} {inscription.nom}", 'Paiement de formation reçu'
         intro = f"{inscription.prenom} {inscription.nom} a réglé la formation « {formation.titre} » : l'inscription est complète."
-        montant = formation.prix
+        montant = inscription.montant_solde if inscription.acompte_paye_le else formation.prix
     notifier_admin(
         type_evenement='inscription' if etape == 'frais' else 'paiement', sujet=sujet, titre=titre, intro=intro,
         details=[
@@ -221,6 +273,16 @@ def _mark_inscription_frais_paid(inscription):
     inscription.frais_payes_le = timezone.now()
     inscription.save(update_fields=['statut', 'frais_payes_le'])
     _notifier_admin_inscription(inscription, 'frais')
+    _send_inscription_invoice_email(inscription)
+
+
+def _mark_inscription_acompte_paid(inscription):
+    if inscription.statut != 'frais_payes':
+        return
+    inscription.statut = 'acompte'
+    inscription.acompte_paye_le = timezone.now()
+    inscription.save(update_fields=['statut', 'acompte_paye_le'])
+    _notifier_admin_inscription(inscription, 'acompte')
     _send_inscription_invoice_email(inscription)
 
 
@@ -253,7 +315,8 @@ def _can_access_meet_room(user, inscription):
         return False
     if user.is_staff:
         return True
-    return inscription.utilisateur_id == user.pk and inscription.statut == 'complet'
+    # 1re tranche payée : la place est confirmée, la salle en ligne est accessible (l'attestation exige le solde)
+    return inscription.utilisateur_id == user.pk and inscription.statut in ('acompte', 'complet')
 
 
 def _jitsi_embed_payload(inscription, user):
@@ -446,14 +509,37 @@ def paiement_formation(request, pk):
         messages.info(request, 'Cette formation est deja reglee.')
         return redirect('formations:mes_inscriptions')
 
+    if inscription.statut == 'acompte':
+        # 2e tranche : le solde
+        montant, type_paiement, champ_id = inscription.montant_solde, 'inscription_solde', 'fedapay_formation_id'
+        libelle = 'Solde de la formation (2e tranche)'
+    else:
+        option = request.GET.get('option')
+        if option not in (tranches.TOTAL, 'moitie'):
+            return render(request, 'formations/choix_paiement.html', {
+                'inscription': inscription,
+                'prix': inscription.prix_formation,
+                'premiere_tranche': tranches.premiere_tranche(inscription.prix_formation),
+                'solde': tranches.solde(inscription.prix_formation),
+                'title': 'Paiement de la formation',
+            })
+        if option == 'moitie':
+            montant, type_paiement, champ_id = tranches.premiere_tranche(inscription.prix_formation), 'inscription_acompte', 'fedapay_acompte_id'
+            libelle = '1re tranche de la formation (50 %)'
+            inscription.montant_acompte = montant
+            inscription.save(update_fields=['montant_acompte'])
+        else:
+            montant, type_paiement, champ_id = inscription.prix_formation, 'inscription_formation', 'fedapay_formation_id'
+            libelle = 'Montant de la formation'
+
     app_url = settings.FEDAPAY_APP_URL or request.build_absolute_uri('/').rstrip('/')
     callback_url = f"{app_url}/formations/inscription/{inscription.pk}/callback-formation/"
     success_url = settings.FEDAPAY_SUCCESS_URL or f"{app_url}/formations/inscription/{inscription.pk}/succes-formation/"
     cancel_url = settings.FEDAPAY_CANCEL_URL or f"{app_url}/formations/inscription/{inscription.pk}/succes/"
 
     transaction_payload = {
-        'amount': int(inscription.formation.prix),
-        'description': f"Paiement formation KcoMat - {inscription.formation.titre}",
+        'amount': montant,
+        'description': f"{libelle} KcoMat - {inscription.formation.titre}",
         'currency': settings.PAYMENT_CONFIG['currency'],
         'country': settings.PAYMENT_CONFIG['country'],
         'customer': {
@@ -465,7 +551,7 @@ def paiement_formation(request, pk):
         'callback_url': callback_url,
         'metadata': {
             'source': 'KcoMat',
-            'type': 'inscription_formation',
+            'type': type_paiement,
             'inscription_id': str(inscription.pk),
             'formation': inscription.formation.titre,
             'success_url': success_url,
@@ -483,12 +569,13 @@ def paiement_formation(request, pk):
             token = data['token']
             checkout_url = data.get('checkout_url', '')
 
-            inscription.fedapay_formation_id = str(transaction_id)
-            inscription.save(update_fields=['fedapay_formation_id'])
+            setattr(inscription, champ_id, str(transaction_id))
+            inscription.save(update_fields=[champ_id])
 
             ctx = {
                 'inscription': inscription,
-                'montant_formation': inscription.formation.prix,
+                'montant_formation': montant,
+                'libelle_paiement': libelle,
                 'title': 'Paiement de la formation',
                 'fedapay_public_key': settings.FEDAPAY_PUBLIC_KEY,
                 'transaction_id': transaction_id,
@@ -535,11 +622,10 @@ def callback_frais(request, pk):
 def callback_formation(request, pk):
     inscription = get_object_or_404(Inscription.objects.select_related('formation'), pk=pk)
     if request.method == 'GET':
-        if inscription.statut == 'frais_payes' and _verify_formation_payment(inscription, request.GET.get('id')):
-            try:
-                _mark_inscription_formation_paid(inscription)
-            except Exception as e:
-                logger.exception("Erreur callback GET formation inscription #%s: %s", inscription.pk, e)
+        try:
+            _confirmer_paiement_formation(inscription, request.GET.get('id'))
+        except Exception as e:
+            logger.exception("Erreur callback GET formation inscription #%s: %s", inscription.pk, e)
         return redirect('formations:succes_formation', pk=inscription.pk)
 
     if request.method == 'POST':
@@ -547,12 +633,8 @@ def callback_formation(request, pk):
             data = json.loads(request.body)
             event = data.get('name', '')
             transaction = data.get('data', {}).get('transaction', {})
-            if (
-                event == 'transaction.approved'
-                and inscription.statut == 'frais_payes'
-                and _verify_formation_payment(inscription, transaction.get('id'))
-            ):
-                _mark_inscription_formation_paid(inscription)
+            if event == 'transaction.approved':
+                _confirmer_paiement_formation(inscription, transaction.get('id'))
         except Exception as e:
             logger.exception("Erreur callback formation inscription #%s: %s", inscription.pk, e)
     return HttpResponse(status=200)
@@ -584,15 +666,19 @@ def succes_formation(request, pk):
         messages.warning(request, "Veuillez d'abord payer les frais d'inscription.")
         return redirect('formations:paiement_frais', pk=inscription.pk)
 
-    if inscription.statut not in Inscription.STATUTS_PAYES:
-        if _verify_formation_payment(inscription, request.GET.get('id')):
-            try:
-                _mark_inscription_formation_paid(inscription)
-            except Exception as e:
-                logger.exception("Erreur envoi facture formation email inscription #%s: %s", inscription.pk, e)
-                messages.warning(request, "Paiement confirme, mais l'envoi automatique de la facture formation a echoue. Vous pouvez la telecharger depuis votre espace.")
-        else:
+    # paiement lancé et pas encore enregistré : total ou 1re tranche (frais payés), ou solde (1re tranche payée)
+    paiement_en_cours = (inscription.statut == 'frais_payes'
+                         or (inscription.statut == 'acompte' and inscription.fedapay_formation_id))
+    if paiement_en_cours:
+        try:
+            confirme = _confirmer_paiement_formation(inscription, request.GET.get('id'))
+        except Exception as e:
+            confirme = True
+            logger.exception("Erreur envoi facture formation email inscription #%s: %s", inscription.pk, e)
+            messages.warning(request, "Paiement confirme, mais l'envoi automatique de la facture formation a echoue. Vous pouvez la telecharger depuis votre espace.")
+        if not confirme:
             messages.warning(request, "Paiement formation en attente de confirmation FedaPay. Rechargez cette page dans quelques secondes.")
+        inscription.refresh_from_db()
 
     ctx = {
         'inscription': inscription,
@@ -663,3 +749,21 @@ def facture_formation_pdf(request, pk):
 
     return _build_formation_invoice_response(inscription)
 
+
+
+def verifier_attestation(request, code):
+    """Page ouverte par le QR code d'une attestation (apprenant ou formateur)."""
+    inscription = (Inscription.objects.select_related('formation').filter(code_verification=code).first())
+    if inscription and not inscription.attestation_possible:
+        inscription = None
+    intervention = None
+    if inscription is None:
+        intervention = (AttestationFormateur.objects.select_related('formateur', 'formation')
+                        .filter(code_verification=code).first())
+    valide = bool(inscription or intervention)
+    return render(request, 'formations/verifier_attestation.html', {
+        'inscription': inscription,
+        'intervention': intervention,
+        'code': code,
+        'title': "Vérification d'attestation",
+    }, status=200 if valide else 404)

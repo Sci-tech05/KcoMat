@@ -1,0 +1,44 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ title }}{% endblock %}
+{% block robots %}noindex, nofollow{% endblock %}
+
+{% block content %}
+<section class="py-16 sm:py-24 bg-slate-50">
+  <div class="max-w-xl mx-auto px-4">
+    <div class="wb-panel overflow-hidden text-center">
+      {% if inscription or intervention %}
+      <div class="bg-gradient-to-br from-emerald-500 to-teal-500 px-6 py-8 text-white">
+        <span class="mx-auto grid place-items-center w-16 h-16 rounded-2xl bg-white/20">{% include 'partials/icon.html' with name='badge-check' class='w-9 h-9' stroke='1.75' %}</span>
+        <h1 class="mt-4 text-2xl font-black">Attestation authentique</h1>
+        <p class="mt-1 text-sm text-emerald-50">Délivrée par KcoMat · N° {% if inscription %}{{ inscription.numero_attestation }}{% else %}{{ intervention.numero_attestation }}{% endif %}</p>
+      </div>
+      <dl class="grid gap-4 p-6 sm:p-8 text-left text-sm">
+        {% if inscription %}
+        <div><dt class="text-xs font-bold uppercase tracking-wider text-slate-400">Apprenant</dt><dd class="mt-1 text-lg font-extrabold text-slate-900">{{ inscription.nom_complet }}</dd></div>
+        <div><dt class="text-xs font-bold uppercase tracking-wider text-slate-400">Formation suivie</dt><dd class="mt-1 font-bold text-slate-900"><a href="{% url 'formations:detail' inscription.formation.slug %}" class="hover:text-blue-700">{{ inscription.formation.titre }}</a></dd></div>
+        <div class="grid grid-cols-2 gap-4">
+          <div><dt class="text-xs font-bold uppercase tracking-wider text-slate-400">Session</dt><dd class="mt-1 text-slate-700">{{ inscription.session_debut|date:"j M Y" }} → {{ inscription.session_fin|date:"j M Y" }}</dd></div>
+          <div><dt class="text-xs font-bold uppercase tracking-wider text-slate-400">Mode</dt><dd class="mt-1 text-slate-700">{{ inscription.get_mode_preference_display }}</dd></div>
+        </div>
+        {% else %}
+        <div><dt class="text-xs font-bold uppercase tracking-wider text-slate-400">Formateur</dt><dd class="mt-1 text-lg font-extrabold text-slate-900">{{ intervention.formateur.nom_complet }}</dd>{% if intervention.formateur.fonction %}<dd class="text-slate-500">{{ intervention.formateur.fonction }}</dd>{% endif %}</div>
+        <div><dt class="text-xs font-bold uppercase tracking-wider text-slate-400">Formation animée</dt><dd class="mt-1 font-bold text-slate-900"><a href="{% url 'formations:detail' intervention.formation.slug %}" class="hover:text-blue-700">{{ intervention.formation.titre }}</a></dd></div>
+        <div class="grid grid-cols-2 gap-4">
+          <div><dt class="text-xs font-bold uppercase tracking-wider text-slate-400">Session</dt><dd class="mt-1 text-slate-700">{{ intervention.session_debut|date:"j M Y" }} → {{ intervention.session_fin|date:"j M Y" }}</dd></div>
+          {% if intervention.volume_horaire %}<div><dt class="text-xs font-bold uppercase tracking-wider text-slate-400">Volume horaire</dt><dd class="mt-1 text-slate-700">{{ intervention.volume_horaire }} h</dd></div>{% endif %}
+        </div>
+        {% endif %}
+      </dl>
+      {% else %}
+      <div class="px-6 py-12">
+        <span class="mx-auto grid place-items-center w-16 h-16 rounded-2xl bg-rose-50 text-rose-600">{% include 'partials/icon.html' with name='shield' class='w-9 h-9' stroke='1.75' %}</span>
+        <h1 class="mt-4 text-2xl font-black text-slate-900">Attestation introuvable</h1>
+        <p class="mt-2 text-sm text-slate-500">Le code « {{ code }} » ne correspond à aucune attestation délivrée par KcoMat. Vérifiez le lien ou contactez-nous.</p>
+        <a href="{% url 'core:contact' %}" class="mt-6 wb-btn wb-btn--primary">Nous contacter</a>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+</section>
+{% endblock %}

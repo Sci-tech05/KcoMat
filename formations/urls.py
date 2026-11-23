@@ -6,6 +6,7 @@ app_name = 'formations'
 urlpatterns = [
     path('', views.liste_formations, name='liste'),
     path('mes-inscriptions/', views.mes_inscriptions, name='mes_inscriptions'),
+    path('attestation/<str:code>/', views.verifier_attestation, name='verifier_attestation'),
     path('<slug:slug>/', views.detail_formation, name='detail'),
     path('inscription/<int:pk>/paiement-frais/', views.paiement_frais, name='paiement_frais'),
     path('inscription/<int:pk>/paiement-formation/', views.paiement_formation, name='paiement_formation'),

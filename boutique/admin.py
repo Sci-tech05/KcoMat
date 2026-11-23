@@ -15,6 +15,7 @@ from reportlab.lib.pagesizes import A4
 from reportlab.lib import colors
 from reportlab.pdfgen import canvas
 
+from core import tranches
 from core.templatetags.kcomat_tags import webp
 
 from .catalogue import charger_catalogue, nombre_produits
@@ -231,10 +232,11 @@ class CommandeItemInline(admin.TabularInline):
 
 @admin.register(Commande)
 class CommandeAdmin(admin.ModelAdmin):
-    list_display = ['id', 'nom', 'prenom', 'montant_total', 'statut', 'created_at']
-    list_filter = ['statut']
+    list_display = ['id', 'nom', 'prenom', 'montant_total', 'reste', 'statut', 'created_at']
+    list_filter = ['statut', 'mode_paiement']
     search_fields = ['nom', 'prenom', 'email', 'telephone']
-    readonly_fields = ['created_at', 'payee_le', 'preparee_le', 'expediee_le', 'livree_le', 'annulee_le', 'fedapay_transaction_id']
+    readonly_fields = ['created_at', 'payee_le', 'preparee_le', 'expediee_le', 'livree_le', 'annulee_le', 'fedapay_transaction_id',
+                       'mode_paiement', 'reste', 'fedapay_solde_id', 'solde_paye_le']
     inlines = [CommandeItemInline]
     date_hierarchy = 'created_at'
     change_list_template = 'admin/boutique/commande/change_list.html'
@@ -246,7 +248,8 @@ class CommandeAdmin(admin.ModelAdmin):
         }),
         ('Client', {'fields': ['utilisateur', 'prenom', 'nom', 'email', 'telephone']}),
         ('Livraison', {'fields': ['adresse_livraison', 'ville', 'notes']}),
-        ('Paiement', {'fields': ['montant_total', 'fedapay_transaction_id', 'created_at']}),
+        ('Paiement', {'fields': ['montant_total', 'mode_paiement', 'reste', 'fedapay_transaction_id',
+                                 'fedapay_solde_id', 'solde_paye_le', 'created_at']}),
     ]
 
     def _prevenir_client(self, request, commande):
@@ -262,11 +265,26 @@ class CommandeAdmin(admin.ModelAdmin):
                 messages.WARNING,
             )
 
+    @admin.display(description='Reste à payer')
+    def reste(self, obj):
+        if not obj.premier_paiement_recu or obj.statut == 'annulee':
+            return '—'
+        if obj.reste_a_payer:
+            return format_html('<b style="color:#B45309">{}</b>', tranches.fcfa(obj.reste_a_payer))
+        return format_html('<span style="color:#047857">Soldée</span>')
+
+    def _alerter_solde(self, request, commande):
+        if commande.statut in ('expediee', 'livree') and commande.reste_a_payer:
+            self.message_user(request, f"Attention : la commande #{commande.pk} n'est pas soldée — "
+                                       f"{tranches.fcfa(commande.reste_a_payer)} restent à payer (2e tranche).",
+                              messages.WARNING)
+
     def save_model(self, request, obj, form, change):
         statut_change = change and 'statut' in form.changed_data
         super().save_model(request, obj, form, change)
         if statut_change:
             self._prevenir_client(request, obj)
+            self._alerter_solde(request, obj)
 
     def _changer_statut(self, request, queryset, statut):
         faites = 0
@@ -275,6 +293,7 @@ class CommandeAdmin(admin.ModelAdmin):
             commande.statut = statut
             commande.save()
             self._prevenir_client(request, commande)
+            self._alerter_solde(request, commande)
             faites += 1
         self.message_user(request, f"{faites} commande(s) mise(s) à jour.")
 

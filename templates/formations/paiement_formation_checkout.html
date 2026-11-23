@@ -56,7 +56,7 @@
                 </div>
 
                 <div class="mt-5 rounded-2xl bg-indigo-50 border border-indigo-100 p-4">
-                    <p class="text-xs uppercase tracking-[0.16em] text-indigo-700 font-bold">Montant formation</p>
+                    <p class="text-xs uppercase tracking-[0.16em] text-indigo-700 font-bold">{{ libelle_paiement|default:"Montant formation" }}</p>
                     <p class="mt-2 text-3xl font-black text-indigo-900">{{ montant_formation|intcomma }} <span class="text-sm font-semibold">FCFA</span></p>
                 </div>
 

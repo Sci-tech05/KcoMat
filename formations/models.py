@@ -1,5 +1,8 @@
+import secrets
+
 from django.db import models
 from django.contrib.auth.models import User
+from django.utils import timezone
 from django.utils.text import slugify
 from django.core.exceptions import ValidationError
 
@@ -56,6 +59,8 @@ class Formation(models.Model):
     public_cible = models.TextField("Pour qui ?", blank=True, help_text="Un profil par ligne.")
     debouches = models.TextField("Débouchés", blank=True, help_text="Un métier ou une opportunité par ligne.")
     materiel_fourni = models.TextField("Matériel fourni", blank=True, help_text="Un élément par ligne.")
+    formateurs = models.ManyToManyField('Formateur', blank=True, related_name='formations',
+                                        help_text="Nommés sur les attestations des apprenants.")
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -150,6 +155,31 @@ class FormationSessionPassee(models.Model):
         return analyser(self.lien_video)
 
 
+def _code_verification():
+    return secrets.token_hex(8)
+
+
+class Formateur(models.Model):
+    prenom = models.CharField("Prénom", max_length=100)
+    nom = models.CharField(max_length=100)
+    fonction = models.CharField("Fonction / spécialité", max_length=160, blank=True,
+                                help_text="Ex. « Ingénieur en systèmes embarqués ». Figure sur les attestations.")
+    email = models.EmailField(blank=True, help_text="Pour lui envoyer son attestation d'intervention.")
+    telephone = models.CharField("Téléphone", max_length=20, blank=True)
+    actif = models.BooleanField(default=True)
+
+    class Meta:
+        ordering = ['nom', 'prenom']
+        verbose_name = "Formateur"
+
+    def __str__(self):
+        return self.nom_complet
+
+    @property
+    def nom_complet(self):
+        return f"{self.prenom} {self.nom}".strip()
+
+
 class Inscription(models.Model):
     MODE_PREFERENCE_CHOICES = [
         ('presentiel', 'Présentiel'),
@@ -158,6 +188,7 @@ class Inscription(models.Model):
     STATUT_CHOICES = [
         ('en_attente', 'En attente de paiement'),
         ('frais_payes', 'Frais d\'inscription payés'),
+        ('acompte', '1re tranche payée (50 %)'),
         ('complet', 'Paiement complet'),
         ('termine', 'Formation terminée'),
         ('annule', 'Annulé'),
@@ -183,8 +214,18 @@ class Inscription(models.Model):
     # Paiement formation
     fedapay_formation_id = models.CharField(max_length=100, blank=True)
     formation_payee_le = models.DateTimeField(null=True, blank=True)
+    # Paiement de la formation en deux tranches : 1re moitié (acompte), puis solde via fedapay_formation_id
+    montant_acompte = models.PositiveIntegerField("1re tranche (FCFA)", null=True, blank=True)
+    fedapay_acompte_id = models.CharField(max_length=100, blank=True)
+    acompte_paye_le = models.DateTimeField("1re tranche payée le", null=True, blank=True)
     jitsi_room_name = models.CharField(max_length=120, blank=True)
     jitsi_room_created_at = models.DateTimeField(null=True, blank=True)
+    # Attestation de formation
+    session_debut = models.DateField("Début de la session suivie", null=True, blank=True)
+    session_fin = models.DateField("Fin de la session suivie", null=True, blank=True)
+    code_verification = models.CharField("Code de vérification", max_length=32, unique=True,
+                                         default=_code_verification, editable=False)
+    attestation_envoyee_le = models.DateTimeField("Attestation envoyée le", null=True, blank=True, editable=False)
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
@@ -195,7 +236,7 @@ class Inscription(models.Model):
         return f"{self.prenom} {self.nom} — {self.formation.titre}"
 
     # Inscription en cours : empêche une 2e inscription à la même formation
-    STATUTS_ACTIFS = ('en_attente', 'frais_payes', 'complet')
+    STATUTS_ACTIFS = ('en_attente', 'frais_payes', 'acompte', 'complet')
     STATUTS_PAYES = ('complet', 'termine')
 
     @classmethod
@@ -212,6 +253,35 @@ class Inscription(models.Model):
         return (cls.objects.filter(critere, formation=formation, statut__in=cls.STATUTS_ACTIFS)
                 .order_by('-created_at').first())
 
+    @property
+    def nom_complet(self):
+        return f"{self.prenom} {self.nom}".strip()
+
+    @property
+    def prix_formation(self):
+        return int(self.formation.prix)
+
+    @property
+    def montant_solde(self):
+        """2e tranche : prix moins la 1re tranche réellement demandée."""
+        return self.prix_formation - (self.montant_acompte or 0)
+
+    @property
+    def reste_formation(self):
+        if self.statut in self.STATUTS_PAYES:
+            return 0
+        return self.montant_solde if self.statut == 'acompte' else self.prix_formation
+
+    @property
+    def numero_attestation(self):
+        annee = (self.session_fin or self.created_at).year
+        return f"KCO-FOR-{annee}-{self.pk:05d}"
+
+    @property
+    def attestation_possible(self):
+        """Formation payée (complet ou terminée) et dates de la session renseignées."""
+        return self.statut in self.STATUTS_PAYES and bool(self.session_debut and self.session_fin)
+
     def montant_inscription(self):
         from django.conf import settings
         return settings.KCOMAT_INFO['frais_inscription']
@@ -224,6 +294,37 @@ class Inscription(models.Model):
         if not base_url:
             return ''
         return f"{base_url}/{self.jitsi_room_name}"
+
+
+class AttestationFormateur(models.Model):
+    """Attestation d'intervention remise au(x) formateur(s) d'une session."""
+    formateur = models.ForeignKey(Formateur, on_delete=models.CASCADE, related_name='attestations')
+    formation = models.ForeignKey(Formation, on_delete=models.CASCADE, related_name='attestations_formateurs')
+    session_debut = models.DateField("Début de la session")
+    session_fin = models.DateField("Fin de la session")
+    volume_horaire = models.PositiveSmallIntegerField("Volume horaire (heures)", null=True, blank=True)
+    nb_apprenants = models.PositiveSmallIntegerField("Nombre d'apprenants", null=True, blank=True)
+    delivree_le = models.DateField("Délivrée le", default=timezone.localdate)
+    code_verification = models.CharField("Code de vérification", max_length=32, unique=True,
+                                         default=_code_verification, editable=False)
+    envoyee_le = models.DateTimeField("Envoyée le", null=True, blank=True, editable=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-session_debut', 'formateur__nom']
+        verbose_name = "Attestation de formateur"
+        verbose_name_plural = "Attestations de formateurs"
+
+    def __str__(self):
+        return f"{self.formateur} — {self.formation}"
+
+    @property
+    def numero_attestation(self):
+        return f"KCO-FMT-{self.session_fin:%Y}-{self.pk:05d}"
+
+    def clean(self):
+        if self.session_debut and self.session_fin and self.session_fin < self.session_debut:
+            raise ValidationError({'session_fin': "La fin doit être postérieure au début."})
 
 
 class PaiementFormation(Inscription):
