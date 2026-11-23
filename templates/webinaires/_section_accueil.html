@@ -1,6 +1,6 @@
-{% comment %}Accueil : les prochains webinaires, juste sous le héros (3 au plus). Paramètre : webinaires_accueil{% endcomment %}
+{% comment %}Accueil : les prochains webinaires, en carrousel qui avance d'une carte toutes les 1,5 s. Paramètre : webinaires_accueil{% endcomment %}
 {% if webinaires_accueil %}
-<section id="webinaires" class="py-14 sm:py-16 bg-slate-50 border-b border-slate-100" aria-labelledby="webinaires-title">
+<section id="webinaires" class="py-14 sm:py-16 bg-slate-50 border-b border-slate-100 overflow-hidden" aria-labelledby="webinaires-title">
   <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
     <div class="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4 mb-8">
       <div>
@@ -8,12 +8,21 @@
         <h2 id="webinaires-title" class="text-2xl sm:text-3xl font-black tracking-tight text-slate-900">Prochains webinaires gratuits</h2>
         <p class="mt-2 text-slate-500">En ligne sur le site, avec attestation de participation.</p>
       </div>
-      <a href="{% url 'webinaires:liste' %}" class="crl-all self-start sm:self-auto">Tous les webinaires {% include 'partials/icon.html' with name='arrow-right' class='w-4 h-4' stroke='2.25' %}</a>
+      <div class="flex items-center gap-2 self-start sm:self-auto">
+        <button type="button" class="crl-nav" data-carrousel-dir="-1" aria-controls="webinaires-track" aria-label="Webinaires précédents">
+          {% include 'partials/icon.html' with name='chevron-right' class='w-5 h-5 rotate-180' stroke='2.25' %}
+        </button>
+        <button type="button" class="crl-nav" data-carrousel-dir="1" aria-controls="webinaires-track" aria-label="Webinaires suivants">
+          {% include 'partials/icon.html' with name='chevron-right' class='w-5 h-5' stroke='2.25' %}
+        </button>
+        <a href="{% url 'webinaires:liste' %}" class="crl-all">Tous les webinaires {% include 'partials/icon.html' with name='arrow-right' class='w-4 h-4' stroke='2.25' %}</a>
+      </div>
     </div>
+  </div>
 
-    <div class="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
-      {% for w in webinaires_accueil %}
-      <article class="wb-tile group" style="{{ w.theme_style }}">
+  <div id="webinaires-track" class="svc-track crl-light" data-carrousel data-toujours data-intervalle="1500" tabindex="0" role="region" aria-roledescription="carrousel" aria-label="Prochains webinaires">
+      {% for pass in "123" %}{% for w in webinaires_accueil %}
+      <article class="wb-tile wb-slide group" style="{{ w.theme_style }}" {% if not forloop.parentloop.first %}data-clone hidden aria-hidden="true"{% endif %}>
         <a href="{% url 'webinaires:detail' w.slug %}" class="block" tabindex="-1" aria-hidden="true">{% include 'webinaires/_couverture.html' with largeur=800 %}</a>
         <div class="flex flex-1 flex-col p-5">
           <div class="flex items-center justify-between gap-3 text-[13px]">
@@ -39,8 +48,7 @@
           </div>
         </div>
       </article>
-      {% endfor %}
-    </div>
+      {% endfor %}{% endfor %}
   </div>
 </section>
 {% endif %}

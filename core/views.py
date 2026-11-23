@@ -6,6 +6,8 @@ from django.http import HttpResponse
 from django.views.decorators.cache import cache_control
 from django.views.decorators.http import require_GET
 from django.conf import settings
+from django.db.models import Q
+from django.utils import timezone
 from .models import TeamMember, Temoignage, Statistique
 from .forms import ContactForm
 from .notifications_admin import notifier_admin
@@ -15,10 +17,11 @@ from boutique.models import Produit
 from projets.models import Projet
 from webinaires.views import avec_inscrits, contexte_cartes
 from webinaires.models import Webinaire
+from carrieres.models import Offre
 
 
 def accueil(request):
-    formations_vedette = Formation.objects.filter(actif=True).order_by('ordre', 'titre')[:10]
+    formations_vedette = Formation.objects.filter(actif=True).order_by('-en_vedette', 'ordre', 'titre')[:10]
     services = Service.objects.filter(actif=True)[:6]
     # composants mis en avant d'abord, puis les plus récents (la section n'est jamais vide)
     produits_vedette = (Produit.objects.filter(actif=True).select_related('categorie')
@@ -27,9 +30,14 @@ def accueil(request):
                        .order_by('-en_vedette', '-date_realisation', '-created_at')[:10])
     temoignages = Temoignage.objects.filter(actif=True)[:6]
     statistiques = Statistique.objects.all()[:6]
-    # webinaires à venir (ou en direct) : en tête de page, juste sous le héros
-    webinaires_accueil = contexte_cartes(request, list(avec_inscrits(Webinaire.objects.a_venir())[:3]))
+    # webinaires à venir (ou en direct), en carrousel sous le héros
+    webinaires_accueil = contexte_cartes(request, list(avec_inscrits(Webinaire.objects.a_venir())[:10]))
+    # offres de carrière ouvertes (à la une d'abord), en carrousel au-dessus des webinaires
+    aujourd_hui = timezone.localdate()
+    offres_accueil = (Offre.objects.filter(actif=True).filter(Q(date_limite__isnull=True) | Q(date_limite__gte=aujourd_hui))
+                      .prefetch_related('formules').order_by('-mise_en_avant', '-created_at')[:10])
     ctx = {
+        'offres_accueil': offres_accueil,
         'webinaires_accueil': webinaires_accueil,
         'formations_vedette': formations_vedette,
         'services': services,

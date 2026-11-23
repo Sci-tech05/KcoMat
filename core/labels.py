@@ -16,7 +16,7 @@ LIBELLES = {
     'date_debut': 'Date de début', 'date_fin': 'Date de fin', 'date_limite': 'Date limite',
     'date_realisation': 'Date de réalisation', 'description': 'Description', 'description_besoin': 'Description du besoin',
     'description_courte': 'Description courte', 'description_projet': 'Description du projet', 'domaine': 'Domaine',
-    'duree': 'Durée', 'email': 'E-mail', 'en_vedette': 'En vedette', 'fedapay_formation_id': 'Transaction Fedapay (formation)',
+    'duree': 'Durée', 'email': 'E-mail', 'en_vedette': 'À la une', 'fedapay_formation_id': 'Transaction Fedapay (formation)',
     'fedapay_frais_id': 'Transaction Fedapay (frais)', 'fedapay_transaction_id': 'Transaction Fedapay', 'fichier': 'Fichier',
     'formation': 'Formation', 'formation_payee_le': 'Formation payée le', 'frais_payes_le': 'Frais payés le', 'icone': 'Icône',
     'image': 'Image', 'image_couverture': 'Image de couverture', 'image_principale': 'Image principale',

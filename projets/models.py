@@ -37,7 +37,8 @@ class Projet(models.Model):
     localite = models.CharField(max_length=200, blank=True)
     date_realisation = models.DateField(null=True, blank=True)
     technologies = models.CharField(max_length=300, blank=True, help_text="Ex: Arduino, Raspberry Pi, Zigbee")
-    en_vedette = models.BooleanField(default=False)
+    en_vedette = models.BooleanField("À la une", default=False,
+                                     help_text="Affiché en première position sur l'accueil et dans sa rubrique.")
     actif = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
 

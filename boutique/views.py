@@ -238,7 +238,8 @@ def liste_produits(request):
     categories = CategorieProduit.objects.annotate(n=Count('produits', filter=Q(produits__actif=True)))
     cat_slug = request.GET.get('categorie', '').strip()
     search = request.GET.get('q', '').strip()[:80]
-    produits = Produit.objects.filter(actif=True).select_related('categorie')
+    # composants à la une d'abord, puis ordre alphabétique
+    produits = Produit.objects.filter(actif=True).select_related('categorie').order_by('-en_vedette', 'nom')
     if cat_slug:
         produits = produits.filter(categorie__slug=cat_slug)
     if search:

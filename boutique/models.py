@@ -64,7 +64,8 @@ class Produit(models.Model):
     stock = models.PositiveIntegerField(default=0)
     actif = models.BooleanField(default=True)
     nouveau = models.BooleanField(default=False)
-    en_vedette = models.BooleanField(default=False)
+    en_vedette = models.BooleanField("À la une", default=False,
+                                     help_text="Affiché en première position sur l'accueil et dans sa rubrique.")
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

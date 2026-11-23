@@ -11,6 +11,7 @@
  * Deux modes automatiques :
  *   - data-vitesse="0.45"   défilement continu (pixels par image) ;
  *   - data-intervalle="1500" avance d'une carte toutes les 1,5 s (pas à pas).
+ *   - data-toujours : défile même avec peu de cartes (elles sont répétées pour boucler).
  *
  * - Boucle infinie seulement si les éléments dépassent la largeur visible ; sinon affichage simple centré.
  * - Pause au survol, au toucher et au focus ; glisser à la souris ; flèches et touches ← →.
@@ -30,12 +31,27 @@
     var gap = parseFloat(getComputedStyle(track).columnGap) || 20;
     var largeurOriginaux = originaux.reduce(function (somme, el) { return somme + el.getBoundingClientRect().width + gap; }, 0);
 
-    // Pas assez d'éléments pour remplir la largeur : affichage simple, sans boucle
-    if (!originaux.length || largeurOriginaux <= track.clientWidth + 1) {
+    // Pas assez d'éléments pour remplir la largeur : affichage simple, sans boucle…
+    var multiple = 1;
+    if (!originaux.length || (largeurOriginaux <= track.clientWidth + 1 && !track.hasAttribute('data-toujours'))) {
       clones.forEach(function (el) { el.remove(); });
       track.classList.add('is-static');
       boutons(track).forEach(function (b) { b.hidden = true; });
       return;
+    }
+    // … sauf avec data-toujours : les cartes sont répétées jusqu'à dépasser la largeur visible, pour défiler quand même
+    if (largeurOriginaux <= track.clientWidth + 1) {
+      multiple = Math.ceil((track.clientWidth + 1) / largeurOriginaux);
+      for (var copie = 3; copie < 3 * multiple; copie++) {
+        originaux.forEach(function (el) {
+          var c = el.cloneNode(true);
+          c.setAttribute('data-clone', '');
+          c.setAttribute('aria-hidden', 'true');
+          c.setAttribute('tabindex', '-1');
+          track.appendChild(c);
+        });
+      }
+      clones = track.querySelectorAll('[data-clone]');
     }
     clones.forEach(function (el) { el.hidden = false; });
 
@@ -44,9 +60,9 @@
     var intervalle = parseInt(track.dataset.intervalle || '0', 10);
     var enPause = false, minuteur = null, pos = 0;
 
-    // largeur exacte d'un jeu de cartes : écart entre la 1re carte et sa 1re copie
+    // largeur exacte d'un jeu de cartes : écart entre la 1re carte et sa 1re copie (× répétitions de data-toujours)
     function largeurJeu() {
-      return clones.length ? clones[0].offsetLeft - originaux[0].offsetLeft : track.scrollWidth / COPIES;
+      return (clones.length ? clones[0].offsetLeft - originaux[0].offsetLeft : track.scrollWidth / COPIES) * multiple;
     }
     // garde la position dans la copie du milieu : boucle dans les deux sens
     function normaliser(x) {

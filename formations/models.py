@@ -48,7 +48,8 @@ class Formation(models.Model):
     places_disponibles = models.PositiveIntegerField(default=20)
     actif = models.BooleanField(default=True)
     nouveau = models.BooleanField(default=False)
-    en_vedette = models.BooleanField(default=False)
+    en_vedette = models.BooleanField("À la une", default=False,
+                                     help_text="Affiché en première position sur l'accueil et dans sa rubrique.")
     ordre = models.PositiveSmallIntegerField(
         "Ordre", default=0, db_index=True,
         help_text="Ordre d'affichage sur le site : le plus petit nombre apparaît en premier (10, 20, 30… pour pouvoir intercaler).",

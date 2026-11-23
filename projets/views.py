@@ -6,7 +6,8 @@ from .models import Projet, CategorieProjet
 def liste_projets(request):
     categories = CategorieProjet.objects.annotate(n=Count('projets', filter=Q(projets__actif=True)))
     cat_slug = request.GET.get('categorie', '')
-    tous = Projet.objects.filter(actif=True)
+    # projets à la une d'abord, puis les plus récents
+    tous = Projet.objects.filter(actif=True).order_by('-en_vedette', '-created_at')
     projets = tous.filter(categorie__slug=cat_slug) if cat_slug else tous
     ctx = {
         'projets': projets,

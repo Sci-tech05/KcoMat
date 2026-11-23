@@ -411,3 +411,54 @@ class RelancesPaiementTests(TestCase):
 def timezone_heure():
     from datetime import timedelta
     return timedelta(hours=2)
+
+from datetime import timedelta
+
+from django.utils import timezone
+
+
+class ALaUneEtCarrouselsTests(TestCase):
+    def test_formations_produits_projets_a_la_une_en_premier(self):
+        from boutique.models import Produit
+        from formations.models import Formation
+        from projets.models import Projet
+        Formation.objects.create(titre='AAA classique', description_courte='c', description='d', prix=1, ordre=1)
+        Formation.objects.create(titre='ZZZ à la une', description_courte='c', description='d', prix=1, ordre=99,
+                                 en_vedette=True)
+        Produit.objects.create(nom='AAA résistance', description_courte='x', description='x', prix=100)
+        Produit.objects.create(nom='ZZZ capteur', description_courte='x', description='x', prix=100, en_vedette=True)
+        Projet.objects.create(titre='Projet récent', description_courte='x', description='x')
+        Projet.objects.create(titre='Projet phare', description_courte='x', description='x', en_vedette=True)
+        Projet.objects.filter(titre='Projet phare').update(created_at=timezone.now() - timedelta(days=30))
+
+        def avant(page, premier, second):
+            contenu = page.content.decode()
+            self.assertLess(contenu.index(premier), contenu.index(second))
+
+        avant(self.client.get(reverse('formations:liste')), 'ZZZ à la une', 'AAA classique')
+        avant(self.client.get(reverse('boutique:liste')), 'ZZZ capteur', 'AAA résistance')
+        avant(self.client.get(reverse('projets:liste')), 'Projet phare', 'Projet récent')
+        accueil = self.client.get('/')
+        avant(accueil, 'ZZZ à la une', 'AAA classique')
+
+    def test_carrousels_offres_puis_webinaires_a_1_5_s(self):
+        from carrieres.models import Offre
+        from webinaires.models import Webinaire
+        debut = timezone.now() + timedelta(days=2)
+        Webinaire.objects.create(titre='Webinaire ESP32', accroche='a', description='d', date_debut=debut,
+                                 date_fin=debut + timedelta(hours=2), actif=True)
+        Offre.objects.create(titre='Stage classique', type_offre='stage', domaine='iot', description='d',
+                             competences_requises='c')
+        Offre.objects.create(titre='Stage vedette', type_offre='stage', domaine='iot', description='d',
+                             competences_requises='c', mise_en_avant=True)
+        Offre.objects.create(titre='Offre close', type_offre='stage', domaine='iot', description='d',
+                             competences_requises='c', date_limite=timezone.localdate() - timedelta(days=1))
+        contenu = self.client.get('/').content.decode()
+        self.assertIn('id="offres-track"', contenu)
+        self.assertIn('id="webinaires-track"', contenu)
+        self.assertLess(contenu.index('id="offres-track"'), contenu.index('id="webinaires-track"'))
+        for piste in ('offres-track', 'webinaires-track'):
+            balise = contenu[contenu.index(f'id="{piste}"'):].split('>', 1)[0]
+            self.assertIn('data-intervalle="1500"', balise)
+        self.assertLess(contenu.index('Stage vedette'), contenu.index('Stage classique'))
+        self.assertNotIn('Offre close', contenu)

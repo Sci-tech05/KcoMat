@@ -359,8 +359,8 @@ def liste_formations(request):
     # nombre de formations publiées par catégorie (affiché dans les filtres)
     categories = CategorieFormation.objects.annotate(n=Count('formations', filter=Q(formations__actif=True)))
     cat_slug = request.GET.get('categorie', '')
-    # ordre choisi dans l'admin (colonne « Ordre »), puis alphabétique
-    toutes = Formation.objects.filter(actif=True).order_by('ordre', 'titre')
+    # à la une d'abord, puis ordre choisi dans l'admin (colonne « Ordre »), puis alphabétique
+    toutes = Formation.objects.filter(actif=True).order_by('-en_vedette', 'ordre', 'titre')
     formations = toutes.filter(categorie__slug=cat_slug) if cat_slug else toutes
     ctx = {
         'formations': formations,
