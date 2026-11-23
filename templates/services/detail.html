@@ -43,8 +43,13 @@
             <div class="hidden lg:flex flex-col gap-4">
                 <div class="bg-white/5 border border-white/10 rounded-2xl p-5 backdrop-blur-sm text-center">
                     <div class="mx-auto mb-3 grid place-items-center w-12 h-12 rounded-2xl bg-white/10 text-cyan-300">{% include 'partials/icon.html' with name='sparkles' class='w-6 h-6' %}</div>
+                    {% if service.est_accompagnement %}
+                    <div class="text-white font-bold text-lg">Consultation : {{ frais_consultation|floatformat:"0g" }} FCFA</div>
+                    <div class="text-gray-400 text-sm mt-1">Thème amélioré, fonctionnalités et liste des matériels. La réalisation fait ensuite l'objet d'un devis personnalisé.</div>
+                    {% else %}
                     <div class="text-white font-bold text-lg">Devis gratuit</div>
                     <div class="text-gray-400 text-sm mt-1">Remplissez le formulaire ci-dessous, notre équipe vous contacte rapidement avec une estimation personnalisée.</div>
+                    {% endif %}
                 </div>
                 <div class="grid grid-cols-2 gap-3">
                     <div class="bg-white/5 border border-white/10 rounded-xl p-4 backdrop-blur-sm text-center">
@@ -106,6 +111,9 @@
                     </div>
                 </article>
 
+                {% if service.est_accompagnement %}
+                {% include 'services/_procedure_accompagnement.html' %}
+                {% else %}
                 <!-- Déroulement -->
                 <section class="rounded-3xl border border-slate-200/80 bg-white p-6 sm:p-8 shadow-sm">
                     <p class="font-mono text-[11px] font-bold uppercase tracking-[0.18em] text-blue-600">Comment ça se passe</p>
@@ -124,6 +132,7 @@
                         {% endfor %}
                     </ol>
                 </section>
+                {% endif %}
 
                 <!-- Pourquoi KcoMat -->
                 <section class="rounded-3xl border border-slate-200/80 bg-white p-6 sm:p-8 shadow-sm">
@@ -157,8 +166,13 @@
                         <div class="flex items-center gap-3">
                             <div class="w-9 h-9 bg-white/20 rounded-xl flex items-center justify-center text-lg">{{ service.icone }}</div>
                             <div>
+                                {% if service.est_accompagnement %}
+                                <div class="font-bold text-base">Demande d'accompagnement</div>
+                                <div class="text-white/75 text-xs">Consultation : {{ frais_consultation|floatformat:"0g" }} FCFA, payable en ligne</div>
+                                {% else %}
                                 <div class="font-bold text-base">Demande de service</div>
                                 <div class="text-white/75 text-xs">Devis gratuit · Sans engagement</div>
+                                {% endif %}
                             </div>
                         </div>
                     </div>
@@ -183,8 +197,11 @@
                             {% endfor %}
                             <button id="submit-btn" type="submit" class="btn-primary w-full py-3 font-bold text-sm mt-2">
                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/></svg>
-                                Envoyer la demande
+                                {% if service.est_accompagnement %}Envoyer et payer la consultation ({{ frais_consultation|floatformat:"0g" }} FCFA){% else %}Envoyer la demande{% endif %}
                             </button>
+                            {% if service.est_accompagnement %}
+                            <p class="text-center text-xs text-gray-400">Paiement sécurisé via FedaPay (MTN, Moov Money). Facture envoyée par e-mail.</p>
+                            {% endif %}
                         </form>
 
                         <!-- Séparateur -->

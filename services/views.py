@@ -1,7 +1,8 @@
 from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib import messages
-from .models import Service, DemandeService
-from .forms import DemandeServiceForm
+from .models import FRAIS_CONSULTATION, Service, DemandeService
+from .forms import DemandeAccompagnementForm, DemandeServiceForm
+from .paiement import memoriser_demande
 from core.notifications_admin import notifier_admin
 
 
@@ -14,11 +15,16 @@ def liste_services(request):
 def detail_service(request, slug):
     service = get_object_or_404(Service, slug=slug, actif=True)
     autres_services = Service.objects.filter(actif=True).exclude(slug=slug).order_by('ordre')[:4]
-    form = DemandeServiceForm(request.POST or None, initial={'service': service})
+    formulaire = DemandeAccompagnementForm if service.est_accompagnement else DemandeServiceForm
+    form = formulaire(request.POST or None, initial={'service': service})
     if request.method == 'POST' and form.is_valid():
         demande = form.save(commit=False)
         demande.service = service
         demande.save()
+        if service.est_accompagnement:
+            # paiement obligatoire : la demande n'est transmise à l'équipe qu'une fois la consultation réglée
+            memoriser_demande(request, demande)
+            return redirect('services:paiement_consultation', pk=demande.pk)
         notifier_admin(
             type_evenement='service', sujet=f"Demande de devis : {service.titre} — {demande.nom}",
             titre='Nouvelle demande de service',
@@ -29,5 +35,6 @@ def detail_service(request, slug):
         )
         messages.success(request, "✅ Votre demande a été envoyée ! Nous vous contacterons rapidement.")
         return redirect('services:detail', slug=service.slug)
-    ctx = {'service': service, 'form': form, 'title': service.titre, 'autres_services': autres_services}
+    ctx = {'service': service, 'form': form, 'title': service.titre, 'autres_services': autres_services,
+           'frais_consultation': FRAIS_CONSULTATION}
     return render(request, 'services/detail.html', ctx)

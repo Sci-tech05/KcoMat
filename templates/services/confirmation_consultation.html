@@ -1,0 +1,45 @@
+{% extends 'base.html' %}
+{% load humanize %}
+
+{% block title %}{{ title }}{% endblock %}
+{% block robots %}noindex, nofollow{% endblock %}
+
+{% block content %}
+<section class="relative overflow-hidden bg-slate-950 py-12 sm:py-16 min-h-[calc(100vh-4rem)]">
+    <div class="absolute inset-0 pointer-events-none">
+        <div class="absolute -top-24 -left-20 w-80 h-80 rounded-full {% if demande.consultation_payee %}bg-emerald-400/20{% else %}bg-amber-400/20{% endif %} blur-3xl"></div>
+        <div class="absolute top-1/3 -right-24 w-96 h-96 rounded-full bg-violet-500/20 blur-3xl"></div>
+    </div>
+
+    <div class="relative max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
+        {% for message in messages %}
+        <div class="mb-5 rounded-2xl border border-amber-300/30 bg-amber-400/15 px-4 py-3 text-sm text-amber-100">{{ message }}</div>
+        {% endfor %}
+
+        <div class="rounded-3xl border border-white/10 bg-white/[0.06] backdrop-blur-xl shadow-2xl p-6 sm:p-8">
+            {% if demande.consultation_payee %}
+            <p class="text-xs uppercase tracking-[0.22em] text-emerald-300 font-semibold">Paiement confirmé</p>
+            <h1 class="mt-2 text-2xl sm:text-3xl font-black text-white">Votre consultation est réglée</h1>
+            <p class="mt-2 text-slate-300">Merci {{ demande.nom }} ! Nous avons bien reçu {{ frais|intcomma }} FCFA pour le projet « {{ demande.intitule_projet }} ».</p>
+            <ul class="mt-6 space-y-2 text-sm text-slate-200">
+                <li>• Notre équipe vous contacte rapidement (téléphone ou WhatsApp) pour fixer la date de la séance.</li>
+                <li>• Votre facture vous a été envoyée par e-mail ; elle est aussi téléchargeable ci-dessous.</li>
+                <li>• À l'issue de la consultation : thème validé, fonctionnalités et liste complète des matériels.</li>
+            </ul>
+            <div class="mt-6 flex flex-col sm:flex-row gap-3">
+                <a href="{% url 'services:facture_consultation' demande.pk %}" target="_blank" class="inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-emerald-950 font-black px-5 py-3 transition-colors">Facture (PDF)</a>
+                <a href="https://wa.me/{{ KCOMAT.whatsapp }}" target="_blank" rel="noopener" class="inline-flex items-center justify-center gap-2 rounded-xl border border-white/20 bg-white/5 hover:bg-white/10 text-white font-semibold px-5 py-3 transition-colors">Nous écrire sur WhatsApp</a>
+            </div>
+            {% else %}
+            <p class="text-xs uppercase tracking-[0.22em] text-amber-300 font-semibold">Demande enregistrée</p>
+            <h1 class="mt-2 text-2xl sm:text-3xl font-black text-white">Paiement de la consultation en attente</h1>
+            <p class="mt-2 text-slate-300">Votre demande pour « {{ demande.intitule_projet }} » est bien enregistrée. La session de consultation est confirmée dès réception des {{ frais|intcomma }} FCFA.</p>
+            <div class="mt-6 flex flex-col sm:flex-row gap-3">
+                <a href="{% url 'services:paiement_consultation' demande.pk %}" class="inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-emerald-950 font-black px-5 py-3 transition-colors">Payer {{ frais|intcomma }} FCFA</a>
+                <a href="https://wa.me/{{ KCOMAT.whatsapp }}" target="_blank" rel="noopener" class="inline-flex items-center justify-center gap-2 rounded-xl border border-white/20 bg-white/5 hover:bg-white/10 text-white font-semibold px-5 py-3 transition-colors">Une difficulté ? WhatsApp</a>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</section>
+{% endblock %}

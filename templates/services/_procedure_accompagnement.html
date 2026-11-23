@@ -1,0 +1,97 @@
+{% load static %}
+<!-- Procédure officielle « Demande d'accompagnement de projets techniques » -->
+<section class="rounded-3xl border border-slate-200/80 bg-white p-6 sm:p-8 shadow-sm">
+    <div class="flex flex-wrap items-end justify-between gap-4">
+        <div>
+            <p class="font-mono text-[11px] font-bold uppercase tracking-[0.18em] text-violet-600">La procédure</p>
+            <h3 class="mt-2 text-xl font-black text-slate-900">Trois étapes, de l'idée au prototype</h3>
+        </div>
+        <a href="{% static 'docs/kcomat-demande-accompagnement-projet.pdf' %}" download
+           class="inline-flex items-center gap-2 rounded-xl border border-violet-200 bg-violet-50 px-4 py-2 text-sm font-semibold text-violet-700 transition hover:bg-violet-100">
+            {% include 'partials/icon.html' with name='download' class='w-4 h-4' stroke='2' %}Fiche de demande (PDF)
+        </a>
+    </div>
+
+    <ol class="mt-6 space-y-4">
+        <li class="rounded-2xl border border-amber-200 bg-amber-50/60 p-5">
+            <div class="flex flex-wrap items-center justify-between gap-2">
+                <p class="flex items-center gap-3 font-black text-slate-900">
+                    <span class="grid h-9 w-9 place-items-center rounded-xl bg-amber-500 font-mono text-sm text-white">01</span>
+                    Session de consultation
+                </p>
+                <span class="rounded-full bg-amber-500 px-3 py-1 text-xs font-bold text-white">{{ frais_consultation|floatformat:"0g" }} FCFA · payable avant la séance</span>
+            </div>
+            <ul class="mt-4 grid gap-2 text-sm text-slate-600 sm:grid-cols-2">
+                <li class="flex gap-2">{% include 'partials/icon.html' with name='check' class='w-4 h-4 mt-0.5 flex-shrink-0 text-amber-600' stroke='2.5' %}Écoute et analyse de votre thème de projet</li>
+                <li class="flex gap-2">{% include 'partials/icon.html' with name='check' class='w-4 h-4 mt-0.5 flex-shrink-0 text-amber-600' stroke='2.5' %}Amélioration et reformulation du thème selon les bonnes pratiques de l'ingénierie</li>
+                <li class="flex gap-2">{% include 'partials/icon.html' with name='check' class='w-4 h-4 mt-0.5 flex-shrink-0 text-amber-600' stroke='2.5' %}Fonctionnalités possibles et pertinentes</li>
+                <li class="flex gap-2">{% include 'partials/icon.html' with name='check' class='w-4 h-4 mt-0.5 flex-shrink-0 text-amber-600' stroke='2.5' %}Contraintes techniques : matérielles, logicielles, énergétiques, temporelles</li>
+                <li class="flex gap-2">{% include 'partials/icon.html' with name='check' class='w-4 h-4 mt-0.5 flex-shrink-0 text-amber-600' stroke='2.5' %}Cahier des charges préliminaire</li>
+                <li class="flex gap-2">{% include 'partials/icon.html' with name='check' class='w-4 h-4 mt-0.5 flex-shrink-0 text-amber-600' stroke='2.5' %}Liste détaillée des matériels nécessaires</li>
+            </ul>
+            <p class="mt-4 rounded-xl bg-white px-4 py-3 text-sm text-slate-700 ring-1 ring-amber-100">
+                <span class="font-bold">Vous repartez avec :</span> le thème amélioré et validé, la liste des fonctionnalités du système et la liste complète des matériels requis.
+            </p>
+        </li>
+
+        <li class="rounded-2xl border border-emerald-200 bg-emerald-50/60 p-5">
+            <div class="flex flex-wrap items-center justify-between gap-2">
+                <p class="flex items-center gap-3 font-black text-slate-900">
+                    <span class="grid h-9 w-9 place-items-center rounded-xl bg-emerald-600 font-mono text-sm text-white">02</span>
+                    Acquisition des matériels
+                </p>
+                <span class="rounded-full bg-emerald-600 px-3 py-1 text-xs font-bold text-white">À la charge du demandeur</span>
+            </div>
+            <ul class="mt-4 space-y-2 text-sm text-slate-600">
+                <li class="flex gap-2">{% include 'partials/icon.html' with name='check' class='w-4 h-4 mt-0.5 flex-shrink-0 text-emerald-600' stroke='2.5' %}<span>Chez KcoMat, selon les stocks disponibles (<a href="{% url 'boutique:liste' %}" class="font-semibold text-emerald-700 underline">voir la boutique</a>), ou chez le fournisseur de votre choix</span></li>
+                <li class="flex gap-2">{% include 'partials/icon.html' with name='check' class='w-4 h-4 mt-0.5 flex-shrink-0 text-emerald-600' stroke='2.5' %}Tous les matériels de la liste sont fournis avant le début de la réalisation</li>
+                <li class="flex gap-2">{% include 'partials/icon.html' with name='check' class='w-4 h-4 mt-0.5 flex-shrink-0 text-emerald-600' stroke='2.5' %}KcoMat n'est pas responsable de la qualité des matériels achetés ailleurs</li>
+            </ul>
+            <p class="mt-4 rounded-xl bg-white px-4 py-3 text-sm text-emerald-800 ring-1 ring-emerald-100">
+                La réalisation ne commence qu'une fois <strong>tous</strong> les matériels fournis et vérifiés par l'équipe KcoMat.
+            </p>
+        </li>
+
+        <li class="rounded-2xl border border-violet-200 bg-violet-50/60 p-5">
+            <div class="flex flex-wrap items-center justify-between gap-2">
+                <p class="flex items-center gap-3 font-black text-slate-900">
+                    <span class="grid h-9 w-9 place-items-center rounded-xl bg-violet-600 font-mono text-sm text-white">03</span>
+                    Réalisation du projet par KcoMat
+                </p>
+                <span class="rounded-full bg-violet-600 px-3 py-1 text-xs font-bold text-white">Devis personnalisé</span>
+            </div>
+            <ul class="mt-4 grid gap-2 text-sm text-slate-600 sm:grid-cols-2">
+                <li class="flex gap-2">{% include 'partials/icon.html' with name='check' class='w-4 h-4 mt-0.5 flex-shrink-0 text-violet-600' stroke='2.5' %}Montage, câblage et assemblage du système</li>
+                <li class="flex gap-2">{% include 'partials/icon.html' with name='check' class='w-4 h-4 mt-0.5 flex-shrink-0 text-violet-600' stroke='2.5' %}Développement du code (firmware, logiciel embarqué…)</li>
+                <li class="flex gap-2">{% include 'partials/icon.html' with name='check' class='w-4 h-4 mt-0.5 flex-shrink-0 text-violet-600' stroke='2.5' %}Tests, débogage et validation du prototype</li>
+                <li class="flex gap-2">{% include 'partials/icon.html' with name='check' class='w-4 h-4 mt-0.5 flex-shrink-0 text-violet-600' stroke='2.5' %}Documentation technique et explication du fonctionnement</li>
+            </ul>
+            <p class="mt-4 text-sm text-slate-600">Le coût varie selon la complexité du projet. Le devis est établi après la consultation et validé par les deux parties avant le début des travaux.</p>
+            <div class="mt-4 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-800">
+                <p class="font-bold">Conditions de paiement de la réalisation</p>
+                <ol class="mt-1 list-decimal space-y-1 pl-5">
+                    <li>La moitié du montant est réglée <strong>avant</strong> le commencement des travaux.</li>
+                    <li>Le solde est intégralement versé <strong>avant</strong> la remise du projet achevé.</li>
+                </ol>
+            </div>
+        </li>
+    </ol>
+
+    <div class="mt-6 overflow-x-auto">
+        <table class="w-full min-w-[420px] overflow-hidden rounded-2xl text-sm">
+            <caption class="sr-only">Récapitulatif de la procédure</caption>
+            <thead>
+                <tr class="bg-slate-900 text-left text-white">
+                    <th class="px-4 py-2.5 font-semibold">Étape</th>
+                    <th class="px-4 py-2.5 font-semibold">Description</th>
+                    <th class="px-4 py-2.5 text-right font-semibold">Coût</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-100 bg-slate-50">
+                <tr><td class="px-4 py-2.5 font-bold text-amber-600">1</td><td class="px-4 py-2.5">Session de consultation</td><td class="px-4 py-2.5 text-right font-bold text-amber-600">{{ frais_consultation|floatformat:"0g" }} FCFA</td></tr>
+                <tr><td class="px-4 py-2.5 font-bold text-emerald-600">2</td><td class="px-4 py-2.5">Acquisition des matériels</td><td class="px-4 py-2.5 text-right italic text-emerald-700">À la charge du demandeur</td></tr>
+                <tr><td class="px-4 py-2.5 font-bold text-violet-600">3</td><td class="px-4 py-2.5">Réalisation complète par KcoMat</td><td class="px-4 py-2.5 text-right font-bold text-violet-600">Devis personnalisé</td></tr>
+            </tbody>
+        </table>
+    </div>
+</section>
