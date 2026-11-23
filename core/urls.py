@@ -8,5 +8,6 @@ urlpatterns = [
     path('a-propos/', views.a_propos, name='a_propos'),
     path('contact/', views.contact, name='contact'),
     path('confidentialite/', views.confidentialite, name='confidentialite'),
+    path('mentions-legales/', views.mentions_legales, name='mentions_legales'),
     path('avis/<str:type_objet>/<int:pk>/', avis.donner_avis, name='donner_avis'),
 ]

@@ -285,3 +285,35 @@ class CompressionImagesTests(TestCase):
         with self.captureOnCommitCallbacks(execute=True):
             a.delete()
         self.assertTrue(os.path.exists(os.path.join(self.media, a.image.name)))
+
+
+class PagesLegalesTests(TestCase):
+    def test_politique_de_confidentialite(self):
+        from django.urls import reverse
+        r = self.client.get(reverse('core:confidentialite'))
+        self.assertContains(r, 'Code du numérique')
+        self.assertContains(r, 'FedaPay')
+        self.assertContains(r, 'id="cookies"')
+        self.assertContains(r, 'href="#droits"')
+        self.assertContains(r, 'APDP')
+        self.assertContains(r, reverse('core:mentions_legales'))
+
+    def test_mentions_legales(self):
+        from django.conf import settings
+        from django.test import override_settings
+        from django.urls import reverse
+        r = self.client.get(reverse('core:mentions_legales'))
+        self.assertContains(r, settings.KCOMAT_INFO['rccm'])
+        self.assertContains(r, settings.KCOMAT_INFO['ifu'])
+        self.assertContains(r, 'PythonAnywhere LLP')
+        self.assertContains(r, 'Établissement (entreprise individuelle)')
+        self.assertContains(r, 'La Direction de')
+        with override_settings(KCOMAT_INFO={**settings.KCOMAT_INFO, 'directeur_publication': 'Prénom NOM'}):
+            self.assertContains(self.client.get(reverse('core:mentions_legales')), 'Prénom NOM')
+
+    def test_liens_dans_le_pied_de_page_et_le_sitemap(self):
+        from django.urls import reverse
+        accueil = self.client.get('/')
+        self.assertContains(accueil, reverse('core:mentions_legales'))
+        self.assertContains(accueil, reverse('core:confidentialite'))
+        self.assertContains(self.client.get('/sitemap.xml'), reverse('core:mentions_legales'))

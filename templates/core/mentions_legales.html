@@ -1,0 +1,107 @@
+{% extends 'core/_page_legale.html' %}
+
+{% block title %}Mentions légales{% endblock %}
+{% block meta_description %}Mentions légales du site KcoMat : éditeur, RCCM et IFU, directeur de la publication, hébergeur, propriété intellectuelle et conditions d'utilisation.{% endblock %}
+
+{% block hero %}
+{% include 'partials/page_hero.html' with crumb='Mentions légales' eyebrow='Informations légales' icon='file' accent='cyan' title='Mentions' highlight='légales' subtitle="Qui édite ce site, qui l'héberge et les règles qui encadrent son utilisation." chips="briefcase|Entreprise béninoise;badge-check|RCCM & IFU;map-pin|Lokossa, Mono" sats='file,shield,briefcase,map-pin,badge-check,cpu' %}
+{% endblock %}
+
+{% block sections %}
+<section id="editeur" class="legal-section">
+  <h2><span class="legal-num">01</span>Éditeur du site</h2>
+  <div class="legal-body">
+    <p>Le site <strong>{{ SITE_URL|cut:"https://"|cut:"http://" }}</strong> est édité par :</p>
+    <dl class="legal-fiche">
+      <div><dt>Dénomination</dt><dd>{{ KCOMAT.name }}</dd></div>
+      <div><dt>Forme juridique</dt><dd>{{ KCOMAT.forme_juridique }}</dd></div>
+      <div><dt>Activité</dt><dd>Formations techniques, vente de composants électroniques, solutions technologiques</dd></div>
+      <div><dt>Siège</dt><dd>{{ KCOMAT.address }}</dd></div>
+      <div><dt>RCCM</dt><dd>{{ KCOMAT.rccm }}</dd></div>
+      <div><dt>IFU</dt><dd>{{ KCOMAT.ifu }}</dd></div>
+      <div><dt>Téléphone</dt><dd><a href="tel:{{ KCOMAT.phone|cut:' ' }}" class="text-blue-700">{{ KCOMAT.phone }}</a></dd></div>
+      <div><dt>E-mail</dt><dd><a href="mailto:{{ KCOMAT.email }}" class="text-blue-700">{{ KCOMAT.email }}</a></dd></div>
+    </dl>
+  </div>
+</section>
+
+<section id="publication" class="legal-section">
+  <h2><span class="legal-num">02</span>Directeur de la publication</h2>
+  <div class="legal-body">
+    <p>{% if directeur_publication %}<strong>{{ directeur_publication }}</strong>, Directeur de {{ KCOMAT.name }}{% else %}La Direction de <strong>{{ KCOMAT.name }}</strong>{% endif %}, joignable à l'adresse <a href="mailto:{{ KCOMAT.email }}">{{ KCOMAT.email }}</a>.</p>
+  </div>
+</section>
+
+<section id="hebergement" class="legal-section">
+  <h2><span class="legal-num">03</span>Hébergement</h2>
+  <div class="legal-body">
+    <dl class="legal-fiche">
+      <div><dt>Hébergeur</dt><dd>PythonAnywhere LLP (groupe Anaconda)</dd></div>
+      <div><dt>Adresse</dt><dd>5 The Green, Richmond TW9 1PL, Royaume-Uni</dd></div>
+      <div><dt>Immatriculation</dt><dd>OC378414 (Angleterre et Pays de Galles)</dd></div>
+      <div><dt>Contact</dt><dd><a href="https://www.pythonanywhere.com" target="_blank" rel="noopener" class="text-blue-700">www.pythonanywhere.com</a> · support@pythonanywhere.com</dd></div>
+    </dl>
+  </div>
+</section>
+
+<section id="propriete" class="legal-section">
+  <h2><span class="legal-num">04</span>Propriété intellectuelle</h2>
+  <div class="legal-body">
+    <p>L'ensemble du site (textes, programmes de formation, photographies, visuels, logo et nom {{ KCOMAT.name }}, vidéos, documents téléchargeables, mise en page) est la propriété de {{ KCOMAT.name }} ou est utilisé avec l'accord de ses auteurs.</p>
+    <p>Toute reproduction, représentation ou diffusion, totale ou partielle, sans autorisation écrite préalable est interdite. Vous pouvez en revanche partager librement les liens vers nos pages.</p>
+    <p>Les noms et logos des partenaires restent la propriété de leurs titulaires ; ils sont affichés avec leur accord.</p>
+  </div>
+</section>
+
+<section id="responsabilite" class="legal-section">
+  <h2><span class="legal-num">05</span>Responsabilité</h2>
+  <div class="legal-body">
+    <p>{{ KCOMAT.name }} veille à l'exactitude des informations publiées (programmes, dates, prix, disponibilités) et les met à jour régulièrement. Des erreurs ou omissions restent possibles : en cas de doute, contactez-nous avant toute commande ou inscription.</p>
+    <p>Nous nous efforçons de garder le site accessible en permanence, mais il peut être interrompu pour maintenance ou en raison d'incidents techniques, sans que notre responsabilité puisse être engagée.</p>
+    <p>Les montages et codes présentés dans nos projets et formations sont fournis à titre pédagogique ; leur reproduction se fait sous la responsabilité de l'utilisateur, notamment pour tout ce qui touche au réseau électrique.</p>
+  </div>
+</section>
+
+<section id="commandes" class="legal-section">
+  <h2><span class="legal-num">06</span>Commandes et paiements</h2>
+  <div class="legal-body">
+    <p>Les prix sont indiqués en francs CFA (FCFA). Les paiements en ligne sont traités par <strong>FedaPay</strong> (Mobile Money) ; {{ KCOMAT.name }} n'a jamais accès à vos codes de paiement. Une facture est délivrée pour chaque paiement confirmé.</p>
+    <p>Les conditions propres à chaque prestation (frais d'inscription aux formations, consultation de l'accompagnement de projet, devis de réalisation) sont précisées sur la page correspondante avant tout paiement.</p>
+  </div>
+</section>
+
+<section id="attestations" class="legal-section">
+  <h2><span class="legal-num">07</span>Attestations</h2>
+  <div class="legal-body">
+    <p>Les attestations de formation, de participation aux webinaires et d'intervention délivrées par {{ KCOMAT.name }} portent un numéro unique et un QR code. Leur authenticité peut être vérifiée en ligne par toute personne qui les reçoit. Toute falsification expose son auteur à des poursuites.</p>
+  </div>
+</section>
+
+<section id="liens" class="legal-section">
+  <h2><span class="legal-num">08</span>Liens et contenus externes</h2>
+  <div class="legal-body">
+    <p>Le site renvoie vers des services tiers (WhatsApp, YouTube, TikTok, Facebook, LinkedIn, sites de nos partenaires) et intègre certains de leurs contenus (vidéos, visioconférence). {{ KCOMAT.name }} n'exerce aucun contrôle sur ces services et n'est pas responsable de leur contenu ni de leur politique de confidentialité.</p>
+  </div>
+</section>
+
+<section id="donnees" class="legal-section">
+  <h2><span class="legal-num">09</span>Données personnelles</h2>
+  <div class="legal-body">
+    <p>Le traitement de vos données personnelles et vos droits (accès, rectification, effacement…) sont détaillés dans notre <a href="{% url 'core:confidentialite' %}">politique de confidentialité</a>, établie conformément au Code du numérique du Bénin.</p>
+  </div>
+</section>
+
+<section id="droit" class="legal-section">
+  <h2><span class="legal-num">10</span>Droit applicable</h2>
+  <div class="legal-body">
+    <p>Les présentes mentions sont régies par le droit béninois. En cas de litige, une solution amiable sera recherchée en priorité ; à défaut, les juridictions compétentes du Bénin seront saisies.</p>
+  </div>
+</section>
+{% endblock %}
+
+{% block autre_page %}
+<a href="{% url 'core:confidentialite' %}" class="mt-6 flex items-center justify-between gap-4 rounded-3xl border border-slate-200 bg-white p-5 shadow-sm transition hover:border-blue-200 hover:shadow-md">
+  <span><span class="block text-xs font-bold uppercase tracking-wider text-slate-400">À lire aussi</span><span class="mt-1 block font-bold text-slate-900">Politique de confidentialité</span></span>
+  {% include 'partials/icon.html' with name='arrow-right' class='w-5 h-5 text-blue-600' %}
+</a>
+{% endblock %}

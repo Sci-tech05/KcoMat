@@ -24,6 +24,7 @@ class PagesSitemap(Sitemap):
         'core:contact': 0.5,
         'partenariats:index': 0.4,
         'core:confidentialite': 0.2,
+        'core:mentions_legales': 0.2,
     }
 
     def items(self):

@@ -480,6 +480,7 @@ DEFAULT_FROM_EMAIL = config('DEFAULT_FROM_EMAIL', default='KcoMat <kcomat0@gmail
 # KcoMat Company Info (accessible via context processor)
 KCOMAT_INFO = {
     'name': 'KcoMat',
+    'forme_juridique': 'Établissement (entreprise individuelle)',
     'slogan': "Maîtrisez les technologies d'aujourd'hui pour construire l'Afrique de demain",
     'ifu': '0202290628090',
     'rccm': 'LOKOSSA N° RB/LKS/25 A 10147',
@@ -493,6 +494,8 @@ KCOMAT_INFO = {
     'linkedin': 'https://www.linkedin.com/in/kcomat-ets-a7179640a',
     'frais_inscription': 2000,
     'maps_embed': 'https://maps.app.goo.gl/UXMLViYtf7Sjm6267',
+    # Mentions légales : nom du directeur de la publication (vide → « La Direction de KcoMat »)
+    'directeur_publication': config('DIRECTEUR_PUBLICATION', default=''),
 }
 
 # Journalisation : erreurs et événements de paiement visibles dans les logs

@@ -1,3 +1,5 @@
+from datetime import date
+
 from django.shortcuts import render, redirect
 from django.contrib import messages
 from django.http import HttpResponse
@@ -65,8 +67,52 @@ def contact(request):
     return render(request, 'core/contact.html', {'form': form, 'title': 'Contact'})
 
 
+# Pages légales : date à changer à chaque modification du texte
+MISE_A_JOUR_LEGALE = date(2026, 11, 23)
+
+SOMMAIRE_CONFIDENTIALITE = [
+    ('responsable', 'Responsable du traitement'),
+    ('donnees', 'Données collectées'),
+    ('finalites', 'Finalités et bases légales'),
+    ('destinataires', 'Destinataires et prestataires'),
+    ('transferts', 'Hébergement et transferts'),
+    ('conservation', 'Durées de conservation'),
+    ('cookies', 'Cookies et stockage local'),
+    ('notifications', 'Notifications push'),
+    ('securite', 'Sécurité'),
+    ('droits', 'Vos droits'),
+    ('modifications', 'Modifications'),
+]
+
+SOMMAIRE_MENTIONS = [
+    ('editeur', 'Éditeur du site'),
+    ('publication', 'Directeur de la publication'),
+    ('hebergement', 'Hébergement'),
+    ('propriete', 'Propriété intellectuelle'),
+    ('responsabilite', 'Responsabilité'),
+    ('commandes', 'Commandes et paiements'),
+    ('attestations', 'Attestations'),
+    ('liens', 'Liens et contenus externes'),
+    ('donnees', 'Données personnelles'),
+    ('droit', 'Droit applicable'),
+]
+
+
 def confidentialite(request):
-    return render(request, 'core/confidentialite.html', {'title': 'Politique de confidentialité'})
+    return render(request, 'core/confidentialite.html', {
+        'title': 'Politique de confidentialité',
+        'sommaire': SOMMAIRE_CONFIDENTIALITE,
+        'mise_a_jour': MISE_A_JOUR_LEGALE,
+    })
+
+
+def mentions_legales(request):
+    return render(request, 'core/mentions_legales.html', {
+        'title': 'Mentions légales',
+        'sommaire': SOMMAIRE_MENTIONS,
+        'mise_a_jour': MISE_A_JOUR_LEGALE,
+        'directeur_publication': settings.KCOMAT_INFO.get('directeur_publication', ''),
+    })
 
 
 ROBOTS_DISALLOW = [
