@@ -13,13 +13,39 @@ set -euo pipefail
 PROJET="${PROJET:-$HOME/KcoMat}"
 VENV="${VENV:-$HOME/.virtualenvs/venv}"
 WSGI="${WSGI:-/var/www/$(echo "${USER}" | tr 'A-Z' 'a-z')_pythonanywhere_com_wsgi.py}"
-SAUVEGARDE="$HOME/sauvegardes_kcomat/$(date +%Y%m%d-%H%M%S)"
+SAUVEGARDES="$HOME/sauvegardes_kcomat"
+SAUVEGARDE="$SAUVEGARDES/$(date +%Y%m%d-%H%M%S)"
+# Sauvegardes complètes conservées (chacune contient la base et tous les médias : le quota disque
+# de PythonAnywhere est vite atteint)
+GARDER="${GARDER:-2}"
 
 cd "$PROJET"
+
+# Téléchargement d'abord : un échec d'identification GitHub ne laisse aucune sauvegarde derrière lui
+echo "→ Téléchargement du code depuis GitHub"
+git fetch origin
+
+# Sauvegardes interrompues (sans fichier .complete) : inutilisables, on libère la place
+for dossier in "$SAUVEGARDES"/*/; do
+    if [ -d "$dossier" ] && [ ! -f "$dossier/.complete" ]; then
+        rm -rf "$dossier"
+        echo "  Sauvegarde incomplète supprimée : $dossier"
+    fi
+done
+# Place pour la nouvelle : on ne garde que les GARDER-1 plus récentes
+ls -1d "$SAUVEGARDES"/*/ 2>/dev/null | sort -r | tail -n +"$GARDER" | xargs -r rm -rf   # noms = dates
+
 echo "→ Sauvegarde dans $SAUVEGARDE"
+echec_sauvegarde() {
+    rm -rf "$SAUVEGARDE"
+    echo "✗ Sauvegarde impossible (quota disque ?) : rien n'a été modifié sur le site."
+    echo "  Place occupée :  du -sh ~/sauvegardes_kcomat/* ~/KcoMat/media ~/KcoMat/db.sqlite3 ~/.cache"
+    exit 1
+}
+trap echec_sauvegarde ERR
 mkdir -p "$SAUVEGARDE"
-cp -a .env "$SAUVEGARDE/" 2>/dev/null || echo "  (pas de .env à sauvegarder)"
-cp -a db.sqlite3 "$SAUVEGARDE/" 2>/dev/null || echo "  (pas de base SQLite à sauvegarder)"
+if [ -f .env ]; then cp -a .env "$SAUVEGARDE/"; else echo "  (pas de .env à sauvegarder)"; fi
+if [ -f db.sqlite3 ]; then cp -a db.sqlite3 "$SAUVEGARDE/"; else echo "  (pas de base SQLite à sauvegarder)"; fi
 # media/cache (copies WebP redimensionnées, aperçus de partage) se régénère : inutile de le sauvegarder
 if [ -d media ]; then
     if command -v rsync >/dev/null; then
@@ -32,9 +58,10 @@ fi
 if [ -d documents_prives ]; then
     cp -a documents_prives "$SAUVEGARDE/documents_prives"
 fi
+touch "$SAUVEGARDE/.complete"
+trap - ERR
 
-echo "→ Mise à jour du code depuis GitHub"
-git fetch origin
+echo "→ Mise à jour du code"
 git reset --hard origin/main
 
 echo "→ Restauration des fichiers non versionnés"
@@ -74,6 +101,4 @@ else
     echo "  Fichier WSGI introuvable : cliquez sur « Reload » dans l'onglet Web."
 fi
 
-# Garde les 5 dernières sauvegardes
-ls -1dt "$HOME"/sauvegardes_kcomat/*/ 2>/dev/null | tail -n +6 | xargs -r rm -rf
 echo "✓ Déploiement terminé. Sauvegarde : $SAUVEGARDE"
