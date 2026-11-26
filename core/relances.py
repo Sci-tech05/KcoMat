@@ -218,7 +218,11 @@ def verifier_relances():
     """Appelé au fil des visites : au plus un passage par heure, en tâche de fond."""
     if not getattr(settings, 'RELANCES_AU_FIL_DES_VISITES', True):
         return
-    if not cache.add(CLE_VERIFICATION, 1, INTERVALLE_VERIFICATION):
+    try:
+        if not cache.add(CLE_VERIFICATION, 1, INTERVALLE_VERIFICATION):
+            return
+    except Exception:          # table du cache absente (createcachetable oublié) : ne jamais casser une page
+        logger.exception("Cache indisponible : relances de paiement ignorées (lancez « manage.py createcachetable »)")
         return
     if getattr(settings, 'PUSH_ASYNC', True):
         threading.Thread(target=_en_tache_de_fond, daemon=True).start()

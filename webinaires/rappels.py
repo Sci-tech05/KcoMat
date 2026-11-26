@@ -170,7 +170,11 @@ def _en_tache_de_fond():
 
 def verifier_rappels():
     """Appelé à chaque visite (au plus une fois par minute) : lance les rappels arrivés à échéance."""
-    if not cache.add(CLE_VERIFICATION, 1, INTERVALLE_VERIFICATION):
+    try:
+        if not cache.add(CLE_VERIFICATION, 1, INTERVALLE_VERIFICATION):
+            return
+    except Exception:          # table du cache absente (createcachetable oublié) : ne jamais casser une page
+        logger.exception("Cache indisponible : rappels de webinaires ignorés (lancez « manage.py createcachetable »)")
         return
     try:
         if not rappels_dus().exists():
