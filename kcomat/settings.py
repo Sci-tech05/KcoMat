@@ -521,13 +521,20 @@ FEDAPAY_SUCCESS_URL = FEDAPAY_CONFIG['success_url']
 FEDAPAY_CANCEL_URL = FEDAPAY_CONFIG['cancel_url']
 
 # Email
-EMAIL_BACKEND = config('EMAIL_BACKEND', default='django.core.mail.backends.smtp.EmailBackend')
+EMAIL_BACKEND = config('EMAIL_BACKEND', default='core.email_backend.EmailBackend')
+# Même backend SMTP, mais en AUTH LOGIN (Gmail coupe la connexion en AUTH PLAIN) : appliqué
+# aussi quand le .env désigne encore le backend SMTP standard de Django.
+if EMAIL_BACKEND == 'django.core.mail.backends.smtp.EmailBackend':
+    EMAIL_BACKEND = 'core.email_backend.EmailBackend'
 EMAIL_HOST = config('EMAIL_HOST', default='smtp.gmail.com')
 EMAIL_PORT = config('EMAIL_PORT', default=587, cast=int)
 EMAIL_USE_TLS = config('EMAIL_USE_TLS', default=True, cast=bool)
 EMAIL_USE_SSL = config('EMAIL_USE_SSL', default=False, cast=bool)
 EMAIL_HOST_USER = config('EMAIL_HOST_USER', default='kcomat0@gmail.com')
 EMAIL_HOST_PASSWORD = config('EMAIL_HOST_PASSWORD', default='')
+if 'gmail.com' in EMAIL_HOST:
+    # Mot de passe d'application Gmail affiché « abcd efgh ijkl mnop » : les espaces n'en font pas partie
+    EMAIL_HOST_PASSWORD = EMAIL_HOST_PASSWORD.replace(' ', '')
 EMAIL_TIMEOUT = config('EMAIL_TIMEOUT', default=20, cast=int)
 DEFAULT_FROM_EMAIL = config('DEFAULT_FROM_EMAIL', default='KcoMat <kcomat0@gmail.com>')
 
