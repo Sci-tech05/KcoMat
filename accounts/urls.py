@@ -1,6 +1,6 @@
 from django.contrib.auth import views as auth_views
 from django.urls import path, reverse_lazy
-from . import views
+from . import verification, views
 from .forms import MotDePasseOublieForm
 
 app_name = 'accounts'
@@ -11,6 +11,10 @@ urlpatterns = [
     path('deconnexion/', views.deconnexion, name='deconnexion'),
     path('dashboard/', views.dashboard, name='dashboard'),
     path('profil/', views.profil, name='profil'),
+
+    # Confirmation de l'adresse e-mail (inscription classique, changement d'adresse)
+    path('email/confirmer/<str:jeton>/', verification.confirmer_email, name='confirmer_email'),
+    path('email/renvoyer/', verification.renvoyer_confirmation, name='renvoyer_confirmation'),
 
     # Mot de passe oublié : demande → e-mail avec lien → nouveau mot de passe
     path('mot-de-passe-oublie/', auth_views.PasswordResetView.as_view(
@@ -24,7 +28,7 @@ urlpatterns = [
     path('mot-de-passe-oublie/envoye/', auth_views.PasswordResetDoneView.as_view(
         template_name='accounts/mdp_oublie_envoye.html',
     ), name='mdp_oublie_envoye'),
-    path('mot-de-passe/nouveau/<uidb64>/<token>/', auth_views.PasswordResetConfirmView.as_view(
+    path('mot-de-passe/nouveau/<uidb64>/<token>/', verification.MotDePasseNouveauView.as_view(
         template_name='accounts/mdp_nouveau.html',
         success_url=reverse_lazy('accounts:mdp_modifie'),
     ), name='mdp_nouveau'),

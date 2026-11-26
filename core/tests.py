@@ -467,3 +467,50 @@ class ALaUneEtCarrouselsTests(TestCase):
         self.assertNotIn('À propos de KcoMat', contenu)
         self.assertLess(contenu.index('Stage vedette'), contenu.index('Stage classique'))
         self.assertNotIn('Offre close', contenu)
+
+
+from django.conf import settings
+from django.core.cache import cache
+
+
+class EnTeteCSPTests(TestCase):
+    def test_politique_presente(self):
+        csp = self.client.get(reverse('core:accueil'))['Content-Security-Policy']
+        self.assertIn("object-src 'none'", csp)
+        self.assertIn("frame-ancestors 'none'", csp)
+        self.assertIn('https://cdn.jsdelivr.net', csp)
+
+    def test_mode_rapport(self):
+        with override_settings(CSP_REPORT_ONLY=True):
+            reponse = self.client.get(reverse('core:accueil'))
+        self.assertIn('Content-Security-Policy-Report-Only', reponse)
+        self.assertNotIn('Content-Security-Policy', reponse)
+
+
+@override_settings(EMAIL_BACKEND='django.core.mail.backends.locmem.EmailBackend',
+                   ADMIN_ALLOWED_IPS=['*'], ADMIN_2FA_RESEND_COOLDOWN_SECONDS=60, ADMIN_2FA_MAX_CODES_PER_HOUR=3)
+class RenvoiCode2FATests(TestCase):
+    def setUp(self):
+        cache.clear()
+        self.admin = User.objects.create_superuser('chef', 'chef@example.com', 'pw-chef-123')
+        self.client.force_login(self.admin)
+        self.url = '/' + settings.ADMIN_2FA_PATH.lstrip('/')
+
+    def test_renvoi_en_boucle_limite(self):
+        self.client.get(self.url)
+        for _ in range(5):
+            self.client.get(self.url + '?resend=1')
+        self.assertEqual(len(mail.outbox), 1)          # délai de 60 s entre deux codes
+
+    def test_plafond_horaire(self):
+        for _ in range(5):
+            cache.delete(f'kx-2fa-dernier:{self.admin.pk}')     # simule l'écoulement du délai
+            self.client.get(self.url + '?resend=1')
+        self.assertEqual(len(mail.outbox), 3)
+
+    def test_tentatives_non_remises_a_zero_par_un_renvoi_bloque(self):
+        self.client.get(self.url)
+        for _ in range(5):
+            self.client.post(self.url, {'code': '000000'})
+        self.client.get(self.url + '?resend=1')                    # refusé (délai) : pas de nouveau code
+        self.assertEqual(self.client.session.get('admin_2fa_attempts'), 5)

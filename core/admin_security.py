@@ -9,6 +9,7 @@ from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.hashers import check_password, make_password
+from django.core.cache import cache
 from django.core.mail import send_mail
 from django.http import HttpResponseForbidden, HttpResponseRedirect
 from django.shortcuts import redirect, render
@@ -78,8 +79,38 @@ def _clear_2fa_state(request):
         request.session.pop(key, None)
 
 
+def _limite_envoi_2fa(request):
+    """Message d'attente si un code vient d'être envoyé ou si le plafond horaire est atteint, sinon None.
+
+    Compteurs dans le cache partagé (par compte, pas par session) : une nouvelle session
+    ou ?resend=1 en boucle ne permettent ni d'inonder la boîte mail ni d'enchaîner les codes.
+    """
+    cle_dernier = f'kx-2fa-dernier:{request.user.pk}'
+    cle_heure = f'kx-2fa-heure:{request.user.pk}'
+    delai = max(0, int(getattr(settings, 'ADMIN_2FA_RESEND_COOLDOWN_SECONDS', 60)))
+    plafond = max(1, int(getattr(settings, 'ADMIN_2FA_MAX_CODES_PER_HOUR', 6)))
+
+    attente = int(cache.get(cle_dernier, 0)) + delai - int(time.time())
+    if attente > 0:
+        return f"Un code vient d'être envoyé. Patientez {attente} s avant d'en demander un nouveau."
+    if cache.get(cle_heure, 0) >= plafond:
+        return "Trop de codes demandés en une heure. Réessayez plus tard."
+
+    cache.set(cle_dernier, int(time.time()), delai)
+    cache.add(cle_heure, 0, 3600)
+    try:
+        cache.incr(cle_heure)
+    except ValueError:      # clé expirée entre add() et incr()
+        cache.set(cle_heure, 1, 3600)
+    return None
+
+
 def _send_admin_2fa_code(request):
     """Envoie un nouveau code. Retourne (adresse, None) si envoyé, sinon (None, message d'erreur)."""
+    attente = _limite_envoi_2fa(request)
+    if attente:
+        return None, attente
+
     code = f"{secrets.randbelow(1_000_000):06d}"
     ttl_seconds = max(60, int(getattr(settings, 'ADMIN_2FA_CODE_TTL_SECONDS', 300)))
     

@@ -3,9 +3,12 @@ import re
 import secrets
 import uuid
 
+from django.conf import settings
 from django.core.exceptions import ValidationError
+from django.core.files.storage import FileSystemStorage
 from django.core.validators import FileExtensionValidator, MaxValueValidator, MinValueValidator
 from django.db import models
+from django.urls import reverse
 from django.utils import timezone
 from django.utils.text import slugify
 
@@ -209,6 +212,29 @@ def lettre_upload_to(instance, filename):
 DOCUMENT_VALIDATORS = [FileExtensionValidator(DOCUMENT_EXTENSIONS), validate_document_size]
 
 
+class DocumentsPrivesStorage(FileSystemStorage):
+    """CV et lettres rangés dans settings.DOCUMENTS_PRIVES_ROOT, hors de /media/ (jamais publics).
+
+    Dossier lu à chaque accès (et non mis en cache) pour suivre override_settings dans les tests.
+    Leur URL pointe vers la vue de l'admin réservée au staff (CandidatureAdmin.fichier_view).
+    """
+
+    @property
+    def base_location(self):
+        return settings.DOCUMENTS_PRIVES_ROOT
+
+    @property
+    def location(self):
+        return os.path.abspath(self.base_location)
+
+    def url(self, name):
+        return reverse('admin:carrieres_candidature_fichier', args=[name])
+
+
+def documents_prives():
+    return DocumentsPrivesStorage()
+
+
 class Candidature(RelancePaiementMixin):
     STATUT_NOUVELLE = 'nouvelle'
     STATUT_EN_REVUE = 'en_revue'
@@ -234,8 +260,9 @@ class Candidature(RelancePaiementMixin):
     prenom = models.CharField(max_length=100)
     email = models.EmailField()
     telephone = models.CharField(max_length=20)
-    cv = models.FileField(upload_to=cv_upload_to, validators=DOCUMENT_VALIDATORS)
-    lettre_motivation = models.FileField(upload_to=lettre_upload_to, blank=True, null=True, validators=DOCUMENT_VALIDATORS)
+    cv = models.FileField(upload_to=cv_upload_to, storage=documents_prives, validators=DOCUMENT_VALIDATORS)
+    lettre_motivation = models.FileField(upload_to=lettre_upload_to, storage=documents_prives, blank=True, null=True,
+                                         validators=DOCUMENT_VALIDATORS)
     message = models.TextField("Motivation", blank=True, max_length=1500)
 
     # Suivi par l'équipe

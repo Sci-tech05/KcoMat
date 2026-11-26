@@ -736,7 +736,10 @@ def meet_room(request, pk):
         'is_admin_meet_view': request.user.is_staff,
         **payload,
     }
-    return render(request, 'formations/meet_room.html', context)
+    response = render(request, 'formations/meet_room.html', context)
+    # Content-Security-Policy : script et cadre Jitsi de cette salle
+    response.csp_origines = [f"https://{payload['jitsi_domain']}"]
+    return response
 
 
 def facture_frais_pdf(request, pk):

@@ -28,6 +28,10 @@ if [ -d media ]; then
         cp -a media "$SAUVEGARDE/media" && rm -rf "$SAUVEGARDE/media/cache"
     fi
 fi
+# CV et lettres de motivation (hors de media/, jamais servis publiquement)
+if [ -d documents_prives ]; then
+    cp -a documents_prives "$SAUVEGARDE/documents_prives"
+fi
 
 echo "→ Mise à jour du code depuis GitHub"
 git fetch origin
@@ -40,6 +44,10 @@ if [ -d "$SAUVEGARDE/media" ]; then
     mkdir -p media
     cp -an "$SAUVEGARDE/media/." media/      # ne remplace rien d'existant
 fi
+if [ -d "$SAUVEGARDE/documents_prives" ]; then
+    mkdir -p documents_prives
+    cp -an "$SAUVEGARDE/documents_prives/." documents_prives/
+fi
 
 # shellcheck disable=SC1091
 source "$VENV/bin/activate"
@@ -47,6 +55,8 @@ echo "→ Dépendances Python"
 pip install --quiet -r requirements.txt
 echo "→ Migrations de la base"
 python manage.py migrate --noinput
+echo "→ Table du cache partagé (anti-essais de connexion, codes 2FA)"
+python manage.py createcachetable
 echo "→ Fichiers statiques : copie + compression gzip"
 echo "  (1 à 3 minutes la première fois ; ensuite seuls les fichiers modifiés sont retraités)"
 debut=$(date +%s)

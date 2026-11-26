@@ -77,6 +77,23 @@
 <!-- ===== CONTENU PRINCIPAL ===== -->
 <section class="py-12 bg-gray-50">
   <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    {% if not email_confirme and user.email %}
+    <!-- Adresse e-mail à confirmer -->
+    <div class="mb-8 flex flex-col sm:flex-row sm:items-center gap-4 rounded-2xl border border-amber-200 bg-amber-50 p-5">
+      <svg class="w-6 h-6 shrink-0 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
+      <p class="flex-1 text-sm text-amber-900 leading-relaxed">
+        <strong>Confirmez votre adresse e-mail.</strong>
+        Un lien a été envoyé à <strong class="break-all">{{ user.email }}</strong>. Tant qu'elle n'est pas confirmée,
+        « Continuer avec Google » ne peut pas se connecter à ce compte.
+      </p>
+      <form method="post" action="{% url 'accounts:renvoyer_confirmation' %}">
+        {% csrf_token %}
+        <button type="submit" class="whitespace-nowrap rounded-full bg-amber-500 px-5 py-2.5 text-sm font-bold text-white hover:bg-amber-600 transition">
+          Renvoyer le lien
+        </button>
+      </form>
+    </div>
+    {% endif %}
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start" data-colonnes>
 
       <!-- ===== COLONNE GAUCHE — Profil + Actions rapides ===== -->

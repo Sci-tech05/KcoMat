@@ -90,6 +90,64 @@ class MotDePasseOublieTests(TestCase):
         self.assertContains(reponse, 'Lien expiré ou déjà utilisé')
 
 
+@override_settings(EMAIL_BACKEND='django.core.mail.backends.locmem.EmailBackend')
+class ConfirmationEmailTests(TestCase):
+    def inscrire(self):
+        return self.client.post(reverse('accounts:inscription'), {
+            'username': 'ama', 'email': 'ama@example.com', 'password1': MOT_DE_PASSE, 'password2': MOT_DE_PASSE,
+        })
+
+    def lien(self, message):
+        return re.search(r'https?://[^/]+(/accounts/email/confirmer/\S+/)', message.body).group(1)
+
+    def test_inscription_envoie_le_lien_et_le_confirme(self):
+        from accounts.verification import email_confirme
+        self.inscrire()
+        user = User.objects.get(username='ama')
+        self.assertFalse(email_confirme(user))
+        self.assertEqual(len(mail.outbox), 1)
+        self.assertEqual(mail.outbox[0].to, ['ama@example.com'])
+        self.assertContains(self.client.get(reverse('accounts:dashboard')), 'Confirmez votre adresse e-mail')
+        self.assertRedirects(self.client.get(self.lien(mail.outbox[0])), reverse('accounts:dashboard'),
+                             fetch_redirect_response=False)
+        self.assertTrue(email_confirme(user))
+        self.assertNotContains(self.client.get(reverse('accounts:dashboard')), 'Confirmez votre adresse e-mail')
+
+    def test_lien_falsifie_refuse(self):
+        from accounts.verification import email_confirme
+        self.inscrire()
+        self.client.get(reverse('accounts:confirmer_email', args=['faux:jeton']))
+        self.assertFalse(email_confirme(User.objects.get(username='ama')))
+
+    def test_lien_perime_apres_changement_adresse(self):
+        from accounts.verification import email_confirme
+        self.inscrire()
+        ancien_lien = self.lien(mail.outbox[0])
+        self.client.post(reverse('accounts:profil'), {'action': 'profile', 'email': 'nouvelle@example.com',
+                                                      'first_name': '', 'last_name': ''})
+        self.assertEqual(len(mail.outbox), 2)                 # lien envoyé à la nouvelle adresse
+        self.client.get(ancien_lien)
+        user = User.objects.get(username='ama')
+        self.assertFalse(email_confirme(user))
+        self.client.get(self.lien(mail.outbox[1]))
+        self.assertTrue(email_confirme(user))
+
+    def test_renvoi_limite(self):
+        self.inscrire()
+        self.client.post(reverse('accounts:renvoyer_confirmation'))
+        self.client.post(reverse('accounts:renvoyer_confirmation'))
+        self.assertEqual(len(mail.outbox), 2)                 # inscription + un seul renvoi
+
+    def test_mot_de_passe_oublie_confirme_l_adresse(self):
+        from accounts.verification import email_confirme
+        user = User.objects.create_user('afi', 'afi@example.com', 'ancien-MotDePasse-1')
+        self.client.post(reverse('accounts:mdp_oublie'), {'email': 'afi@example.com'})
+        lien = re.search(r'https?://[^/]+(/accounts/mot-de-passe/nouveau/\S+/)', mail.outbox[0].body).group(1)
+        reponse = self.client.get(lien, follow=True)
+        self.client.post(reponse.redirect_chain[-1][0], {'new_password1': MOT_DE_PASSE, 'new_password2': MOT_DE_PASSE})
+        self.assertTrue(email_confirme(user))
+
+
 class ProfilEmailTests(TestCase):
     def test_email_deja_pris_refuse(self):
         User.objects.create_user('a', 'pris@example.com', MOT_DE_PASSE)
@@ -216,11 +274,23 @@ class ConnexionGoogleTests(TestCase):
         textes = [str(m) for m in requete._messages]
         self.assertEqual(textes, ['✅ Compte créé avec Google ! Bienvenue chez KcoMat.'])   # un seul message
 
-    def test_email_deja_inscrit_retrouve_le_meme_compte(self):
+    def test_email_confirme_retrouve_le_meme_compte(self):
+        from accounts.verification import marquer_confirme
         existant = User.objects.create_user('kofi', 'kofi@gmail.com', MOT_DE_PASSE)
+        marquer_confirme(existant)
         connexion_google_simulee(self.client, 'KOFI@gmail.com')
         self.assertEqual(User.objects.filter(email__iexact='kofi@gmail.com').count(), 1)
         self.assertTrue(existant.socialaccount_set.filter(provider='google').exists())
+
+    def test_email_non_confirme_pas_de_rattachement(self):
+        """Compte créé avec l'adresse d'autrui (non confirmée) : Google ne s'y rattache pas."""
+        intrus = User.objects.create_user('intrus', 'victime@gmail.com', MOT_DE_PASSE)
+        requete, reponse = connexion_google_simulee(self.client, 'victime@gmail.com')
+        self.assertIsNone(requete.session.get('_auth_user_id'))
+        self.assertFalse(intrus.socialaccount_set.exists())
+        self.assertEqual(User.objects.filter(email__iexact='victime@gmail.com').count(), 1)
+        self.assertEqual(reponse['Location'], reverse('accounts:connexion'))
+        self.assertIn('pas encore été confirmée', ' '.join(str(m) for m in requete._messages))
 
     def test_compte_admin_connecte_mais_admin_garde_le_code(self):
         chef = User.objects.create_superuser('chef', 'chef@gmail.com', MOT_DE_PASSE)

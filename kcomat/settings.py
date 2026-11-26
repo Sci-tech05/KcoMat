@@ -143,6 +143,7 @@ MIDDLEWARE = [
     'core.admin_security.AdminSecurityMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'core.middleware.ContentSecurityPolicyMiddleware',
     'django_htmx.middleware.HtmxMiddleware',
     'allauth.account.middleware.AccountMiddleware',
     # Rappels « 20 min avant » des webinaires, déclenchés au fil des visites
@@ -187,6 +188,16 @@ DATABASES = {
     }
 }
 
+# Cache partagé par tous les processus (compteurs anti-essais de connexion, envois de codes 2FA) :
+# le cache mémoire par défaut est propre à chaque worker et repart à zéro à chaque redémarrage.
+# Table créée par « python manage.py createcachetable » (voir deploy_pythonanywhere.sh).
+CACHES = {
+    'default': {
+        'BACKEND': 'django.core.cache.backends.db.DatabaseCache',
+        'LOCATION': 'kcomat_cache',
+    }
+}
+
 AUTH_PASSWORD_VALIDATORS = [
     {'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator'},
     {'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator'},
@@ -220,6 +231,9 @@ STORAGES = {
 
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
+# CV et lettres de motivation : hors de MEDIA_ROOT, donc jamais servis par /media/ ;
+# seule la vue protégée de l'admin (carrieres.admin) les lit. Dossier non versionné.
+DOCUMENTS_PRIVES_ROOT = BASE_DIR / 'documents_prives'
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
@@ -263,6 +277,10 @@ ACCOUNT_UNIQUE_EMAIL = True
 ACCOUNT_USERNAME_REQUIRED = True               # pseudo créé automatiquement à partir du nom Google
 ACCOUNT_EMAIL_VERIFICATION = 'none'            # Google a déjà vérifié l'adresse
 ACCOUNT_LOGOUT_ON_GET = False
+# Inscription classique : lien de confirmation envoyé par e-mail (accounts.verification).
+# Tant que l'adresse n'est pas confirmée, « Continuer avec Google » ne se rattache pas au compte.
+EMAIL_CONFIRMATION_JOURS = config('EMAIL_CONFIRMATION_JOURS', default=7, cast=int)
+EMAIL_CONFIRMATION_DELAI_RENVOI = config('EMAIL_CONFIRMATION_DELAI_RENVOI', default=60, cast=int)
 
 # Admin security
 _admin_url_raw = env_value('ADMIN_URL', default='admin/')
@@ -282,6 +300,37 @@ ADMIN_ALLOWED_IPS = [ip.strip() for ip in _admin_allowed_ips_raw.split(',') if i
 ADMIN_TRUST_X_FORWARDED_FOR = config('ADMIN_TRUST_X_FORWARDED_FOR', default=False, cast=bool)
 ADMIN_2FA_CODE_TTL_SECONDS = config('ADMIN_2FA_CODE_TTL_SECONDS', default=300, cast=int)
 ADMIN_2FA_MAX_ATTEMPTS = config('ADMIN_2FA_MAX_ATTEMPTS', default=5, cast=int)
+# Renvoi du code : délai minimal entre deux e-mails et plafond par heure (par compte)
+ADMIN_2FA_RESEND_COOLDOWN_SECONDS = config('ADMIN_2FA_RESEND_COOLDOWN_SECONDS', default=60, cast=int)
+ADMIN_2FA_MAX_CODES_PER_HOUR = config('ADMIN_2FA_MAX_CODES_PER_HOUR', default=6, cast=int)
+
+# Content-Security-Policy (core.middleware.ContentSecurityPolicyMiddleware).
+# 'unsafe-inline' / 'unsafe-eval' restent nécessaires (scripts en ligne des gabarits, Alpine.js),
+# mais seules les origines listées peuvent fournir scripts, cadres et polices.
+# Les salles Jitsi ajoutent leur propre domaine à la volée (attribut csp_origines de la réponse).
+# CSP_REPORT_ONLY=True : le navigateur signale les blocages dans la console sans rien bloquer.
+CSP_REPORT_ONLY = env_bool('CSP_REPORT_ONLY', default=False)
+CSP_DIRECTIVES = {
+    'default-src': ["'self'"],
+    'script-src': ["'self'", "'unsafe-inline'", "'unsafe-eval'", 'https://cdn.jsdelivr.net', 'https://unpkg.com'],
+    'style-src': ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com'],
+    'font-src': ["'self'", 'data:', 'https://fonts.gstatic.com'],
+    'img-src': ["'self'", 'data:', 'blob:', 'https:'],
+    'media-src': ["'self'", 'blob:'],
+    'connect-src': ["'self'"],
+    'frame-src': [
+        'https://www.youtube-nocookie.com', 'https://www.youtube.com', 'https://www.tiktok.com',
+        'https://maps.google.com', 'https://www.google.com',
+        'https://checkout.fedapay.com', 'https://sandbox-checkout.fedapay.com',
+    ],
+    'worker-src': ["'self'"],
+    'manifest-src': ["'self'"],
+    'object-src': ["'none'"],
+    'base-uri': ["'self'"],
+    'frame-ancestors': ["'none'"],
+    'form-action': ["'self'", 'https://accounts.google.com',
+                    'https://checkout.fedapay.com', 'https://sandbox-checkout.fedapay.com'],
+}
 
 CRISPY_ALLOWED_TEMPLATE_PACKS = 'tailwind'
 CRISPY_TEMPLATE_PACK = 'tailwind'

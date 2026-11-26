@@ -165,7 +165,7 @@ def salle(request, slug):
     if not payload['jitsi_domain'] and not youtube_id:
         messages.error(request, "La salle de visioconférence n'est pas configurée. Contactez-nous.")
         return redirect(page)
-    return render(request, 'webinaires/salle.html', {
+    response = render(request, 'webinaires/salle.html', {
         'webinaire': webinaire,
         'etat': webinaire.statut(),
         'animateur': animateur,
@@ -175,6 +175,9 @@ def salle(request, slug):
         'youtube_chat_domaine': request.get_host().split(':')[0],
         **payload,
     })
+    if payload['jitsi_domain']:     # Content-Security-Policy : script et cadre Jitsi de cette salle
+        response.csp_origines = [f"https://{payload['jitsi_domain']}"]
+    return response
 
 
 def agenda(request, slug):

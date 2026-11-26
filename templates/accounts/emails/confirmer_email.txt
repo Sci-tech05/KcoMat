@@ -1,0 +1,10 @@
+{% autoescape off %}Bonjour {{ user.first_name|default:user.get_username }},
+
+Bienvenue chez KcoMat ! Confirmez l'adresse e-mail de votre compte ({{ user.get_username }}) en ouvrant ce lien (valable {{ jours }} jours) :
+{{ lien }}
+
+Si vous n'avez pas créé de compte KcoMat, ignorez simplement ce message.
+
+L'équipe KcoMat — Lokossa, Bénin
+WhatsApp : +229 01 96 78 00 99
+{% endautoescape %}

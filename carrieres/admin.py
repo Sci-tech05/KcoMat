@@ -312,12 +312,22 @@ class CandidatureAdmin(admin.ModelAdmin):
         custom = [
             path('<int:pk>/document/<str:kind>/', self.admin_site.admin_view(self.document_view),
                  name='carrieres_candidature_document'),
+            # URL des fichiers eux-mêmes (DocumentsPrivesStorage.url) : lien « Actuellement » du formulaire
+            path('fichier/<path:nom>', self.admin_site.admin_view(self.fichier_view),
+                 name='carrieres_candidature_fichier'),
             path('export/retenues.zip', self.admin_site.admin_view(self.export_retenues_view),
                  name='carrieres_candidature_export_retenues'),
             path('export/rapport.pdf', self.admin_site.admin_view(self.export_rapport_view),
                  name='carrieres_candidature_export_rapport'),
         ]
         return custom + super().get_urls()
+
+    def fichier_view(self, request, nom):
+        """Même accès que document_view, à partir du nom de fichier stocké (CV ou lettre)."""
+        candidature = Candidature.objects.filter(Q(cv=nom) | Q(lettre_motivation=nom)).first()
+        if candidature is None:
+            raise Http404
+        return self.document_view(request, candidature.pk, 'cv' if candidature.cv.name == nom else 'lettre')
 
     def document_view(self, request, pk, kind):
         """Sert le CV / la lettre uniquement au staff autorisé (fichiers personnels)."""

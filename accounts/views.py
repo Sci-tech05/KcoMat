@@ -20,6 +20,7 @@ from webinaires.views import contexte_cartes
 from webinaires.models import Webinaire
 from .models import ProfilUtilisateur
 from .forms import InscriptionForm, UserUpdateForm, ProfilUtilisateurForm, KcomatPasswordChangeForm
+from .verification import adresse_a_confirmer, email_confirme, envoyer_confirmation
 
 
 def _page_suivante(request, defaut='accounts:dashboard'):
@@ -78,6 +79,9 @@ def inscription(request):
         login(request, user, backend='django.contrib.auth.backends.ModelBackend')
         request.session['proposer_notifications'] = True  # propose l'abonnement aux notifications
         messages.success(request, "✅ Compte créé avec succès ! Bienvenue chez KcoMat.")
+        adresse_a_confirmer(user)
+        if envoyer_confirmation(request, user):
+            messages.info(request, f"Un lien de confirmation a été envoyé à {user.email} : cliquez dessus pour valider votre adresse.")
         return redirect(_page_suivante(request))
     return render(request, 'accounts/inscription.html', {
         'form': form, 'title': 'Créer un compte', 'next': _page_suivante(request, ''),
@@ -108,6 +112,7 @@ def dashboard(request):
         'mes_webinaires': mes_webinaires,
         'inscriptions': inscriptions,
         'commandes': commandes,
+        'email_confirme': email_confirme(request.user),
         'title': 'Mon espace KcoMat',
     }
     return render(request, 'accounts/dashboard.html', ctx)
@@ -138,9 +143,15 @@ def profil(request):
             user_form = UserUpdateForm(request.POST, instance=request.user)
             profil_form = ProfilUtilisateurForm(request.POST, instance=profil)
             if user_form.is_valid() and profil_form.is_valid():
-                user_form.save()
+                email_change = 'email' in user_form.changed_data
+                user = user_form.save()
                 profil_form.save()
                 messages.success(request, 'Profil mis à jour avec succès.')
+                if email_change:
+                    # Nouvelle adresse : non vérifiée tant que le lien envoyé n'a pas été ouvert
+                    adresse_a_confirmer(user)
+                    if envoyer_confirmation(request, user):
+                        messages.info(request, f"Un lien de confirmation a été envoyé à {user.email}.")
                 if is_ajax:
                     return JsonResponse({
                         'ok': True,

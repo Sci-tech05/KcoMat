@@ -1,6 +1,7 @@
 """Connexion avec Google (django-allauth) : règles propres à KcoMat."""
 from allauth.account.adapter import DefaultAccountAdapter
 from allauth.account.models import EmailAddress
+from allauth.account.utils import filter_users_by_email
 from allauth.core.exceptions import ImmediateHttpResponse
 from allauth.socialaccount.adapter import DefaultSocialAccountAdapter
 from django.contrib import messages
@@ -26,7 +27,29 @@ class AdaptateurGoogle(DefaultSocialAccountAdapter):
                 elif not adresse.verified:
                     adresse.verified = True
                     adresse.save(update_fields=['verified'])
+        if utilisateur.pk is None:
+            # can_authenticate_by_email a refusé le rattachement : un compte non confirmé utilise
+            # déjà cette adresse. Pas de second compte, on explique comment reprendre la main.
+            emails_google = [e.email for e in sociallogin.email_addresses if e.verified]
+            if any(filter_users_by_email(email) for email in emails_google):
+                messages.error(request, "Un compte KcoMat utilise déjà cette adresse, mais elle n'a pas encore été confirmée. "
+                                        "Connectez-vous avec votre mot de passe puis confirmez votre adresse depuis votre espace, "
+                                        "ou utilisez « Mot de passe oublié ».")
+                raise ImmediateHttpResponse(redirect('accounts:connexion'))
         super().pre_social_login(request, sociallogin)
+
+    def can_authenticate_by_email(self, login, email):
+        """Rattacher une connexion Google à un compte existant seulement si ce compte a confirmé
+        l'adresse (ou s'il s'agit d'un compte staff, créé par l'équipe). Sinon, un tiers ayant créé
+        un compte avec l'adresse de la victime garderait l'accès après sa première connexion Google."""
+        if not super().can_authenticate_by_email(login, email):
+            return False
+        utilisateurs = filter_users_by_email(email, prefer_verified=True)
+        if not utilisateurs:
+            return True
+        utilisateur = utilisateurs[0]
+        return utilisateur.is_staff or EmailAddress.objects.filter(
+            user=utilisateur, email__iexact=email, verified=True).exists()
 
     def save_user(self, request, sociallogin, form=None):
         """Première connexion Google : compte créé avec le prénom, le nom et l'e-mail fournis par Google."""

@@ -1,9 +1,11 @@
 import io
+import os
 import shutil
 import tempfile
 import zipfile
 from datetime import timedelta
 
+from django.conf import settings
 from django.contrib.auth.models import User
 from django.core import mail
 from django.core.files.uploadedfile import SimpleUploadedFile
@@ -21,7 +23,7 @@ def fichier(nom='cv.pdf', contenu=PDF, type_mime='application/pdf'):
     return SimpleUploadedFile(nom, contenu, content_type=type_mime)
 
 
-@override_settings(MEDIA_ROOT=TEMP_MEDIA, EMAIL_BACKEND='django.core.mail.backends.locmem.EmailBackend')
+@override_settings(MEDIA_ROOT=TEMP_MEDIA, DOCUMENTS_PRIVES_ROOT=TEMP_MEDIA, EMAIL_BACKEND='django.core.mail.backends.locmem.EmailBackend')
 class CandidaturePubliqueTests(TestCase):
     @classmethod
     def tearDownClass(cls):
@@ -81,7 +83,7 @@ class CandidaturePubliqueTests(TestCase):
         self.assertEqual(Candidature.objects.get().score_auto, 10 + 20)  # CV non PDF + dans les délais
 
 
-@override_settings(MEDIA_ROOT=TEMP_MEDIA, EMAIL_BACKEND='django.core.mail.backends.locmem.EmailBackend')
+@override_settings(MEDIA_ROOT=TEMP_MEDIA, DOCUMENTS_PRIVES_ROOT=TEMP_MEDIA, EMAIL_BACKEND='django.core.mail.backends.locmem.EmailBackend')
 class CandidatureAdminTests(TestCase):
     def setUp(self):
         self.admin = User.objects.create_superuser('chef', 'chef@example.com', 'pw-chef-123')
@@ -145,6 +147,21 @@ class CandidatureAdminTests(TestCase):
         self.client.logout()
         self.assertNotEqual(self.client.get(url).status_code, 200)
 
+    def test_cv_hors_de_media_et_lien_protege(self):
+        media, prives = tempfile.mkdtemp(), tempfile.mkdtemp()
+        self.addCleanup(shutil.rmtree, media, ignore_errors=True)
+        self.addCleanup(shutil.rmtree, prives, ignore_errors=True)
+        with override_settings(MEDIA_ROOT=media, DOCUMENTS_PRIVES_ROOT=prives):
+            candidature = Candidature.objects.create(offre=self.offre, nom='Sossa', prenom='Ina', email='ina@example.com',
+                                                     telephone='0197000002', cv=fichier())
+            self.assertTrue(os.path.isfile(os.path.join(prives, candidature.cv.name)))
+            self.assertFalse(os.path.exists(os.path.join(media, candidature.cv.name)))
+            url = candidature.cv.url
+            self.assertFalse(url.startswith(settings.MEDIA_URL))
+            self.assertEqual(self.client.get(url).status_code, 200)
+            self.client.logout()
+            self.assertNotEqual(self.client.get(url).status_code, 200)
+
     def test_action_reponse_email(self):
         self.client.post(reverse('admin:carrieres_candidature_changelist'), {
             'action': 'envoyer_reponses', '_selected_action': [self.retenue.pk, self.refusee.pk]})
@@ -185,7 +202,7 @@ def image_offre():
                                            b',\x00\x00\x00\x00\x01\x00\x01\x00\x00\x02\x02D\x01\x00;', content_type='image/gif')
 
 
-@override_settings(MEDIA_ROOT=TEMP_MEDIA, EMAIL_BACKEND='django.core.mail.backends.locmem.EmailBackend')
+@override_settings(MEDIA_ROOT=TEMP_MEDIA, DOCUMENTS_PRIVES_ROOT=TEMP_MEDIA, EMAIL_BACKEND='django.core.mail.backends.locmem.EmailBackend')
 class OffresPremiumTests(TestCase):
     def setUp(self):
         from carrieres.catalogue import charger_catalogue
@@ -281,7 +298,7 @@ class CandidatureUniqueTests(TestCase):
         self.addCleanup(shutil.rmtree, self._media, ignore_errors=True)
 
     def postuler(self, offre, email):
-        with override_settings(MEDIA_ROOT=self._media), self.captureOnCommitCallbacks(execute=True):
+        with override_settings(MEDIA_ROOT=self._media, DOCUMENTS_PRIVES_ROOT=self._media), self.captureOnCommitCallbacks(execute=True):
             return self.client.post(reverse('carrieres:detail', args=[offre.slug]), {
                 'prenom': 'Awa', 'nom': 'Dossou', 'email': email, 'telephone': '0197000000', 'cv': fichier()})
 
@@ -293,7 +310,7 @@ class CandidatureUniqueTests(TestCase):
         self.assertEqual(self.postuler(self.autre, 'awa@example.com').status_code, 302)   # autre offre : autorisé
 
 
-@override_settings(MEDIA_ROOT=TEMP_MEDIA, EMAIL_BACKEND='django.core.mail.backends.locmem.EmailBackend')
+@override_settings(MEDIA_ROOT=TEMP_MEDIA, DOCUMENTS_PRIVES_ROOT=TEMP_MEDIA, EMAIL_BACKEND='django.core.mail.backends.locmem.EmailBackend')
 class FraisDeStageDeuxTranchesTests(TestCase):
     FETCH = 'api.fedapay_service.fetch_fedapay_transaction'
     CREATE = 'carrieres.paiement.create_fedapay_transaction'

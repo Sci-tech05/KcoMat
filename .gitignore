@@ -19,6 +19,8 @@ htmlcov/
 staticfiles/
 # Fichiers uploadés : ne pas versionner (sauvegarder sur le serveur)
 media/
+# CV et lettres de motivation (données personnelles, hors de /media/)
+documents_prives/
 
 # ─── Front ────────────────────────────────────────────────
 node_modules/
